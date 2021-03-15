@@ -1,13 +1,14 @@
 package me.joba.factorio;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class CombinatorGroup {
 
     private final List<ConnectedCombinator> combinators = new ArrayList<>();
     private final List<NetworkGroup> networks = new ArrayList<>();
-    private final NetworkGroup input, output;
+    private NetworkGroup input, output;
     private String correspondingCode;
 
     public CombinatorGroup(NetworkGroup input, NetworkGroup output) {
@@ -15,6 +16,12 @@ public class CombinatorGroup {
         this.output = output;
         if(input != null) this.networks.add(input);
         if(input != output) this.networks.add(output);
+    }
+
+    public void setInput(NetworkGroup input) {
+        if(input == null || this.input != null) throw new IllegalArgumentException("Cannot unset input");
+        this.input = input;
+        this.networks.add(input);
     }
 
     public String getCorrespondingCode() {

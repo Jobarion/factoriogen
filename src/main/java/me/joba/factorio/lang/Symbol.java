@@ -6,24 +6,17 @@ import me.joba.factorio.NetworkGroup;
 public abstract class Symbol {
 
     private FactorioSignal signal;
-    private NetworkGroup outputGroup;
 
     public Symbol() {
 
     }
 
-    public Symbol(FactorioSignal signal, NetworkGroup outputGroup) {
+    public Symbol(FactorioSignal signal) {
         this.signal = signal;
-        this.outputGroup = outputGroup;
     }
 
-    public void bind(FactorioSignal factorioSignal, NetworkGroup networkGroup) {
+    public void bind(FactorioSignal factorioSignal) {
         this.signal = factorioSignal;
-        this.outputGroup = networkGroup;
-    }
-
-    public NetworkGroup getOutputGroup() {
-        return outputGroup;
     }
 
     public FactorioSignal getSignal() {

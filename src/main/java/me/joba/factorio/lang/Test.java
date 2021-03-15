@@ -8,14 +8,19 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class Test {
 
-    private static final String TEST = "{ a = 1; b = a + 2; c = a + b; b = b / 2; d = a + b + c; }";
+    private static final String TEST = "{\n" +
+            "  a = 1;\n" +
+            "  b = a + 2;\n" +
+            "  c = a + b;\n" +
+            "  b = b / 2;\n" +
+            "  d = a + b + c;\n" +
+            "  d = d + 1;\n" +
+            "}";
     private static Context variableContext = new Context();
 
     public static void main(String[] args) throws IOException {
@@ -23,6 +28,7 @@ public class Test {
         LanguageLexer lexer = new LanguageLexer(CharStreams.fromString(TEST));
         LanguageParser parser = new LanguageParser(new CommonTokenStream(lexer));
         List<CombinatorGroup> generatedGroups = new ArrayList<>();
+        Set<VariableAccessor> accessors = new HashSet<>();
 //        List<ConnectedCombinator> combinators = new ArrayList<>();
 //        List<NetworkGroup> networkGroups = new ArrayList<>();
 
@@ -30,25 +36,6 @@ public class Test {
 
             @Override
             public void exitIfExpr(LanguageParser.IfExprContext ctx) {
-
-            }
-
-            @Override
-            public void exitBoolExpr(LanguageParser.BoolExprContext ctx) {
-            }
-
-            @Override
-            public void enterExpr(LanguageParser.ExprContext ctx) {
-
-            }
-
-            @Override
-            public void enterStatement(LanguageParser.StatementContext ctx) {
-                System.out.println("Enter statement");
-            }
-
-            @Override
-            public void enterBlockStatement(LanguageParser.BlockStatementContext ctx) {
 
             }
 
@@ -93,10 +80,10 @@ public class Test {
                     }
 
                     if(!leftVar.isBound()) {
-                        leftVar.bind(variableContext.getFreeSymbol(), variableContext.getCurrentNetworkGroup());
+                        leftVar.bind(variableContext.getFreeSymbol());
                     }
                     if(!rightVar.isBound()) {
-                        rightVar.bind(variableContext.getFreeSymbol(), variableContext.getCurrentNetworkGroup());
+                        rightVar.bind(variableContext.getFreeSymbol());
                     }
 
                     System.out.println(leftVar + ctx.op.getText() + rightVar);
@@ -120,8 +107,8 @@ public class Test {
                     if(named == null) throw new RuntimeException("Variable " + ctx.var.getText() + " is not defined");
                     variableContext.pushTempVariable(named);
                     var accessor = named.createVariableAccessor();
-                    accessor.setGreenOut(variableContext.getCurrentNetworkGroup());
-                    variableContext.getExpressionContext().getCombinators().add(accessor);
+                    accessors.add(accessor);
+                    accessor.access().accept(variableContext.getExpressionContext());
                 }
             }
 
@@ -170,6 +157,8 @@ public class Test {
         Signal.SIGNAL_TYPES.set(FactorioSignal.values().length);
 
         System.out.println(generatedGroups);
+
+        accessors.forEach(VariableAccessor::generateAccessors);
 
         var combinators = generatedGroups.stream()
                 .map(CombinatorGroup::getCombinators)

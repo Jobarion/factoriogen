@@ -15,8 +15,8 @@ public abstract class Variable extends Symbol {
         this.id = id;
     }
 
-    public Variable(VarType type, int id, FactorioSignal signal, NetworkGroup networkGroup) {
-        super(signal, networkGroup);
+    public Variable(VarType type, int id, FactorioSignal signal) {
+        super(signal);
         this.type = type;
         this.id = id;
     }
@@ -41,5 +41,5 @@ public abstract class Variable extends Symbol {
         return Accessor.signal(getSignal().ordinal());
     }
 
-    public abstract ConnectedCombinator createVariableAccessor();
+    public abstract VariableAccessor createVariableAccessor();
 }

@@ -4,6 +4,7 @@ import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 
+import java.awt.geom.Point2D;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
@@ -69,7 +70,7 @@ public class Simulator {
         int y = 0;
         JSONArray entities = new JSONArray();
         Map<Integer, JSONObject> connections = new HashMap<>();
-
+        Map<Integer, MSTSolver.Point> positions = new HashMap<>();
         for(ConnectedCombinator combinator : combinators) {
             var json = combinator.getCombinator().createJson();
             JSONObject pos = new JSONObject();
@@ -78,6 +79,7 @@ public class Simulator {
             json.put("entity_number", combinator.getEntityId());
             pos.put("x", x);
             pos.put("y", y);
+            positions.put(combinator.getEntityId(), new MSTSolver.Point(x, y));
             JSONObject connectionList = new JSONObject();
             json.put("connections", connectionList);
             connections.put(combinator.getEntityId(), connectionList);
@@ -91,66 +93,132 @@ public class Simulator {
         Map<NetworkGroup, Set<ConnectedCombinator>> networkMap = new HashMap<>();
         for(NetworkGroup ng : networks) {
             Set<ConnectedCombinator> connected = new HashSet<>();
+            List<MSTSolver.Node> nodes = new ArrayList<>();
             for(ConnectedCombinator cc : combinators) {
-                if(cc.getGreenIn() == ng || cc.getGreenOut() == ng || cc.getRedOut() == ng || cc.getRedIn() == ng) {
-                    connected.add(cc);
-                }
-            }
-            networkMap.put(ng, connected);
-        }
-        //Minimum spanning tree instead of complete graph pls
-        for(var entry : networkMap.entrySet()) {
-            var ng = entry.getKey();
-            for(var combi1 : entry.getValue()) {
-                var jsonConn = connections.get(combi1.getEntityId());
+
+                var jsonConn = connections.get(cc.getEntityId());
                 var jsonObjIn = getOrElse(jsonConn, "1", new JSONObject());
                 var jsonObjOut = getOrElse(jsonConn, "2", new JSONObject());
+
                 var greenIn = getOrElse(jsonObjIn, "green", new JSONArray());
-                var redIn = getOrElse(jsonObjIn, "red", new JSONArray());
                 var greenOut = getOrElse(jsonObjOut, "green", new JSONArray());
+                var redIn = getOrElse(jsonObjIn, "red", new JSONArray());
                 var redOut = getOrElse(jsonObjOut, "red", new JSONArray());
+
                 jsonObjIn.put("green", greenIn);
                 jsonObjIn.put("red", redIn);
                 jsonObjOut.put("green", greenOut);
                 jsonObjOut.put("red", redOut);
                 jsonConn.put("1", jsonObjIn);
-                if(!combi1.getCombinator().isOutputOnly()) jsonConn.put("2", jsonObjOut);
-                for(var combi2 : entry.getValue()) {
-                    if(combi1 == combi2) {
-                        if(combi1.getGreenIn() != null && combi1.getGreenIn() == combi1.getGreenOut()) {
+                jsonConn.put("2", jsonObjOut);
+
+                if(cc.getGreenIn() == ng) {
+                    nodes.add(new MSTSolver.Node(positions.get(cc.getEntityId()), cc.getEntityId(), 1) {
+                        @Override
+                        public void accept(MSTSolver.Node node) {
                             JSONObject conObj = new JSONObject();
-                            conObj.put("entity_id", combi1.getEntityId());
-                            conObj.put("circuit_id", "2");
+                            conObj.put("entity_id", node.getEntityId());
+                            conObj.put("circuit_id", node.getCircuitId());
                             greenIn.add(conObj);
-                            conObj = new JSONObject();
-                            conObj.put("entity_id", combi1.getEntityId());
-                            conObj.put("circuit_id", "1");
+                        }
+                    });
+                }
+
+
+                if(cc.getGreenOut() == ng) {
+                    nodes.add(new MSTSolver.Node(positions.get(cc.getEntityId()), cc.getEntityId(), cc.getCombinator().isOutputOnly() ? 1 : 2) {
+                        @Override
+                        public void accept(MSTSolver.Node node) {
+                            JSONObject conObj = new JSONObject();
+                            conObj.put("entity_id", node.getEntityId());
+                            conObj.put("circuit_id", node.getCircuitId());
                             greenOut.add(conObj);
                         }
-                        if(combi1.getRedIn() != null && combi1.getRedOut() == combi1.getRedIn()) {
+                    });
+                }
+
+
+                if(cc.getRedIn() == ng) {
+                    nodes.add(new MSTSolver.Node(positions.get(cc.getEntityId()), cc.getEntityId(), 1) {
+                        @Override
+                        public void accept(MSTSolver.Node node) {
                             JSONObject conObj = new JSONObject();
-                            conObj.put("entity_id", combi1.getEntityId());
-                            conObj.put("circuit_id", "2");
+                            conObj.put("entity_id", node.getEntityId());
+                            conObj.put("circuit_id", node.getCircuitId());
                             redIn.add(conObj);
-                            conObj = new JSONObject();
-                            conObj.put("entity_id", combi1.getEntityId());
-                            conObj.put("circuit_id", "1");
+                        }
+                    });
+                }
+
+
+                if(cc.getRedOut() == ng) {
+                    nodes.add(new MSTSolver.Node(positions.get(cc.getEntityId()), cc.getEntityId(), cc.getCombinator().isOutputOnly() ? 1 : 2) {
+                        @Override
+                        public void accept(MSTSolver.Node node) {
+                            JSONObject conObj = new JSONObject();
+                            conObj.put("entity_id", node.getEntityId());
+                            conObj.put("circuit_id", node.getCircuitId());
                             redOut.add(conObj);
                         }
-                        continue;
-                    }
-                    JSONObject conObj = new JSONObject();
-                    conObj.put("entity_id", combi2.getEntityId());
-                    int circuitId = combi2.getGreenIn() == ng || combi2.getRedIn() == ng || combi2.getCombinator().isOutputOnly() ? 1 : 2;
-                    conObj.put("circuit_id", circuitId);
-                    if(combi1.getGreenIn() == ng || (combi1.getGreenOut() == ng && combi1.getCombinator().isOutputOnly())) greenIn.add(conObj);
-                    else if(combi1.getRedIn() == ng || (combi1.getRedOut() == ng && combi1.getCombinator().isOutputOnly())) redIn.add(conObj);
-                    else if(combi1.getGreenOut() == ng) greenOut.add(conObj);
-                    else if(combi1.getRedOut() == ng) redOut.add(conObj);
-                    else throw new RuntimeException("???");
+                    });
                 }
             }
+            MSTSolver.solveMst(nodes);
+            networkMap.put(ng, connected);
         }
+        //Minimum spanning tree instead of complete graph pls
+//        for(var entry : networkMap.entrySet()) {
+//            var ng = entry.getKey();
+//            for(var combi1 : entry.getValue()) {
+//                var jsonConn = connections.get(combi1.getEntityId());
+//                var jsonObjIn = getOrElse(jsonConn, "1", new JSONObject());
+//                var jsonObjOut = getOrElse(jsonConn, "2", new JSONObject());
+//                var greenIn = getOrElse(jsonObjIn, "green", new JSONArray());
+//                var redIn = getOrElse(jsonObjIn, "red", new JSONArray());
+//                var greenOut = getOrElse(jsonObjOut, "green", new JSONArray());
+//                var redOut = getOrElse(jsonObjOut, "red", new JSONArray());
+//                jsonObjIn.put("green", greenIn);
+//                jsonObjIn.put("red", redIn);
+//                jsonObjOut.put("green", greenOut);
+//                jsonObjOut.put("red", redOut);
+//                jsonConn.put("1", jsonObjIn);
+//                if(!combi1.getCombinator().isOutputOnly()) jsonConn.put("2", jsonObjOut);
+//                for(var combi2 : entry.getValue()) {
+//                    if(combi1 == combi2) {
+//                        if(combi1.getGreenIn() != null && combi1.getGreenIn() == combi1.getGreenOut()) {
+//                            JSONObject conObj = new JSONObject();
+//                            conObj.put("entity_id", combi1.getEntityId());
+//                            conObj.put("circuit_id", "2");
+//                            greenIn.add(conObj);
+//                            conObj = new JSONObject();
+//                            conObj.put("entity_id", combi1.getEntityId());
+//                            conObj.put("circuit_id", "1");
+//                            greenOut.add(conObj);
+//                        }
+//                        if(combi1.getRedIn() != null && combi1.getRedOut() == combi1.getRedIn()) {
+//                            JSONObject conObj = new JSONObject();
+//                            conObj.put("entity_id", combi1.getEntityId());
+//                            conObj.put("circuit_id", "2");
+//                            redIn.add(conObj);
+//                            conObj = new JSONObject();
+//                            conObj.put("entity_id", combi1.getEntityId());
+//                            conObj.put("circuit_id", "1");
+//                            redOut.add(conObj);
+//                        }
+//                        continue;
+//                    }
+//                    JSONObject conObj = new JSONObject();
+//                    conObj.put("entity_id", combi2.getEntityId());
+//                    int circuitId = combi2.getGreenIn() == ng || combi2.getRedIn() == ng || combi2.getCombinator().isOutputOnly() ? 1 : 2;
+//                    conObj.put("circuit_id", circuitId);
+//                    if(combi1.getGreenIn() == ng || (combi1.getGreenOut() == ng && combi1.getCombinator().isOutputOnly())) greenIn.add(conObj);
+//                    else if(combi1.getRedIn() == ng || (combi1.getRedOut() == ng && combi1.getCombinator().isOutputOnly())) redIn.add(conObj);
+//                    else if(combi1.getGreenOut() == ng) greenOut.add(conObj);
+//                    else if(combi1.getRedOut() == ng) redOut.add(conObj);
+//                    else throw new RuntimeException("???");
+//                }
+//            }
+//        }
 
         JSONObject blueprint = new JSONObject();
         blueprint.put("icons", new JSONArray());

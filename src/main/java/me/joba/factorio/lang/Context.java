@@ -15,6 +15,8 @@ public class Context {
     private Stack<Symbol> tempVariables;
     private Stack<ScopedContext> scopeStack;
     private ScopedContext currentScope;
+    private Stack<ConditionContext> conditionContexts;
+    private ConditionContext conditionContext;
 
     private class ScopedContext {
         private int symbolIndex = 0;
@@ -25,15 +27,27 @@ public class Context {
         private Set<FactorioSignal> usedBindings = new HashSet<>();
 
         public ScopedContext() {
-            this.expressionContext = new CombinatorGroup(null, new NetworkGroup());
+            this.expressionContext = new CombinatorGroup(internalExpressionGroup, new NetworkGroup());
             expressionContext.getNetworks().add(internalExpressionGroup);
         }
 
         public CombinatorGroup startExpressionContext() {
             this.internalExpressionGroup = new NetworkGroup();
-            this.expressionContext = new CombinatorGroup(null, new NetworkGroup());
-            expressionContext.getNetworks().add(internalExpressionGroup);
+            this.expressionContext = new CombinatorGroup(internalExpressionGroup, new NetworkGroup());
             return expressionContext;
+        }
+    }
+
+    private class ConditionContext {
+        private Set<String> assignedIf = new HashSet<>();
+        private Set<String> assignedElse = new HashSet<>();
+
+        public Set<String> getAssignedIf() {
+            return assignedIf;
+        }
+
+        public Set<String> getAssignedElse() {
+            return assignedElse;
         }
     }
 
@@ -44,6 +58,8 @@ public class Context {
         scopeStack = new Stack<>();
         freeBindings = new HashSet<>();
         freeBindings.addAll(Arrays.asList(FactorioSignal.values()));
+        conditionContexts = new Stack<>();
+        conditionContext = new ConditionContext();
     }
 
     public void pushTempVariable(Symbol var) {
@@ -57,7 +73,7 @@ public class Context {
     }
 
     public Variable createBoundVariable(VarType type, FactorioSignal signal) {
-        var var = new AnonymousVariable(type, variableIdCounter++, signal, getCurrentNetworkGroup());
+        var var = new AnonymousVariable(type, variableIdCounter++, signal);
         tempVariables.push(var);
         return var;
     }
@@ -67,7 +83,7 @@ public class Context {
     }
 
     public Variable createNamedVariable(String name, VarType type, FactorioSignal signal, CombinatorGroup producer) {
-        var var = new NamedVariable(type, variableIdCounter++, signal, producer.getOutput(), producer);
+        var var = new NamedVariable(type, variableIdCounter++, signal, producer);
         vars.put(name, var);
         currentScope.createdVariables.add(name);
         return var;
@@ -83,6 +99,19 @@ public class Context {
 
     public CombinatorGroup getExpressionContext() {
         return currentScope.expressionContext;
+    }
+
+    public void enterIf() {
+        conditionContexts.push(conditionContext);
+        conditionContext = new ConditionContext();
+    }
+
+    public void leaveIf() {
+        conditionContext = conditionContexts.pop();
+    }
+
+    public ConditionContext getConditionContext() {
+        return conditionContext;
     }
 
     public void enterScope() {

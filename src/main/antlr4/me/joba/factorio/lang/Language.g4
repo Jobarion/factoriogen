@@ -64,6 +64,6 @@ NEQ: '!=';
 
 NETWORK_IN: 'IN';
 
-WS : [ \t]+ -> skip ;
+WS : [ \t\n\r]+ -> skip ;
 WS_OPT: (' ' | '\t')+;
 
