@@ -2,6 +2,7 @@
 package me.joba.factorio.lang;
 
 import me.joba.factorio.Accessor;
+import me.joba.factorio.ConnectedCombinator;
 import me.joba.factorio.NetworkGroup;
 
 public abstract class Variable extends Symbol {
@@ -40,5 +41,5 @@ public abstract class Variable extends Symbol {
         return Accessor.signal(getSignal().ordinal());
     }
 
-    public abstract NetworkGroup createVariableAccessor();
+    public abstract ConnectedCombinator createVariableAccessor();
 }

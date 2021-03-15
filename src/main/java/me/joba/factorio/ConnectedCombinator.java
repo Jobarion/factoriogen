@@ -2,10 +2,17 @@ package me.joba.factorio;
 
 public class ConnectedCombinator {
 
+    private static int entityIdCounter = 0;
+
     private Combinator combinator;
     private NetworkGroup redIn, greenIn;
     private NetworkGroup redOut, greenOut;
     private int entityId;
+
+    public ConnectedCombinator(Combinator combinator) {
+        this.combinator = combinator;
+        this.entityId = entityIdCounter++;
+    }
 
     public ConnectedCombinator(int entityId, Combinator combinator) {
         this.combinator = combinator;

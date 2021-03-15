@@ -1,5 +1,6 @@
 package me.joba.factorio.lang;
 
+import me.joba.factorio.CombinatorGroup;
 import me.joba.factorio.NetworkGroup;
 
 import java.util.*;
@@ -18,9 +19,22 @@ public class Context {
     private class ScopedContext {
         private int symbolIndex = 0;
         private int expressionDepth = 0;
-        private NetworkGroup expressionNetworkGroup = new NetworkGroup();
+        private NetworkGroup internalExpressionGroup = new NetworkGroup();
+        private CombinatorGroup expressionContext;
         private Set<String> createdVariables = new HashSet<>();
         private Set<FactorioSignal> usedBindings = new HashSet<>();
+
+        public ScopedContext() {
+            this.expressionContext = new CombinatorGroup(null, new NetworkGroup());
+            expressionContext.getNetworks().add(internalExpressionGroup);
+        }
+
+        public CombinatorGroup startExpressionContext() {
+            this.internalExpressionGroup = new NetworkGroup();
+            this.expressionContext = new CombinatorGroup(null, new NetworkGroup());
+            expressionContext.getNetworks().add(internalExpressionGroup);
+            return expressionContext;
+        }
     }
 
     public Context() {
@@ -37,13 +51,13 @@ public class Context {
     }
 
     public Variable createTempVariable(VarType type) {
-        var var = new Variable(VarType.UNKNOWN, variableIdCounter++);
+        var var = new AnonymousVariable(VarType.UNKNOWN, variableIdCounter++);
         tempVariables.push(var);
         return var;
     }
 
     public Variable createBoundVariable(VarType type, FactorioSignal signal) {
-        var var = new Variable(type, variableIdCounter++, signal, getCurrentNetworkGroup());
+        var var = new AnonymousVariable(type, variableIdCounter++, signal, getCurrentNetworkGroup());
         tempVariables.push(var);
         return var;
     }
@@ -52,23 +66,23 @@ public class Context {
         return tempVariables.pop();
     }
 
-    public Variable createNamedVariable(String name, VarType type) {
-        var var =  vars.get(name);
-        if(var != null) return var;
-        var = new Variable(type, variableIdCounter++);
+    public Variable createNamedVariable(String name, VarType type, FactorioSignal signal, CombinatorGroup producer) {
+        var var = new NamedVariable(type, variableIdCounter++, signal, producer.getOutput(), producer);
         vars.put(name, var);
         currentScope.createdVariables.add(name);
         return var;
     }
 
     public Variable getNamedVariable(String name) {
-        var var =  vars.get(name);
-        if(var == null) throw new RuntimeException("Variable " + name + " is not defined");
-        return var;
+        return vars.get(name);
     }
 
-    public void startNewContext() {
-        currentScope.expressionNetworkGroup = new NetworkGroup();
+    public void startExpressionContext() {
+        currentScope.startExpressionContext();
+    }
+
+    public CombinatorGroup getExpressionContext() {
+        return currentScope.expressionContext;
     }
 
     public void enterScope() {
@@ -94,6 +108,6 @@ public class Context {
     }
 
     public NetworkGroup getCurrentNetworkGroup() {
-        return currentScope.expressionNetworkGroup;
+        return currentScope.internalExpressionGroup;
     }
 }

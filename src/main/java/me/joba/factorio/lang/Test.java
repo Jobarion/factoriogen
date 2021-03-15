@@ -9,20 +9,22 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class Test {
 
-    private static final String TEST = "{ a = 1; b = a + 2; c = a + b; }";
+    private static final String TEST = "{ a = 1; b = a + 2; c = a + b; b = b / 2; d = a + b + c; }";
     private static Context variableContext = new Context();
-    private static int entityIdCounter = 0;
 
     public static void main(String[] args) throws IOException {
         InputStream stream = new ByteArrayInputStream(TEST.getBytes(StandardCharsets.UTF_8));
         LanguageLexer lexer = new LanguageLexer(CharStreams.fromString(TEST));
         LanguageParser parser = new LanguageParser(new CommonTokenStream(lexer));
-        List<ConnectedCombinator> combinators = new ArrayList<>();
-        List<NetworkGroup> networkGroups = new ArrayList<>();
+        List<CombinatorGroup> generatedGroups = new ArrayList<>();
+//        List<ConnectedCombinator> combinators = new ArrayList<>();
+//        List<NetworkGroup> networkGroups = new ArrayList<>();
 
         parser.addParseListener(new LanguageBaseListener() {
 
@@ -37,7 +39,7 @@ public class Test {
 
             @Override
             public void enterExpr(LanguageParser.ExprContext ctx) {
-                System.out.println("Enter " + ctx.getText());
+
             }
 
             @Override
@@ -51,15 +53,20 @@ public class Test {
             }
 
             @Override
+            public void enterCompleteExpression(LanguageParser.CompleteExpressionContext ctx) {
+                variableContext.startExpressionContext();
+            }
+
+            @Override
             public void exitCompleteExpression(LanguageParser.CompleteExpressionContext ctx) {
-                networkGroups.add(variableContext.getCurrentNetworkGroup());
-                variableContext.startNewContext();
+                generatedGroups.add(variableContext.getExpressionContext());
+                variableContext.getExpressionContext().setCorrespondingCode(ctx.getText());
             }
 
             @Override
             public void exitExpr(LanguageParser.ExprContext ctx) {
-                System.out.println("Exit " + ctx.getText());
                 if(ctx.left != null) {
+                    System.out.println("Exit " + ctx.getText());
                     var rightVar = variableContext.popTempVariable();
                     var leftVar = variableContext.popTempVariable();
                     var op = switch (ctx.op.getText()) {
@@ -85,8 +92,6 @@ public class Test {
                         }
                     }
 
-                    System.out.println(leftVar + ctx.op.getText() + rightVar);
-
                     if(!leftVar.isBound()) {
                         leftVar.bind(variableContext.getFreeSymbol(), variableContext.getCurrentNetworkGroup());
                     }
@@ -101,46 +106,54 @@ public class Test {
                     variableContext.createBoundVariable(VarType.INT, outSymbol);
                     var cmb = ArithmeticCombinator.withLeftRight(leftVar.toAccessor(variableContext),  rightVar.toAccessor(variableContext), outSymbol.ordinal(), op);
 
-                    var connected = new ConnectedCombinator(entityIdCounter++, cmb);
+                    var connected = new ConnectedCombinator(cmb);
                     connected.setGreenIn(variableContext.getCurrentNetworkGroup());
                     connected.setGreenOut(variableContext.getCurrentNetworkGroup());
-                    combinators.add(connected);
+                    variableContext.getExpressionContext().getCombinators().add(connected);
                 }
                 else if(ctx.numberLit != null) {
                     int val = Integer.parseInt(ctx.getText());
                     variableContext.pushTempVariable(new Constant(val));
                 }
                 else if(ctx.var != null) {
-                    variableContext.pushTempVariable(variableContext.getNamedVariable(ctx.var.getText()));
+                    var named = variableContext.getNamedVariable(ctx.var.getText());
+                    if(named == null) throw new RuntimeException("Variable " + ctx.var.getText() + " is not defined");
+                    variableContext.pushTempVariable(named);
+                    var accessor = named.createVariableAccessor();
+                    accessor.setGreenOut(variableContext.getCurrentNetworkGroup());
+                    variableContext.getExpressionContext().getCombinators().add(accessor);
                 }
-//                else if(ctx
-
             }
 
             @Override
             public void exitAssignment(LanguageParser.AssignmentContext ctx) {
                 var value = variableContext.popTempVariable();
-                var named = variableContext.createNamedVariable(ctx.var.getText(), value.getType());
 
-                if(!named.isBound()) {
-                    named.bind(variableContext.getFreeSymbol(), variableContext.getCurrentNetworkGroup());
+                FactorioSignal variableSymbol;
+                if(variableContext.getNamedVariable(ctx.var.getText()) != null) {
+                    variableSymbol = variableContext.getNamedVariable(ctx.var.getText()).getSignal();
                 }
                 else {
-                    named.bind(named.getSignal(), variableContext.getCurrentNetworkGroup());
+                    variableSymbol = variableContext.getFreeSymbol();
                 }
+
                 ConnectedCombinator connected;
                 if(value instanceof Constant) {
-                    Combinator cmb = Combinator.constant(Signal.singleValue(named.getSignal().ordinal(), ((Constant) value).getVal()));
-                    connected = new ConnectedCombinator(entityIdCounter++, cmb);
-                    connected.setGreenOut(variableContext.getCurrentNetworkGroup());
+                    Combinator cmb = Combinator.constant(Signal.singleValue(variableSymbol.ordinal(), ((Constant) value).getVal()));
+                    connected = new ConnectedCombinator(cmb);
+                    connected.setGreenOut(variableContext.getExpressionContext().getOutput());
+                    variableContext.getExpressionContext().getCombinators().add(connected);
                 }
                 else {
-                    Combinator cmb = ArithmeticCombinator.withLeftRight(value.toAccessor(variableContext), Accessor.constant(0), named.getSignal().ordinal(), ArithmeticCombinator.ADD);
-                    connected = new ConnectedCombinator(entityIdCounter++, cmb);
-                    connected.setGreenIn(value.getOutputGroup());
-                    connected.setGreenOut(variableContext.getCurrentNetworkGroup());
+                    Combinator cmb = ArithmeticCombinator.withLeftRight(Accessor.signal(value.getSignal().ordinal()), Accessor.constant(0), variableSymbol.ordinal(), ArithmeticCombinator.ADD);
+                    connected = new ConnectedCombinator(cmb);
+                    connected.setGreenOut(variableContext.getExpressionContext().getOutput());
+                    connected.setGreenIn(variableContext.getCurrentNetworkGroup());
+                    variableContext.getExpressionContext().getCombinators().add(connected);
                 }
-                combinators.add(connected);
+                var named= variableContext.createNamedVariable(ctx.var.getText(), value.getType(), variableSymbol, variableContext.getExpressionContext());
+
+                System.out.println("Creating named " + ctx.var.getText() + " = " + named);
             }
 
             @Override
@@ -150,17 +163,28 @@ public class Test {
 
             @Override
             public void exitBlock(LanguageParser.BlockContext ctx) {
-                networkGroups.add(variableContext.getCurrentNetworkGroup());
                 variableContext.leaveScope();
             }
         });
         parser.block();
         Signal.SIGNAL_TYPES.set(FactorioSignal.values().length);
 
-        System.out.println(combinators);
-        System.out.println(networkGroups);
+        System.out.println(generatedGroups);
 
-        System.out.println(Simulator.writeBlueprint(combinators, networkGroups));
+        var combinators = generatedGroups.stream()
+                .map(CombinatorGroup::getCombinators)
+                .flatMap(Collection::stream)
+                .collect(Collectors.toList());
+
+        var networks = generatedGroups.stream()
+                .map(CombinatorGroup::getNetworks)
+                .flatMap(Collection::stream)
+                .collect(Collectors.toList());
+
+        System.out.println(combinators);
+        System.out.println(networks);
+
+        System.out.println(Simulator.writeBlueprint(combinators, networks));
 
 //        while(true) {
 //            networkGroups.forEach(NetworkGroup::aggregateInputs);
