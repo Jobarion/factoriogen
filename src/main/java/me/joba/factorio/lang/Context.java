@@ -7,9 +7,7 @@ import java.util.*;
 
 public class Context {
 
-    private int maxSymbol = 0;
     private int variableIdCounter = 0;
-
     private Set<FactorioSignal> freeBindings;
     private Map<String, Variable> vars;
     private Stack<Symbol> tempVariables;
@@ -19,8 +17,6 @@ public class Context {
     private ConditionContext conditionContext;
 
     private class ScopedContext {
-        private int symbolIndex = 0;
-        private int expressionDepth = 0;
         private NetworkGroup internalExpressionGroup = new NetworkGroup();
         private CombinatorGroup expressionContext;
         private Set<String> createdVariables = new HashSet<>();
@@ -38,16 +34,32 @@ public class Context {
         }
     }
 
-    private class ConditionContext {
-        private Set<String> assignedIf = new HashSet<>();
-        private Set<String> assignedElse = new HashSet<>();
+    public class ConditionContext {
 
-        public Set<String> getAssignedIf() {
+        private final Map<String, Variable> originalBindings = new HashMap<>();
+        private final Map<String, Variable> assignedIf = new HashMap<>();
+        private final Map<String, Variable> assignedElse = new HashMap<>();
+
+        private Map<String, Variable> active = assignedIf;
+
+        public Map<String, Variable> getAssignedIf() {
             return assignedIf;
         }
 
-        public Set<String> getAssignedElse() {
+        public Map<String, Variable> getAssignedElse() {
             return assignedElse;
+        }
+
+        public Map<String, Variable> getOriginalBindings() {
+            return originalBindings;
+        }
+
+        public void enterElse() {
+            active = assignedElse;
+        }
+
+        public void registerAssignment(String name, Variable var) {
+            active.put(name, var);
         }
     }
 
@@ -84,8 +96,13 @@ public class Context {
 
     public Variable createNamedVariable(String name, VarType type, FactorioSignal signal, CombinatorGroup producer) {
         var var = new NamedVariable(type, variableIdCounter++, signal, producer);
-        vars.put(name, var);
-        currentScope.createdVariables.add(name);
+        var previous = vars.put(name, var);
+        if(previous == null) {
+            currentScope.createdVariables.add(name);
+        }
+        else {
+            conditionContext.originalBindings.putIfAbsent(name, previous);
+        }
         return var;
     }
 
@@ -130,10 +147,6 @@ public class Context {
         freeBindings.remove(signal);
         currentScope.usedBindings.add(signal);
         return signal;
-    }
-
-    public int getExpressionDepth() {
-        return currentScope.expressionDepth;
     }
 
     public NetworkGroup getCurrentNetworkGroup() {

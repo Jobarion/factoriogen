@@ -15,60 +15,270 @@ public class Test {
 
     private static final String TEST = "{\n" +
             "  a = 1;\n" +
-            "  b = a + 2;\n" +
-            "  c = a + b;\n" +
-            "  b = b / 2;\n" +
-            "  d = a + b + c;\n" +
-            "  d = d + 1;\n" +
+            "  if(a < 2) {\n" +
+            "    a = 2;\n" +
+            "  };\n" +
+            "  else {\n" +
+            "    b = 3;\n" +
+            "  };\n" +
+            "  b = a;\n" +
             "}";
-    private static Context variableContext = new Context();
+    private static Context context = new Context();
 
-    public static void main(String[] args) throws IOException {
-        InputStream stream = new ByteArrayInputStream(TEST.getBytes(StandardCharsets.UTF_8));
+    public static void main(String[] args) {
         LanguageLexer lexer = new LanguageLexer(CharStreams.fromString(TEST));
         LanguageParser parser = new LanguageParser(new CommonTokenStream(lexer));
         List<CombinatorGroup> generatedGroups = new ArrayList<>();
         Set<VariableAccessor> accessors = new HashSet<>();
-//        List<ConnectedCombinator> combinators = new ArrayList<>();
-//        List<NetworkGroup> networkGroups = new ArrayList<>();
 
         parser.addParseListener(new LanguageBaseListener() {
 
             @Override
-            public void exitIfExpr(LanguageParser.IfExprContext ctx) {
+            public void enterElseExpr(LanguageParser.ElseExprContext ctx) {
+                context.getConditionContext().enterElse();
+            }
 
+            @Override
+            public void enterIfExpr(LanguageParser.IfExprContext ctx) {
+                context.enterIf();
+            }
+
+            @Override
+            public void exitIfExpr(LanguageParser.IfExprContext ctx) {
+                System.out.println("Assigned in if: " + context.getConditionContext().getAssignedIf());
+                System.out.println("Assigned in else: " + context.getConditionContext().getAssignedElse());
+
+                var condition = context.popTempVariable();
+
+                var assignedIf = context.getConditionContext().getAssignedIf();
+                var assignedElse = context.getConditionContext().getAssignedElse();
+                var assignedOriginal = context.getConditionContext().getOriginalBindings();
+
+                Set<String> allVariables = new HashSet<>();
+                allVariables.addAll(assignedIf.keySet());
+                allVariables.addAll(assignedElse.keySet());
+
+                if(allVariables.isEmpty()) {
+                    context.leaveIf();
+                    return;
+                }
+
+                ConnectedCombinator connected;
+                if(condition instanceof Constant) {
+                    Combinator cmb = Combinator.constant(Signal.singleValue(condition.getSignal().ordinal(), ((Constant) condition).getVal()));
+                    connected = new ConnectedCombinator(cmb);
+                    connected.setRedOut(context.getExpressionContext().getOutput());
+                    context.getExpressionContext().getCombinators().add(connected);
+                }
+                else {
+                    Combinator cmb = ArithmeticCombinator.copying(condition.getSignal());
+                    connected = new ConnectedCombinator(cmb);
+                    connected.setRedOut(context.getExpressionContext().getOutput());
+                    connected.setGreenIn(context.getCurrentNetworkGroup());
+                    context.getExpressionContext().getCombinators().add(connected);
+                }
+
+                var ifCmb = DeciderCombinator.withLeftRight(Accessor.signal(condition.getSignal()), Accessor.constant(1), Writer.everything(false), DeciderCombinator.EQ);
+                var elseCmb = DeciderCombinator.withLeftRight(Accessor.signal(condition.getSignal()), Accessor.constant(0), Writer.everything(false), DeciderCombinator.EQ);
+
+                var ifConnected = new ConnectedCombinator(ifCmb);
+                var elseConnected = new ConnectedCombinator(elseCmb);
+
+                ifConnected.setRedIn(context.getExpressionContext().getOutput());
+                elseConnected.setRedIn(context.getExpressionContext().getOutput());
+
+                NetworkGroup outputNetwork = new NetworkGroup();
+
+                CombinatorGroup ifGroup = new CombinatorGroup(new NetworkGroup(), outputNetwork);
+                CombinatorGroup elseGroup = new CombinatorGroup(new NetworkGroup(), outputNetwork);
+
+                ifGroup.getCombinators().add(ifConnected);
+                elseGroup.getCombinators().add(elseConnected);
+
+                CombinatorGroup combinedGroup = new CombinatorGroup(outputNetwork, new NetworkGroup());
+
+                var passThroughCmb = ArithmeticCombinator.withEach(Accessor.constant(0), ArithmeticCombinator.ADD);
+                var removeSignalCmb = ArithmeticCombinator.withLeftRight(Accessor.signal(condition.getSignal()), Accessor.constant(-1), condition.getSignal().ordinal(), ArithmeticCombinator.MUL);
+
+                var passThroughConnected = new ConnectedCombinator(passThroughCmb);
+                var removeSignalConnected = new ConnectedCombinator(removeSignalCmb);
+
+                passThroughConnected.setGreenIn(combinedGroup.getInput());
+                removeSignalConnected.setGreenIn(combinedGroup.getInput());
+                passThroughConnected.setGreenOut(combinedGroup.getOutput());
+                removeSignalConnected.setGreenOut(combinedGroup.getOutput());
+
+                combinedGroup.getCombinators().add(passThroughConnected);
+                combinedGroup.getCombinators().add(removeSignalConnected);
+
+                generatedGroups.add(ifGroup);
+                generatedGroups.add(elseGroup);
+                generatedGroups.add(combinedGroup);
+
+                for(String name : allVariables) {
+                    var original = assignedOriginal.get(name);
+                    if(assignedIf.containsKey(name)) {
+                        assignedIf.get(name).createVariableAccessor().access().accept(ifGroup);
+                    }
+                    else {
+                        original.createVariableAccessor().access().accept(ifGroup);
+                    }
+                    if(assignedElse.containsKey(name)) {
+                        assignedElse.get(name).createVariableAccessor().access().accept(elseGroup);
+                    }
+                    else {
+                        original.createVariableAccessor().access().accept(elseGroup);
+                    }
+                    context.createNamedVariable(name, original.getType(), original.getSignal(), combinedGroup);
+                }
+
+                context.leaveIf();
             }
 
             @Override
             public void enterCompleteExpression(LanguageParser.CompleteExpressionContext ctx) {
-                variableContext.startExpressionContext();
+                context.startExpressionContext();
             }
 
             @Override
             public void exitCompleteExpression(LanguageParser.CompleteExpressionContext ctx) {
-                generatedGroups.add(variableContext.getExpressionContext());
-                variableContext.getExpressionContext().setCorrespondingCode(ctx.getText());
+                generatedGroups.add(context.getExpressionContext());
+                context.getExpressionContext().setCorrespondingCode(ctx.getText());
+            }
+
+            @Override
+            public void exitBoolExpr(LanguageParser.BoolExprContext ctx) {
+                if(ctx.leftComponent != null) {
+                    System.out.println("Exit " + ctx.getText());
+                    var rightVar = context.popTempVariable();
+                    var leftVar = context.popTempVariable();
+                    var op = DeciderCombinator.getOperation(ctx.op.getText());
+
+                    if(leftVar.getType() != VarType.INT) throw new RuntimeException(leftVar + " is not of type boolean");
+                    if(rightVar.getType() != VarType.INT) throw new RuntimeException(leftVar + " is not of type boolean");
+
+                    if(leftVar instanceof Constant) {
+                        if(rightVar instanceof Constant) {
+                            //Calculate constant expressions immediately
+                            boolean boolVal = op.test(((Constant) leftVar).getVal(), ((Constant) rightVar).getVal());
+                            System.out.println("Folded const expr '" + leftVar + ctx.op.getText() + rightVar + " -> " + boolVal);
+                            context.pushTempVariable(new Constant(boolVal ? 1 : 0, VarType.BOOLEAN));
+                            return;
+                        }
+                        else {
+                            //Constants are only allowed on the right side
+                            var tmp = rightVar;
+                            rightVar = leftVar;
+                            leftVar = tmp;
+                        }
+                    }
+                    if(!leftVar.isBound()) {
+                        leftVar.bind(context.getFreeSymbol());
+                    }
+                    if(!rightVar.isBound()) {
+                        rightVar.bind(context.getFreeSymbol());
+                    }
+
+                    System.out.println(leftVar + ctx.op.getText() + rightVar);
+
+                    var outSymbol = context.getFreeSymbol();
+
+                    context.createBoundVariable(VarType.BOOLEAN, outSymbol);
+                    var cmb = DeciderCombinator.withLeftRight(leftVar.toAccessor(context),  rightVar.toAccessor(context), Writer.constant(outSymbol.ordinal(), 1), op);
+
+                    var connected = new ConnectedCombinator(cmb);
+                    connected.setGreenIn(context.getCurrentNetworkGroup());
+                    connected.setGreenOut(context.getCurrentNetworkGroup());
+                    context.getExpressionContext().getCombinators().add(connected);
+                }
+                else if(ctx.left != null) {System.out.println("Exit " + ctx.getText());
+                    var rightVar = context.popTempVariable();
+                    var leftVar = context.popTempVariable();
+                    var op = switch(ctx.op.getText()) {
+                        case "&&" -> ArithmeticCombinator.AND;
+                        case "||" -> ArithmeticCombinator.OR;
+                        case "^" -> ArithmeticCombinator.XOR;
+                        default -> throw new UnsupportedOperationException("Unknown operation '" + ctx.op.getText() + "'");
+                    };
+
+                    if(leftVar.getType() != VarType.BOOLEAN) throw new RuntimeException(leftVar + " is not of type boolean");
+                    if(rightVar.getType() != VarType.BOOLEAN) throw new RuntimeException(leftVar + " is not of type boolean");
+
+                    if(leftVar instanceof Constant) {
+                        if(rightVar instanceof Constant) {
+                            //Calculate constant expressions immediately
+                            int newVal = op.applyAsInt(((Constant) leftVar).getVal(), ((Constant) rightVar).getVal());
+                            System.out.println("Folded const expr '" + leftVar + ctx.op.getText() + rightVar + " -> " + newVal);
+                            context.pushTempVariable(new Constant(newVal, VarType.BOOLEAN));
+                            return;
+                        }
+                        else {
+                            //Constants are only allowed on the right side
+                            var tmp = rightVar;
+                            rightVar = leftVar;
+                            leftVar = tmp;
+                        }
+                    }
+                    if(!leftVar.isBound()) {
+                        leftVar.bind(context.getFreeSymbol());
+                    }
+                    if(!rightVar.isBound()) {
+                        rightVar.bind(context.getFreeSymbol());
+                    }
+
+                    System.out.println(leftVar + ctx.op.getText() + rightVar);
+
+                    var outSymbol = context.getFreeSymbol();
+
+                    context.createBoundVariable(VarType.BOOLEAN, outSymbol);
+                    var cmb = ArithmeticCombinator.withLeftRight(leftVar.toAccessor(context),  rightVar.toAccessor(context), outSymbol.ordinal(), op);
+
+                    var connected = new ConnectedCombinator(cmb);
+                    connected.setGreenIn(context.getCurrentNetworkGroup());
+                    connected.setGreenOut(context.getCurrentNetworkGroup());
+                    context.getExpressionContext().getCombinators().add(connected);
+                }
+                else if(ctx.negated != null) {
+                    System.out.println("Exit " + ctx.getText());
+                    var toNegate = context.popTempVariable();
+
+                    if(toNegate.getType() != VarType.BOOLEAN) throw new RuntimeException(toNegate + " is not of type boolean");
+
+                    if(toNegate instanceof Constant) {
+                        //Calculate constant expressions immediately
+                        int val = ((Constant) toNegate).getVal();
+                        context.pushTempVariable(new Constant(val == 0 ? 1 : 0, VarType.BOOLEAN));
+                        return;
+                    }
+                    if(!toNegate.isBound()) {
+                        toNegate.bind(context.getFreeSymbol());
+                    }
+
+                    var outSymbol = context.getFreeSymbol();
+
+                    context.createBoundVariable(VarType.BOOLEAN, outSymbol);
+                    var cmb = DeciderCombinator.withLeftRight(toNegate.toAccessor(context),  Accessor.constant(0), Writer.constant(outSymbol.ordinal(), 1), DeciderCombinator.EQ);
+
+                    var connected = new ConnectedCombinator(cmb);
+                    connected.setGreenIn(context.getCurrentNetworkGroup());
+                    connected.setGreenOut(context.getCurrentNetworkGroup());
+                    context.getExpressionContext().getCombinators().add(connected);
+                }
             }
 
             @Override
             public void exitExpr(LanguageParser.ExprContext ctx) {
                 if(ctx.left != null) {
                     System.out.println("Exit " + ctx.getText());
-                    var rightVar = variableContext.popTempVariable();
-                    var leftVar = variableContext.popTempVariable();
-                    var op = switch (ctx.op.getText()) {
-                        case "+" -> ArithmeticCombinator.ADD;
-                        case "-" -> ArithmeticCombinator.SUB;
-                        case "*" -> ArithmeticCombinator.MUL;
-                        case "/" -> ArithmeticCombinator.DIV;
-                        default -> throw new UnsupportedOperationException("Unknown op " + ctx.op.getText());
-                    };
+                    var rightVar = context.popTempVariable();
+                    var leftVar = context.popTempVariable();
+                    var op = ArithmeticCombinator.getOperation(ctx.op.getText());
                     if(leftVar instanceof Constant) {
                         if(rightVar instanceof Constant) {
                             //Calculate constant expressions immediately
                             int newVal = op.applyAsInt(((Constant) leftVar).getVal(), ((Constant) rightVar).getVal());
                             System.out.println("Folded const expr '" + leftVar + ctx.op.getText() + rightVar + " -> " + newVal);
-                            variableContext.pushTempVariable(new Constant(newVal));
+                            context.pushTempVariable(new Constant(newVal));
                             return;
                         }
                         else {
@@ -80,77 +290,80 @@ public class Test {
                     }
 
                     if(!leftVar.isBound()) {
-                        leftVar.bind(variableContext.getFreeSymbol());
+                        leftVar.bind(context.getFreeSymbol());
                     }
                     if(!rightVar.isBound()) {
-                        rightVar.bind(variableContext.getFreeSymbol());
+                        rightVar.bind(context.getFreeSymbol());
                     }
 
                     System.out.println(leftVar + ctx.op.getText() + rightVar);
 
-                    var outSymbol = variableContext.getFreeSymbol();
+                    var outSymbol = context.getFreeSymbol();
 
-                    variableContext.createBoundVariable(VarType.INT, outSymbol);
-                    var cmb = ArithmeticCombinator.withLeftRight(leftVar.toAccessor(variableContext),  rightVar.toAccessor(variableContext), outSymbol.ordinal(), op);
+                    context.createBoundVariable(VarType.INT, outSymbol);
+                    var cmb = ArithmeticCombinator.withLeftRight(leftVar.toAccessor(context),  rightVar.toAccessor(context), outSymbol.ordinal(), op);
 
                     var connected = new ConnectedCombinator(cmb);
-                    connected.setGreenIn(variableContext.getCurrentNetworkGroup());
-                    connected.setGreenOut(variableContext.getCurrentNetworkGroup());
-                    variableContext.getExpressionContext().getCombinators().add(connected);
+                    connected.setGreenIn(context.getCurrentNetworkGroup());
+                    connected.setGreenOut(context.getCurrentNetworkGroup());
+                    context.getExpressionContext().getCombinators().add(connected);
                 }
                 else if(ctx.numberLit != null) {
                     int val = Integer.parseInt(ctx.getText());
-                    variableContext.pushTempVariable(new Constant(val));
+                    context.pushTempVariable(new Constant(val));
                 }
                 else if(ctx.var != null) {
-                    var named = variableContext.getNamedVariable(ctx.var.getText());
+                    var named = context.getNamedVariable(ctx.var.getText());
                     if(named == null) throw new RuntimeException("Variable " + ctx.var.getText() + " is not defined");
-                    variableContext.pushTempVariable(named);
+                    context.pushTempVariable(named);
                     var accessor = named.createVariableAccessor();
                     accessors.add(accessor);
-                    accessor.access().accept(variableContext.getExpressionContext());
+                    accessor.access().accept(context.getExpressionContext());
                 }
             }
 
             @Override
             public void exitAssignment(LanguageParser.AssignmentContext ctx) {
-                var value = variableContext.popTempVariable();
+                var value = context.popTempVariable();
+                String varName = ctx.var.getText();
 
                 FactorioSignal variableSymbol;
-                if(variableContext.getNamedVariable(ctx.var.getText()) != null) {
-                    variableSymbol = variableContext.getNamedVariable(ctx.var.getText()).getSignal();
+                if(context.getNamedVariable(varName) != null) {
+                    var existing = context.getNamedVariable(varName);
+                    //We don't care about new variables inside our if block, they go out of scope anyway
+                    context.getConditionContext().registerAssignment(varName, existing);
+                    variableSymbol = context.getNamedVariable(varName).getSignal();
                 }
                 else {
-                    variableSymbol = variableContext.getFreeSymbol();
+                    variableSymbol = context.getFreeSymbol();
                 }
 
                 ConnectedCombinator connected;
                 if(value instanceof Constant) {
                     Combinator cmb = Combinator.constant(Signal.singleValue(variableSymbol.ordinal(), ((Constant) value).getVal()));
                     connected = new ConnectedCombinator(cmb);
-                    connected.setGreenOut(variableContext.getExpressionContext().getOutput());
-                    variableContext.getExpressionContext().getCombinators().add(connected);
+                    connected.setGreenOut(context.getExpressionContext().getOutput());
+                    context.getExpressionContext().getCombinators().add(connected);
                 }
                 else {
                     Combinator cmb = ArithmeticCombinator.withLeftRight(Accessor.signal(value.getSignal().ordinal()), Accessor.constant(0), variableSymbol.ordinal(), ArithmeticCombinator.ADD);
                     connected = new ConnectedCombinator(cmb);
-                    connected.setGreenOut(variableContext.getExpressionContext().getOutput());
-                    connected.setGreenIn(variableContext.getCurrentNetworkGroup());
-                    variableContext.getExpressionContext().getCombinators().add(connected);
+                    connected.setGreenOut(context.getExpressionContext().getOutput());
+                    connected.setGreenIn(context.getCurrentNetworkGroup());
+                    context.getExpressionContext().getCombinators().add(connected);
                 }
-                var named= variableContext.createNamedVariable(ctx.var.getText(), value.getType(), variableSymbol, variableContext.getExpressionContext());
-
-                System.out.println("Creating named " + ctx.var.getText() + " = " + named);
+                var named= context.createNamedVariable(varName, value.getType(), variableSymbol, context.getExpressionContext());
+                System.out.println("Creating named " + varName + " = " + named);
             }
 
             @Override
             public void enterBlock(LanguageParser.BlockContext ctx) {
-                variableContext.enterScope();
+                context.enterScope();
             }
 
             @Override
             public void exitBlock(LanguageParser.BlockContext ctx) {
-                variableContext.leaveScope();
+                context.leaveScope();
             }
         });
         parser.block();
@@ -174,16 +387,5 @@ public class Test {
         System.out.println(networks);
 
         System.out.println(Simulator.writeBlueprint(combinators, networks));
-
-//        while(true) {
-//            networkGroups.forEach(NetworkGroup::aggregateInputs);
-//            combinators.forEach(ConnectedCombinator::tick);
-//            networkGroups.forEach(ng -> System.out.println(Simulator.toString(ng.getState())));
-//        }
     }
-
-
-//    public static void generateExpr(LanguageParser.ExprContext expr) {
-//        expr.
-//    }
 }

@@ -5,9 +5,15 @@ import me.joba.factorio.Accessor;
 public class Constant extends Symbol {
 
     private final int val;
+    private final VarType type;
 
     public Constant(int val) {
+        this(val, VarType.INT);
+    }
+
+    public Constant(int val, VarType type) {
         this.val = val;
+        this.type = type;
     }
 
     public int getVal() {
@@ -26,6 +32,6 @@ public class Constant extends Symbol {
 
     @Override
     public VarType getType() {
-        return VarType.INT;
+        return type;
     }
 }

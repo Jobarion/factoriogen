@@ -16,19 +16,21 @@ expr
     | NETWORK_IN
     ;
 
-ifExpr: 'if' '(' ifCond=boolExpr ')' ifStatement=statement ('else' elseStatement=statement)?;
+ifExpr: 'if' '(' ifCond=boolExpr ')' ifStatement=statement ('else' elseStatement=elseExpr)?;
+elseExpr: statement;
+
 whileExpr: 'while' '(' loopCond=boolExpr ')' loopStatement=statement;
 
 boolExprComponent
-    : completeExpression
+    : expr
     | 'any(' anyExpr=completeExpression ')'
     | 'all(' allExpr=completeExpression ')';
 
 boolExpr
     : '(' boolExpr ')'
-    | NOT boolExpr
-    | boolExpr (AND | OR | XOR) boolExpr
-    | boolExprComponent (LT | GT | LEQ | GEQ | EQ | NEQ) boolExprComponent;
+    | NOT negated=boolExpr
+    | left=boolExpr op=(AND | OR | XOR) right=boolExpr
+    | leftComponent=boolExprComponent op=(LT | GT | LEQ | GEQ | EQ | NEQ) rightComponent=boolExprComponent;
 
 block: '{' blockStatement+ '}';
 

@@ -108,6 +108,17 @@ public interface LanguageListener extends ParseTreeListener {
 	void exitBlock(@NotNull LanguageParser.BlockContext ctx);
 
 	/**
+	 * Enter a parse tree produced by {@link LanguageParser#elseExpr}.
+	 * @param ctx the parse tree
+	 */
+	void enterElseExpr(@NotNull LanguageParser.ElseExprContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link LanguageParser#elseExpr}.
+	 * @param ctx the parse tree
+	 */
+	void exitElseExpr(@NotNull LanguageParser.ElseExprContext ctx);
+
+	/**
 	 * Enter a parse tree produced by {@link LanguageParser#boolExpr}.
 	 * @param ctx the parse tree
 	 */

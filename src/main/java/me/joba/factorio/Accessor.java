@@ -28,6 +28,10 @@ public interface Accessor {
         };
     }
 
+    static Accessor signal(FactorioSignal sid) {
+        return signal(sid.ordinal());
+    }
+
     static Accessor signal(int sid) {
         return new Accessor() {
             @Override
