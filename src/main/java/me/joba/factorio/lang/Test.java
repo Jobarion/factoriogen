@@ -4,25 +4,51 @@ import me.joba.factorio.*;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.stream.Collectors;
 
 public class Test {
 
-    private static final String TEST = "{\n" +
-            "  a = 1;\n" +
-            "  if(a < 2) {\n" +
-            "    a = 2;\n" +
+    private static final String TEST_INCORRECT = "{\n" +
+            "  a = 2;\n" +
+            "  b = 3;\n" +
+            "  if(b > 4) {\n" +
+            "    a = 1;\n" +
             "  };\n" +
             "  else {\n" +
-            "    b = 3;\n" +
+            "    a = a / 2;\n" +
+            "    b = a;\n" +
             "  };\n" +
-            "  b = a;\n" +
+            "  c = a + b;\n" +
             "}";
+
+
+    private static final String TEST_MINIMAL = "{\n" +
+            "  b = 4;\n" +
+            "  if(b > 4) {\n" +
+            "    b = 1;\n" +
+            "  };\n" +
+            "  else {\n" +
+            "    b = b / 2;\n" +
+            "  };\n" +
+            "  c = b;\n" +
+            "}";
+
+    private static final String TEST_ORIGINAL = "{\n" +
+            "  a = 3;\n" +
+            "  b = a * a - 1;\n" +
+            "  if(b > 4) {\n" +
+            "    a = 1;\n" +
+            "  };\n" +
+            "  else {\n" +
+            "    a = a / 2;\n" +
+            "    b = a;\n" +
+            "  };\n" +
+            "  c = a + b;\n" +
+            "}";
+
+    private static final String TEST = TEST_ORIGINAL;
+
     private static Context context = new Context();
 
     public static void main(String[] args) {
@@ -40,6 +66,7 @@ public class Test {
 
             @Override
             public void enterIfExpr(LanguageParser.IfExprContext ctx) {
+                context.startExpressionContext();
                 context.enterIf();
             }
 
@@ -84,13 +111,17 @@ public class Test {
                 var ifConnected = new ConnectedCombinator(ifCmb);
                 var elseConnected = new ConnectedCombinator(elseCmb);
 
-                ifConnected.setRedIn(context.getExpressionContext().getOutput());
-                elseConnected.setRedIn(context.getExpressionContext().getOutput());
-
                 NetworkGroup outputNetwork = new NetworkGroup();
 
                 CombinatorGroup ifGroup = new CombinatorGroup(new NetworkGroup(), outputNetwork);
                 CombinatorGroup elseGroup = new CombinatorGroup(new NetworkGroup(), outputNetwork);
+
+                ifConnected.setRedIn(context.getExpressionContext().getOutput());
+                ifConnected.setGreenIn(ifGroup.getInput());
+                ifConnected.setGreenOut(ifGroup.getOutput());
+                elseConnected.setRedIn(context.getExpressionContext().getOutput());
+                elseConnected.setGreenIn(elseGroup.getInput());
+                elseConnected.setGreenOut(elseGroup.getOutput());
 
                 ifGroup.getCombinators().add(ifConnected);
                 elseGroup.getCombinators().add(elseConnected);
@@ -117,22 +148,29 @@ public class Test {
 
                 for(String name : allVariables) {
                     var original = assignedOriginal.get(name);
+                    VariableAccessor ifAccessor;
                     if(assignedIf.containsKey(name)) {
-                        assignedIf.get(name).createVariableAccessor().access().accept(ifGroup);
+                        ifAccessor = assignedIf.get(name).createVariableAccessor();
                     }
                     else {
-                        original.createVariableAccessor().access().accept(ifGroup);
+                        ifAccessor = original.createVariableAccessor();
                     }
+                    VariableAccessor elseAccessor;
                     if(assignedElse.containsKey(name)) {
-                        assignedElse.get(name).createVariableAccessor().access().accept(elseGroup);
+                        elseAccessor = assignedElse.get(name).createVariableAccessor();
                     }
                     else {
-                        original.createVariableAccessor().access().accept(elseGroup);
+                        elseAccessor = original.createVariableAccessor();
                     }
+                    ifAccessor.access().accept(ifGroup);
+                    elseAccessor.access().accept(elseGroup);
+                    accessors.add(ifAccessor);
+                    accessors.add(elseAccessor);
                     context.createNamedVariable(name, original.getType(), original.getSignal(), combinedGroup);
                 }
 
                 context.leaveIf();
+                generatedGroups.add(context.getExpressionContext());
             }
 
             @Override
@@ -179,11 +217,11 @@ public class Test {
                         rightVar.bind(context.getFreeSymbol());
                     }
 
-                    System.out.println(leftVar + ctx.op.getText() + rightVar);
-
                     var outSymbol = context.getFreeSymbol();
 
-                    context.createBoundVariable(VarType.BOOLEAN, outSymbol);
+                    var bound = context.createBoundVariable(VarType.BOOLEAN, outSymbol);
+                    System.out.println(bound + " = " + leftVar + " " + ctx.op.getText() + " " + rightVar);
+
                     var cmb = DeciderCombinator.withLeftRight(leftVar.toAccessor(context),  rightVar.toAccessor(context), Writer.constant(outSymbol.ordinal(), 1), op);
 
                     var connected = new ConnectedCombinator(cmb);
@@ -328,13 +366,15 @@ public class Test {
                 String varName = ctx.var.getText();
 
                 FactorioSignal variableSymbol;
+                boolean preexisting;
+                //We don't care about new variables inside our if block, they go out of scope anyway
                 if(context.getNamedVariable(varName) != null) {
                     var existing = context.getNamedVariable(varName);
-                    //We don't care about new variables inside our if block, they go out of scope anyway
-                    context.getConditionContext().registerAssignment(varName, existing);
-                    variableSymbol = context.getNamedVariable(varName).getSignal();
+                    variableSymbol = existing.getSignal();
+                    preexisting = true;
                 }
                 else {
+                    preexisting = false;
                     variableSymbol = context.getFreeSymbol();
                 }
 
@@ -353,6 +393,9 @@ public class Test {
                     context.getExpressionContext().getCombinators().add(connected);
                 }
                 var named= context.createNamedVariable(varName, value.getType(), variableSymbol, context.getExpressionContext());
+                if(preexisting) {
+                    context.getConditionContext().registerAssignment(varName, named);
+                }
                 System.out.println("Creating named " + varName + " = " + named);
             }
 

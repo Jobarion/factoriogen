@@ -85,7 +85,7 @@ public class Simulator {
             connections.put(combinator.getEntityId(), connectionList);
             entities.add(json);
             x += 2;
-            if(x > 10) {
+            if(x > 8) {
                 x = 0;
                 y++;
             }

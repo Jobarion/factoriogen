@@ -39,6 +39,7 @@ public class Context {
         private final Map<String, Variable> originalBindings = new HashMap<>();
         private final Map<String, Variable> assignedIf = new HashMap<>();
         private final Map<String, Variable> assignedElse = new HashMap<>();
+        private boolean isInElse = false;
 
         private Map<String, Variable> active = assignedIf;
 
@@ -56,6 +57,11 @@ public class Context {
 
         public void enterElse() {
             active = assignedElse;
+            isInElse = true;
+        }
+
+        public boolean isInElse() {
+            return isInElse;
         }
 
         public void registerAssignment(String name, Variable var) {
@@ -107,6 +113,18 @@ public class Context {
     }
 
     public Variable getNamedVariable(String name) {
+        if(!conditionContext.isInElse) return vars.get(name);
+
+        var elseOverride = conditionContext.getAssignedElse().get(name);
+        //If we're in an else block and the variable was overwritten in that else block, use it
+        if(elseOverride != null) return elseOverride;
+
+        //If it was overwritten in the if block, use the original one
+        if(conditionContext.getAssignedIf().get(name) != null) {
+            return conditionContext.getOriginalBindings().get(name);
+        }
+
+        //It wasn't overwritten, use the original one
         return vars.get(name);
     }
 
