@@ -149,7 +149,7 @@ public class Generator {
                 generatedGroups.add(elseGroup);
                 generatedGroups.add(combinedGroup);
 
-                int delay = condition.getTickDelay();
+                int delay = condition.getTickDelay() + 1;//Condition signal has to be first
 
                 List<Variable> createdVariables = new ArrayList<>();
 
