@@ -7,7 +7,7 @@ import org.antlr.v4.runtime.CommonTokenStream;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public class Test {
+public class Generator {
 
     private static final String TEST_INCORRECT = "{\n" +
             "  a = 2;\n" +
@@ -19,24 +19,21 @@ public class Test {
             "    a = a / 2;\n" +
             "    b = a;\n" +
             "  };\n" +
-            "  c = a + b;\n" +
+            "  c = a + b + de;\n" +
             "}";
 
 
-    private static final String TEST_MINIMAL = "{\n" +
-            "  b = 4;\n" +
-            "  if(b > 4) {\n" +
-            "    b = 1;\n" +
-            "  };\n" +
-            "  else {\n" +
-            "    b = b / 2;\n" +
-            "  };\n" +
-            "  c = b;\n" +
+    private static final String TEST_LONG_CHAIN = "{\n" +
+            "  a = 1;\n" +
+            "  b = a * a;\n" +
+            "  c = b * b;\n" +
+            "  d = c * c;\n" +
             "}";
 
     private static final String TEST_ORIGINAL = "{\n" +
             "  a = 3;\n" +
             "  b = a * a - 1;\n" +
+            "  d = 0;\n" +
             "  if(b > 4) {\n" +
             "    a = 1;\n" +
             "  };\n" +
@@ -44,6 +41,12 @@ public class Test {
             "    a = a / 2;\n" +
             "    b = a;\n" +
             "  };\n" +
+            "  c = a + b + d;\n" +
+            "}";
+
+    private static final String TEST_DELAY_SIMPLE = "{\n" +
+            "  a = 2;\n" +
+            "  b = a * a;\n" +
             "  c = a + b;\n" +
             "}";
 
@@ -146,27 +149,52 @@ public class Test {
                 generatedGroups.add(elseGroup);
                 generatedGroups.add(combinedGroup);
 
+                int delay = condition.getTickDelay();
+
+                List<Variable> createdVariables = new ArrayList<>();
+
+                List<VariableAccessor> ifAccessors = new ArrayList<>();
+                List<VariableAccessor> elseAccessors = new ArrayList<>();
+
                 for(String name : allVariables) {
                     var original = assignedOriginal.get(name);
                     VariableAccessor ifAccessor;
                     if(assignedIf.containsKey(name)) {
-                        ifAccessor = assignedIf.get(name).createVariableAccessor();
+                        var ifVar = assignedIf.get(name);
+                        ifAccessor = ifVar.createVariableAccessor();
+                        delay = Math.max(delay, ifVar.getTickDelay());
                     }
                     else {
                         ifAccessor = original.createVariableAccessor();
+                        delay = Math.max(delay, original.getTickDelay());
                     }
                     VariableAccessor elseAccessor;
                     if(assignedElse.containsKey(name)) {
-                        elseAccessor = assignedElse.get(name).createVariableAccessor();
+                        var elseVar = assignedElse.get(name);
+                        elseAccessor = elseVar.createVariableAccessor();
                     }
                     else {
                         elseAccessor = original.createVariableAccessor();
+                        delay = Math.max(delay, original.getTickDelay());
                     }
-                    ifAccessor.access().accept(ifGroup);
-                    elseAccessor.access().accept(elseGroup);
-                    accessors.add(ifAccessor);
-                    accessors.add(elseAccessor);
-                    context.createNamedVariable(name, original.getType(), original.getSignal(), combinedGroup);
+                    ifAccessors.add(ifAccessor);
+                    elseAccessors.add(elseAccessor);
+                    createdVariables.add(context.createNamedVariable(name, original.getType(), original.getSignal(), combinedGroup));
+                }
+                delay++; //Accessors :(
+
+                for(var accessor : ifAccessors) {
+                    accessor.access(delay).accept(ifGroup);
+                    accessors.add(accessor);
+                }
+
+                for(var accessor : elseAccessors) {
+                    accessor.access(delay).accept(elseGroup);
+                    accessors.add(accessor);
+                }
+
+                for(var v : createdVariables) {
+                    v.setDelay(delay + 2); //1 for the if, 1 for filtering the condition signal out of the passed through one
                 }
 
                 context.leaveIf();
@@ -220,7 +248,21 @@ public class Test {
                     var outSymbol = context.getFreeSymbol();
 
                     var bound = context.createBoundVariable(VarType.BOOLEAN, outSymbol);
-                    System.out.println(bound + " = " + leftVar + " " + ctx.op.getText() + " " + rightVar);
+                    bound.setDelay(Math.max(leftVar.getTickDelay(), rightVar.getTickDelay()) + 1);
+
+                    if(leftVar instanceof NamedVariable) {
+                        var accessor = ((Variable)leftVar).createVariableAccessor();
+                        accessors.add(accessor);
+                        accessor.access(bound.getTickDelay()).accept(context.getExpressionContext());
+                    }
+
+                    if(rightVar instanceof NamedVariable) {
+                        var accessor = ((Variable)rightVar).createVariableAccessor();
+                        accessors.add(accessor);
+                        accessor.access(bound.getTickDelay()).accept(context.getExpressionContext());
+                    }
+
+                    System.out.println(bound + " = " + leftVar + " " + ctx.op.getText() + " " + rightVar + ", with delay " + bound.getTickDelay());
 
                     var cmb = DeciderCombinator.withLeftRight(leftVar.toAccessor(context),  rightVar.toAccessor(context), Writer.constant(outSymbol.ordinal(), 1), op);
 
@@ -264,11 +306,25 @@ public class Test {
                         rightVar.bind(context.getFreeSymbol());
                     }
 
-                    System.out.println(leftVar + ctx.op.getText() + rightVar);
-
                     var outSymbol = context.getFreeSymbol();
 
-                    context.createBoundVariable(VarType.BOOLEAN, outSymbol);
+                    var bound = context.createBoundVariable(VarType.BOOLEAN, outSymbol);
+                    bound.setDelay(Math.max(leftVar.getTickDelay(), rightVar.getTickDelay()) + 1);
+
+                    if(leftVar instanceof NamedVariable) {
+                        var accessor = ((Variable)leftVar).createVariableAccessor();
+                        accessors.add(accessor);
+                        accessor.access(bound.getTickDelay()).accept(context.getExpressionContext());
+                    }
+
+                    if(rightVar instanceof NamedVariable) {
+                        var accessor = ((Variable)rightVar).createVariableAccessor();
+                        accessors.add(accessor);
+                        accessor.access(bound.getTickDelay()).accept(context.getExpressionContext());
+                    }
+
+                    System.out.println(leftVar + ctx.op.getText() + rightVar + ", with delay " + bound.getTickDelay());
+
                     var cmb = ArithmeticCombinator.withLeftRight(leftVar.toAccessor(context),  rightVar.toAccessor(context), outSymbol.ordinal(), op);
 
                     var connected = new ConnectedCombinator(cmb);
@@ -294,7 +350,15 @@ public class Test {
 
                     var outSymbol = context.getFreeSymbol();
 
-                    context.createBoundVariable(VarType.BOOLEAN, outSymbol);
+                    var bound = context.createBoundVariable(VarType.BOOLEAN, outSymbol);
+                    bound.setDelay(toNegate.getTickDelay() + 1);
+
+                    if(toNegate instanceof NamedVariable) {
+                        var accessor = ((Variable)toNegate).createVariableAccessor();
+                        accessors.add(accessor);
+                        accessor.access(bound.getTickDelay()).accept(context.getExpressionContext());
+                    }
+
                     var cmb = DeciderCombinator.withLeftRight(toNegate.toAccessor(context),  Accessor.constant(0), Writer.constant(outSymbol.ordinal(), 1), DeciderCombinator.EQ);
 
                     var connected = new ConnectedCombinator(cmb);
@@ -334,11 +398,25 @@ public class Test {
                         rightVar.bind(context.getFreeSymbol());
                     }
 
-                    System.out.println(leftVar + ctx.op.getText() + rightVar);
 
                     var outSymbol = context.getFreeSymbol();
 
-                    context.createBoundVariable(VarType.INT, outSymbol);
+                    var bound = context.createBoundVariable(VarType.INT, outSymbol);
+                    bound.setDelay(Math.max(leftVar.getTickDelay(), rightVar.getTickDelay()) + 1);
+
+                    if(leftVar instanceof NamedVariable) {
+                        var accessor = ((NamedVariable)leftVar).createVariableAccessor();
+                        accessors.add(accessor);
+                        accessor.access(bound.getTickDelay()).accept(context.getExpressionContext());
+                    }
+
+                    if(rightVar instanceof NamedVariable) {
+                        var accessor = ((NamedVariable)rightVar).createVariableAccessor();
+                        accessors.add(accessor);
+                        accessor.access(bound.getTickDelay()).accept(context.getExpressionContext());
+                    }
+
+                    System.out.println(leftVar + ctx.op.getText() + rightVar + ", with delay " + bound.getTickDelay());
                     var cmb = ArithmeticCombinator.withLeftRight(leftVar.toAccessor(context),  rightVar.toAccessor(context), outSymbol.ordinal(), op);
 
                     var connected = new ConnectedCombinator(cmb);
@@ -354,9 +432,9 @@ public class Test {
                     var named = context.getNamedVariable(ctx.var.getText());
                     if(named == null) throw new RuntimeException("Variable " + ctx.var.getText() + " is not defined");
                     context.pushTempVariable(named);
-                    var accessor = named.createVariableAccessor();
-                    accessors.add(accessor);
-                    accessor.access().accept(context.getExpressionContext());
+//                    var accessor = named.createVariableAccessor();
+//                    accessors.add(accessor);
+//                    accessor.access(named.getTickDelay() + 1).accept(context.getExpressionContext());
                 }
             }
 
@@ -393,10 +471,11 @@ public class Test {
                     context.getExpressionContext().getCombinators().add(connected);
                 }
                 var named= context.createNamedVariable(varName, value.getType(), variableSymbol, context.getExpressionContext());
+                named.setDelay(value.getTickDelay() + 2); //Aliasing, accessor
                 if(preexisting) {
                     context.getConditionContext().registerAssignment(varName, named);
                 }
-                System.out.println("Creating named " + varName + " = " + named);
+                System.out.println("Creating named " + varName + " = " + named + ", with delay " + named.getTickDelay());
             }
 
             @Override

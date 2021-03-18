@@ -9,6 +9,7 @@ public abstract class Variable extends Symbol {
 
     private final int id;
     private VarType type;
+    private int delay = -1;
 
     public Variable(VarType type, int id) {
         this.type = type;
@@ -41,5 +42,15 @@ public abstract class Variable extends Symbol {
         return Accessor.signal(getSignal().ordinal());
     }
 
+    @Override
+    public int getTickDelay() {
+//        if(delay == -1)
+//            throw new IllegalArgumentException("Delay not set");
+        return delay;
+    }
+
+    public void setDelay(int delay) {
+        this.delay = delay;
+    }
     public abstract VariableAccessor createVariableAccessor();
 }

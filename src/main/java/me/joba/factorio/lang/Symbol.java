@@ -1,7 +1,6 @@
 package me.joba.factorio.lang;
 
 import me.joba.factorio.Accessor;
-import me.joba.factorio.NetworkGroup;
 
 public abstract class Symbol {
 
@@ -29,4 +28,5 @@ public abstract class Symbol {
 
     public abstract Accessor toAccessor(Context context);
     public abstract VarType getType();
+    public abstract int getTickDelay();
 }

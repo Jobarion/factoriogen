@@ -34,4 +34,9 @@ public class Constant extends Symbol {
     public VarType getType() {
         return type;
     }
+
+    @Override
+    public int getTickDelay() {
+        return 0;
+    }
 }

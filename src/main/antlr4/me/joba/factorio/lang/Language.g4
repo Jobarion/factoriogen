@@ -1,6 +1,5 @@
 grammar Language;
 
-//declaration: Type assignment;
 assignment: var=VarName '=' x=completeExpression;
 
 completeExpression: expr;
@@ -68,4 +67,3 @@ NETWORK_IN: 'IN';
 
 WS : [ \t\n\r]+ -> skip ;
 WS_OPT: (' ' | '\t')+;
-
