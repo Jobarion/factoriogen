@@ -220,6 +220,30 @@ public interface DeciderCombinator extends Combinator {
     DeciderOperation EQ  = new DeciderOperation("=", (a, b) -> a == b);
     DeciderOperation NEQ = new DeciderOperation("!=", (a, b) -> a != b);
 
+    static DeciderOperation getOperationForFlippedOperands(DeciderOperation op) {
+        return switch (op.getCode()) {
+            case ">" -> LT;
+            case ">=" -> LEQ;
+            case "<" -> GT;
+            case "<=" -> GEQ;
+            case "=" -> EQ;
+            case "!=" -> NEQ;
+            default -> throw new UnsupportedOperationException("Unknown operation " + op);
+        };
+    }
+
+    static DeciderOperation getInvertedOperation(DeciderOperation op) {
+        return switch (op.getCode()) {
+            case ">" -> LEQ;
+            case ">=" -> LT;
+            case "<" -> GEQ;
+            case "<=" -> GT;
+            case "=" -> NEQ;
+            case "!=" -> EQ;
+            default -> throw new UnsupportedOperationException("Unknown operation " + op);
+        };
+    }
+
     static DeciderOperation getOperation(String op) {
         return switch (op) {
             case ">" -> GT;

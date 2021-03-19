@@ -3,10 +3,8 @@ package me.joba.factorio.lang;
 import me.joba.factorio.*;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
-import org.antlr.v4.runtime.ParserRuleContext;
 
 import java.util.*;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class Generator extends LanguageBaseListener {
@@ -25,40 +23,60 @@ public class Generator extends LanguageBaseListener {
             "  c = a + b + d;\n" +
             "}";
 
-    private static final String TEST = TEST_ORIGINAL;
+    private static final String TEST_NESTED_IF = "{\n" +
+            "  a = 30;\n" +
+            "  if(a > 10) {\n" +
+            "    a = a / 2;\n" +
+            "    if(a > 10) {\n" +
+            "      a = a * a;\n" +
+            "    };\n" +
+            "  };\n" +
+            "  b = a;\n" +
+            "}";
+
+    private static final String TEST = TEST_NESTED_IF;
 
     private Context context = new Context();
     private List<CombinatorGroup> generatedGroups = new ArrayList<>();
-//    private Set<VariableAccessor> accessors = new HashSet<>();
 
     @Override
-    public void enterElseExpr(LanguageParser.ElseExprContext ctx) {
-        context.getConditionContext().enterElse();
+    public void enterIfStatement(LanguageParser.IfStatementContext ctx) {
+        context.enterIfStatement();
+    }
+
+    @Override
+    public void enterElseStatement(LanguageParser.ElseStatementContext ctx) {
+        context.enterElseStatement();
     }
 
     @Override
     public void enterIfExpr(LanguageParser.IfExprContext ctx) {
         context.startExpressionContext();
-        context.enterIf();
+        context.enterConditional();
     }
 
     @Override
     public void exitIfExpr(LanguageParser.IfExprContext ctx) {
-        System.out.println("Assigned in if: " + context.getConditionContext().getAssignedIf());
-        System.out.println("Assigned in else: " + context.getConditionContext().getAssignedElse());
-
         var condition = context.popTempVariable();
 
-        var assignedIf = context.getConditionContext().getAssignedIf();
-        var assignedElse = context.getConditionContext().getAssignedElse();
-        var assignedOriginal = context.getConditionContext().getOriginalBindings();
+        var assignedIf = context.getConditionContext().getIfScope().getDefinedVariables();
+        var assignedElse = context.getConditionContext().getElseScope().map(VariableScope::getDefinedVariables).orElse(Collections.emptyMap());
+
+        context.leaveConditional();
+
+        System.out.println("Assigned in if: " + assignedIf);
+        System.out.println("Assigned in else: " + assignedElse);
+
+
+        //Remove if variables only existed in if/else block and are now irrelevant
+        assignedIf.keySet().removeIf(key -> context.getNamedVariable(key) == null);
+        assignedElse.keySet().removeIf(key -> context.getNamedVariable(key) == null);
 
         Set<String> allVariables = new HashSet<>();
         allVariables.addAll(assignedIf.keySet());
         allVariables.addAll(assignedElse.keySet());
 
         if(allVariables.isEmpty()) {
-            context.leaveIf();
             return;
         }
 
@@ -126,7 +144,7 @@ public class Generator extends LanguageBaseListener {
         List<VariableAccessor> elseAccessors = new ArrayList<>();
 
         for(String name : allVariables) {
-            var original = assignedOriginal.get(name);
+            var original = context.getNamedVariable(name);
             VariableAccessor ifAccessor;
             if(assignedIf.containsKey(name)) {
                 var ifVar = assignedIf.get(name);
@@ -166,7 +184,6 @@ public class Generator extends LanguageBaseListener {
             v.setDelay(delay + 2); //1 for the if, 1 for filtering the condition signal out of the passed through one
         }
 
-        context.leaveIf();
         generatedGroups.add(context.getExpressionContext());
     }
 
@@ -217,15 +234,12 @@ public class Generator extends LanguageBaseListener {
         String varName = ctx.var.getText();
 
         FactorioSignal variableSymbol;
-        boolean preexisting;
         //We don't care about new variables inside our if block, they go out of scope anyway
         if(context.getNamedVariable(varName) != null) {
             var existing = context.getNamedVariable(varName);
             variableSymbol = existing.getSignal();
-            preexisting = true;
         }
         else {
-            preexisting = false;
             variableSymbol = context.getFreeSymbol();
         }
 
@@ -245,8 +259,10 @@ public class Generator extends LanguageBaseListener {
         }
         var named= context.createNamedVariable(varName, value.getType(), variableSymbol, context.getExpressionContext());
         named.setDelay(value.getTickDelay() + 2); //Aliasing, accessor
-        if(preexisting) {
-            context.getConditionContext().registerAssignment(varName, named);
+        if(value instanceof NamedVariable) {
+            var accessor = ((NamedVariable) value).createVariableAccessor();
+            context.getExpressionContext().getAccessors().add(accessor);
+            accessor.access(value.getTickDelay() + 1).accept(context.getExpressionContext());
         }
         System.out.println("Creating named " + varName + " = " + named + ", with delay " + named.getTickDelay());
     }
@@ -299,6 +315,12 @@ public class Generator extends LanguageBaseListener {
 
         @Override
         public void generateCombinators(Symbol[] symbols, DeciderOperation operation, FactorioSignal outSymbol) {
+            if(symbols[0] instanceof Constant) {
+                var tmp = symbols[1];
+                symbols[1] = symbols[0];
+                symbols[0] = tmp;
+                operation = DeciderCombinator.getInvertedOperation(operation);
+            }
             var cmb = DeciderCombinator.withLeftRight(symbols[0].toAccessor(context),  symbols[1].toAccessor(context), Writer.constant(outSymbol.ordinal(), 1), operation);
             var connected = new ConnectedCombinator(cmb);
             connected.setGreenIn(context.getCurrentNetworkGroup());

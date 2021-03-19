@@ -1,6 +1,5 @@
 package me.joba.factorio.lang;
 
-import me.joba.factorio.ArithmeticCombinator;
 import org.antlr.v4.runtime.ParserRuleContext;
 
 import java.util.Arrays;
@@ -46,7 +45,7 @@ public abstract class Combiner<RC extends ParserRuleContext, OP> {
         }
 
         var outSymbol = context.getFreeSymbol();
-        var bound = context.createBoundVariable(outputType, outSymbol);
+        var bound = context.createBoundTempVariable(outputType, outSymbol);
         bound.setDelay(maxInputDelay + 1);
 
         System.out.println(Arrays.toString(symbols) + " (using " + op + ") = " + bound + ", with delay " + bound.getTickDelay());

@@ -9,20 +9,16 @@ public class Context {
 
     private int variableIdCounter = 0;
     private Set<FactorioSignal> freeBindings;
-    private Map<String, Variable> vars;
     private Stack<Symbol> tempVariables;
-    private Stack<ScopedContext> scopeStack;
-    private ScopedContext currentScope;
+    private Stack<CombinatorContext> combinatorContexts;
+    private Stack<VariableScope> variables;
     private Stack<ConditionContext> conditionContexts;
-    private ConditionContext conditionContext;
 
-    private class ScopedContext {
+    private class CombinatorContext {
         private NetworkGroup internalExpressionGroup = new NetworkGroup();
         private CombinatorGroup expressionContext;
-        private Set<String> createdVariables = new HashSet<>();
-        private Set<FactorioSignal> usedBindings = new HashSet<>();
 
-        public ScopedContext() {
+        public CombinatorContext() {
             this.expressionContext = new CombinatorGroup(internalExpressionGroup, new NetworkGroup());
             expressionContext.getNetworks().add(internalExpressionGroup);
         }
@@ -36,61 +32,42 @@ public class Context {
 
     public class ConditionContext {
 
-        private final Map<String, Variable> originalBindings = new HashMap<>();
-        private final Map<String, Variable> assignedIf = new HashMap<>();
-        private final Map<String, Variable> assignedElse = new HashMap<>();
-        private boolean isInElse = false;
+        private VariableScope ifScope;
+        private VariableScope elseScope;
 
-        private Map<String, Variable> active = assignedIf;
-
-        public Map<String, Variable> getAssignedIf() {
-            return assignedIf;
+        public VariableScope getIfScope() {
+            return ifScope;
         }
 
-        public Map<String, Variable> getAssignedElse() {
-            return assignedElse;
+        public void setIfScope(VariableScope ifScope) {
+            this.ifScope = ifScope;
         }
 
-        public Map<String, Variable> getOriginalBindings() {
-            return originalBindings;
+        public Optional<VariableScope> getElseScope() {
+            return Optional.ofNullable(elseScope);
         }
 
-        public void enterElse() {
-            active = assignedElse;
-            isInElse = true;
-        }
-
-        public boolean isInElse() {
-            return isInElse;
-        }
-
-        public void registerAssignment(String name, Variable var) {
-            active.put(name, var);
+        public void setElseScope(VariableScope elseScope) {
+            this.elseScope = elseScope;
         }
     }
 
     public Context() {
         tempVariables = new Stack<>();
-        currentScope = new ScopedContext();
-        vars = new HashMap<>();
-        scopeStack = new Stack<>();
+        combinatorContexts = new Stack<>();
+        combinatorContexts.push(new CombinatorContext());
+        variables = new Stack<>();
+        variables.push(new VariableScope(null));
         freeBindings = new HashSet<>();
         freeBindings.addAll(Arrays.asList(FactorioSignal.values()));
         conditionContexts = new Stack<>();
-        conditionContext = new ConditionContext();
     }
 
     public void pushTempVariable(Symbol var) {
         tempVariables.push(var);
     }
 
-    public Variable createTempVariable(VarType type) {
-        var var = new AnonymousVariable(VarType.UNKNOWN, variableIdCounter++);
-        tempVariables.push(var);
-        return var;
-    }
-
-    public Variable createBoundVariable(VarType type, FactorioSignal signal) {
+    public Variable createBoundTempVariable(VarType type, FactorioSignal signal) {
         var var = new AnonymousVariable(type, variableIdCounter++, signal);
         tempVariables.push(var);
         return var;
@@ -101,73 +78,62 @@ public class Context {
     }
 
     public Variable createNamedVariable(String name, VarType type, FactorioSignal signal, CombinatorGroup producer) {
-        var var = new NamedVariable(type, variableIdCounter++, signal, producer);
-        var previous = vars.put(name, var);
-        if(previous == null) {
-            currentScope.createdVariables.add(name);
-        }
-        else {
-            conditionContext.originalBindings.putIfAbsent(name, previous);
-        }
-        return var;
+        return variables.peek().createNamedVariable(name, type, signal, producer);
     }
 
     public Variable getNamedVariable(String name) {
-        if(!conditionContext.isInElse) return vars.get(name);
-
-        var elseOverride = conditionContext.getAssignedElse().get(name);
-        //If we're in an else block and the variable was overwritten in that else block, use it
-        if(elseOverride != null) return elseOverride;
-
-        //If it was overwritten in the if block, use the original one
-        if(conditionContext.getAssignedIf().get(name) != null) {
-            return conditionContext.getOriginalBindings().get(name);
-        }
-
-        //It wasn't overwritten, use the original one
-        return vars.get(name);
+        return variables.peek().getNamedVariable(name);
     }
 
     public void startExpressionContext() {
-        currentScope.startExpressionContext();
+        combinatorContexts.peek().startExpressionContext();
     }
 
     public CombinatorGroup getExpressionContext() {
-        return currentScope.expressionContext;
+        return combinatorContexts.peek().expressionContext;
     }
 
-    public void enterIf() {
-        conditionContexts.push(conditionContext);
-        conditionContext = new ConditionContext();
+    public void enterIfStatement() {
+        var vscope = new VariableScope(variables.peek());
+        variables.push(vscope);
+        conditionContexts.peek().setIfScope(vscope);
     }
 
-    public void leaveIf() {
-        conditionContext = conditionContexts.pop();
+    public void enterElseStatement() {
+        variables.pop(); //The if scope
+        var vscope = new VariableScope(variables.peek());
+        variables.push(vscope);
+        conditionContexts.peek().setElseScope(vscope);
+    }
+
+    public void enterConditional() {
+        conditionContexts.push(new ConditionContext());
+    }
+
+    public void leaveConditional() {
+        variables.pop(); //the last if/else/elseif block
+        conditionContexts.pop();
     }
 
     public ConditionContext getConditionContext() {
-        return conditionContext;
+        return conditionContexts.peek();
     }
 
     public void enterScope() {
-        scopeStack.push(currentScope);
-        currentScope = new ScopedContext();
+        combinatorContexts.push(new CombinatorContext());
     }
 
     public void leaveScope() {
-        freeBindings.addAll(currentScope.usedBindings);
-        vars.keySet().removeAll(currentScope.createdVariables);
-        currentScope = scopeStack.pop();
+        combinatorContexts.pop();
     }
 
     public FactorioSignal getFreeSymbol() {
         var signal = freeBindings.iterator().next();
         freeBindings.remove(signal);
-        currentScope.usedBindings.add(signal);
         return signal;
     }
 
     public NetworkGroup getCurrentNetworkGroup() {
-        return currentScope.internalExpressionGroup;
+        return combinatorContexts.peek().internalExpressionGroup;
     }
 }

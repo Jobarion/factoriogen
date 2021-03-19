@@ -15,8 +15,9 @@ expr
     | NETWORK_IN
     ;
 
-ifExpr: 'if' '(' ifCond=boolExpr ')' ifStatement=statement ('else' elseStatement=elseExpr)?;
-elseExpr: statement;
+ifExpr: 'if' '(' ifCond=boolExpr ')' ifPart=ifStatement ('else' elsePart=elseStatement)?;
+elseStatement: statement;
+ifStatement: statement;
 
 whileExpr: 'while' '(' loopCond=boolExpr ')' loopStatement=statement;
 
