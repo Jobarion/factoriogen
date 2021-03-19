@@ -11,9 +11,11 @@ import java.util.function.Consumer;
 
 public class VariableAccessor {
 
+    private static final boolean ACCURATE_TIMING = true;
+
     private final Map<CombinatorGroup, AccessibleVariable> accessedList;
     private final NamedVariable variable;
-    private static final boolean ACCURATE_TIMING = true;
+    private boolean generated = false;
 
     public VariableAccessor(NamedVariable variable) {
         this.variable = variable;
@@ -21,6 +23,8 @@ public class VariableAccessor {
     }
 
     public void generateAccessors() {
+        if(generated) return;
+        generated = true;
         if(accessedList.isEmpty()) return;
         var connectionNetwork = new NetworkGroup();
         variable.getProducer().getNetworks().add(connectionNetwork);
@@ -46,7 +50,6 @@ public class VariableAccessor {
     private void generateAccurateAccessors() {
         int minDelay = Integer.MAX_VALUE;
         int maxDelay = Integer.MIN_VALUE;
-
 
         for(var a : accessedList.values()) {
             minDelay = Math.min(minDelay, a.delay);

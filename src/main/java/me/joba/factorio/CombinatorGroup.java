@@ -1,5 +1,7 @@
 package me.joba.factorio;
 
+import me.joba.factorio.lang.VariableAccessor;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -7,6 +9,7 @@ public class CombinatorGroup {
 
     private final List<ConnectedCombinator> combinators = new ArrayList<>();
     private final List<NetworkGroup> networks = new ArrayList<>();
+    private final List<VariableAccessor> accessors = new ArrayList<>();
     private NetworkGroup input, output;
     private String correspondingCode;
 
@@ -37,6 +40,10 @@ public class CombinatorGroup {
 
     public List<NetworkGroup> getNetworks() {
         return networks;
+    }
+
+    public List<VariableAccessor> getAccessors() {
+        return accessors;
     }
 
     public NetworkGroup getInput() {

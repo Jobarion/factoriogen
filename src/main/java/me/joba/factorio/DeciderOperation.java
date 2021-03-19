@@ -18,4 +18,9 @@ public class DeciderOperation implements IntBinaryPredicate {
     public boolean test(int a, int b) {
         return operator.test(a, b);
     }
+
+    @Override
+    public String toString() {
+        return code;
+    }
 }

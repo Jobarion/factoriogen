@@ -20,4 +20,9 @@ public class ArithmeticOperation implements IntBinaryOperator {
     public int applyAsInt(int left, int right) {
         return operator.applyAsInt(left, right);
     }
+
+    @Override
+    public String toString() {
+        return code;
+    }
 }

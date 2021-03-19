@@ -21,7 +21,6 @@ public class Simulator {
     public static final int CIRCUIT_PRIMARY = 1;
     public static final int CIRCUIT_SECONDARY = 2;
 
-
     public static void main(String[] args) throws Exception {
 
         var combinators = readBlueprint(NETWORK);
@@ -227,6 +226,7 @@ public class Simulator {
         JSONObject root = new JSONObject();
         root.put("blueprint", blueprint);
         String outString = root.toJSONString();
+        System.out.println(outString);
         Deflater deflater = new Deflater(9);
         deflater.setInput(outString.getBytes(StandardCharsets.UTF_8));
         deflater.finish();

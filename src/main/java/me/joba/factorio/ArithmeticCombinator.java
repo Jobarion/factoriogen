@@ -35,7 +35,12 @@ public interface ArithmeticCombinator extends Combinator {
                 JSONObject cbehavior = new JSONObject();
                 JSONObject conds = new JSONObject();
                 cbehavior.put("arithmetic_conditions", conds);
-                conds.put("first_signal", left.toJson());
+                if(left.isConstant()) {
+                    conds.put("first_constant", left.toJson());
+                }
+                else {
+                    conds.put("first_signal", left.toJson());
+                }
                 if(right.isConstant()) {
                     conds.put("second_constant", right.toJson());
                 }
