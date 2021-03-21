@@ -6,8 +6,12 @@ completeExpression: expr;
 
 expr
     : '(' wrapped=expr ')'
-    | left=expr (op=MUL | op=DIV) right=expr
+    | left=expr (op=MUL | op=DIV | op=MOD) right=expr
     | left=expr (op=ADD | op=SUB) right=expr
+    | left=expr (op=LSH | op=RSH) right=expr
+    | left=expr op=BAND right=expr
+    | left=expr op=BOR right=expr
+    | left=expr op=BXOR right=expr
     | numberLit=IntLiteral
     | var=VarName ('(' vecAccessor=StringLiteral ')')?
     | 'sum(' sumExpr=expr ')'
@@ -19,7 +23,9 @@ ifExpr: 'if' '(' ifCond=boolExpr ')' ifPart=ifStatement ('else' elsePart=elseSta
 elseStatement: statement;
 ifStatement: statement;
 
-whileExpr: 'while' '(' loopCond=boolExpr ')' loopStatement=statement;
+whileExpr: 'while' '(' loopCond=boolExpr ')' loopStatement=loopBody;
+
+loopBody: statement;
 
 boolExprComponent
     : expr
@@ -37,7 +43,7 @@ block: '{' blockStatement+ '}';
 blockStatement: statement;
 
 statement
-    : block ';'
+    : block
     | assignment ';'
     | ifExpr
     | whileExpr;
@@ -51,6 +57,12 @@ ADD: '+';
 SUB: '-';
 MUL: '*';
 DIV: '/';
+MOD: '%';
+LSH: '>>';
+RSH: '<<';
+BAND: '&';
+BOR: '|';
+BXOR: '^';
 
 AND: '&&';
 OR: '||';

@@ -32,4 +32,8 @@ public class VariableScope {
         variables.put(name, var);
         return var;
     }
+
+    protected VariableScope getParentScope() {
+        return parentScope;
+    }
 }

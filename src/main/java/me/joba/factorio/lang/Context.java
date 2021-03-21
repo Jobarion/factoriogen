@@ -93,6 +93,18 @@ public class Context {
         return combinatorContexts.peek().expressionContext;
     }
 
+    public void enterLoop() {
+        variables.push(new WhileVariableScope(variables.peek()));
+    }
+
+    public VariableScope getVariableScope() {
+        return variables.peek();
+    }
+
+    public void leaveLoop() {
+        variables.pop();
+    }
+
     public void enterIfStatement() {
         var vscope = new VariableScope(variables.peek());
         variables.push(vscope);

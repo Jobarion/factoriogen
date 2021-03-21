@@ -101,6 +101,9 @@ public class VariableAccessor {
     }
 
     public AccessibleVariable access(int delay) {
+        if(delay < variable.getTickDelay() + 1) {
+            throw new RuntimeException("Illegal access");
+        }
         return new AccessibleVariable(delay);
     }
 

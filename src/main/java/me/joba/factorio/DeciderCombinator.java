@@ -250,7 +250,7 @@ public interface DeciderCombinator extends Combinator {
             case ">=" -> GEQ;
             case "<" -> LT;
             case "<=" -> LEQ;
-            case "=" -> EQ;
+            case "==" -> EQ;
             case "!=" -> NEQ;
             default -> throw new UnsupportedOperationException("Unknown operation " + op);
         };

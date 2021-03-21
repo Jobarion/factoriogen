@@ -139,7 +139,7 @@ public interface ArithmeticCombinator extends Combinator {
     ArithmeticOperation ADD =new ArithmeticOperation("+", (a, b) -> a + b);
     ArithmeticOperation SUB =new ArithmeticOperation("-", (a, b) -> a - b);
     ArithmeticOperation DIV =new ArithmeticOperation("/", (a, b) -> a / b);
-    ArithmeticOperation MOD =new ArithmeticOperation("%", (a, b) -> a * b);
+    ArithmeticOperation MOD =new ArithmeticOperation("%", (a, b) -> a % b);
     ArithmeticOperation LSH =new ArithmeticOperation("<<", (a, b) -> a << b);
     ArithmeticOperation RSH =new ArithmeticOperation(">>", (a, b) -> a >> b);
     ArithmeticOperation AND =new ArithmeticOperation("&", (a, b) -> a & b);
@@ -152,6 +152,12 @@ public interface ArithmeticCombinator extends Combinator {
             case "-" -> SUB;
             case "*" -> MUL;
             case "/" -> DIV;
+            case "%" -> MOD;
+            case ">>" -> LSH;
+            case "<<" -> RSH;
+            case "|" -> OR;
+            case "&" -> AND;
+            case "^" -> XOR;
             default -> throw new UnsupportedOperationException("Unknown operation " + op);
         };
     }
