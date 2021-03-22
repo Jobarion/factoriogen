@@ -75,7 +75,20 @@ public class Generator extends LanguageBaseListener {
             "  b = a;\n" +
             "}";
 
-    private static final String TEST = COLLATZ_LOOP;
+    private static final String NESTED_LOOP = "{\n" +
+            "  a = 0;\n" +
+            "  while(a < 10) {\n" +
+            "    c = 0;\n" +
+            "    while(c < 10) {\n" +
+            "      a = a + 1;\n" +
+            "    }\n" +
+            "  }\n" +
+            "  b = a;\n" +
+            "}";
+
+    private static final String TEST = NESTED_LOOP;
+
+    private static final boolean AUTO_RUN_LOOP = true;
 
     private Context context = new Context();
     private List<CombinatorGroup> generatedGroups = new ArrayList<>();
@@ -267,6 +280,13 @@ public class Generator extends LanguageBaseListener {
         CombinatorGroup loopOutputGroup = new CombinatorGroup(null, new NetworkGroup());
         generatedGroups.add(loopOutputGroup);
         loopExitConnected.setGreenOut(loopOutputGroup.getOutput());
+
+        if(AUTO_RUN_LOOP) {//TODO only for the first loop
+            var loopPulseLoopback = new ConnectedCombinator(ArithmeticCombinator.copying(loopPulseSymbol));
+            loopOutputGroup.getCombinators().add(loopPulseLoopback);
+            loopPulseLoopback.setGreenIn(loopOutputGroup.getOutput());
+            loopPulseLoopback.setRedOut(internalNetwork);
+        }
 
         for(var defined : context.getVariableScope().getAllVariables().entrySet()) {
             var v = defined.getValue();
