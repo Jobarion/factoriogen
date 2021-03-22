@@ -47,15 +47,17 @@ public class Generator extends LanguageBaseListener {
             "  b = a;\n" +
             "}";
 
-    private static final String COLLATZ_IF = "{\n" +
-            "  a = 27;\n" +
-            "  if(a % 2 == 0) {\n" +
-            "    a = a / 2;\n" +
+    private static final String IF_TIMING = "{ \n" +
+            "  b = 4;\n" +
+            "  x = 10;\n" +
+            "  a = x;\n" +
+            "  a = a / 3;\n" +
+            "  a = a + 2;\n" +
+            "  a = a - 5;\n" +
+            "  if(b == 4) {\n" +
+            "    a = 10;\n" +
             "  }\n" +
-            "  else {\n" +
-            "    a = a * 3 + 1;\n" +
-            "  }\n" +
-            "  b = a;\n" +
+            "  c = a;\n" +
             "}";
 
     private static final String COLLATZ_LOOP = "{\n" +
@@ -315,7 +317,6 @@ public class Generator extends LanguageBaseListener {
         else {
             Combinator cmb = ArithmeticCombinator.copying(condition.getSignal());
             connected = new ConnectedCombinator(cmb);
-            connected.setRedOut(context.getExpressionContext().getOutput());
             connected.setGreenIn(context.getCurrentNetworkGroup());
             context.getExpressionContext().getCombinators().add(connected);
         }
@@ -395,6 +396,19 @@ public class Generator extends LanguageBaseListener {
             createdVariables.add(context.createNamedVariable(name, original.getType(), original.getSignal(), combinedGroup));
         }
         delay++; //Accessors :(
+
+        ConnectedCombinator currentConditionCombinator = connected;
+        for(int i = delay; i > condition.getTickDelay() + 2; i--) {
+            System.out.println("Added manual if condition delay");
+            ConnectedCombinator next = new ConnectedCombinator(ArithmeticCombinator.copying(condition.getSignal()));
+            var connection = new NetworkGroup();
+            currentConditionCombinator.setGreenOut(connection);
+            next.setGreenIn(connection);
+            currentConditionCombinator = next;
+            context.getExpressionContext().getNetworks().add(connection);
+            context.getExpressionContext().getCombinators().add(next);
+        }
+        currentConditionCombinator.setRedOut(context.getExpressionContext().getOutput());
 
         for(var accessor : ifAccessors) {
             accessor.access(delay).accept(ifGroup);
