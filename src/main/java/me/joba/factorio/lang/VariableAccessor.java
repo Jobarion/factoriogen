@@ -65,7 +65,7 @@ public class VariableAccessor {
 
         System.out.println("Delay timing difference " + minDelay + " " + maxDelay);
 
-        //TODO: Transform an accessor chain like (1 and 2 are the singal that is passed on, * means every signal)
+        //TODO: Transform an accessor chain like (1 and 2 are the signals that are passed on, * means every signal)
         // 1 -> 1 -> 1 -> 1 -> 1, and 2 -> 2 -> 2 to * -> * -> * -> * -> 1
         //                                                  -> 2
 

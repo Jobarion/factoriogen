@@ -36,8 +36,13 @@ public class Generator extends LanguageBaseListener {
 
     private static final String TEST_LOOP = "{\n" +
             "  a = 10;\n" +
+//            "  c = 10;\n" +
             "  while(a > 5) {\n" +
+            "    if(a % 2 == 0) {\n" +
+            "      a = a / 2;\n" +
+            "    }\n" +
             "    a = a - 1;\n" +
+//            "    c = c - a;\n" +
             "  }\n" +
             "  b = a;\n" +
             "}";
@@ -56,19 +61,19 @@ public class Generator extends LanguageBaseListener {
     private static final String COLLATZ_LOOP = "{\n" +
             "  a = 27;\n" +
             "  i = 10;\n" +
-            "  while(i > 1) {\n" +
+            "  while(i > 0) {\n" +
             "    i = i - 1;\n" +
-//            "    if(a % 2 == 0) {\n" +
+            "    if(a % 2 == 0) {\n" +
             "      a = a / 2;\n" +
-//            "    }\n" +
-//            "    else {\n" +
+            "    }\n" +
+            "    else {\n" +
             "      a = a * 3 + 1;\n" +
-//            "    }\n" +
+            "    }\n" +
             "  }\n" +
             "  b = a;\n" +
             "}";
 
-    private static final String TEST = TEST_LOOP;
+    private static final String TEST = COLLATZ_LOOP;
 
     private Context context = new Context();
     private List<CombinatorGroup> generatedGroups = new ArrayList<>();
@@ -155,7 +160,9 @@ public class Generator extends LanguageBaseListener {
             maxDelay = Math.max(maxDelay, whileScope.getParentScope().getNamedVariable(varName).getTickDelay());
         }
         for(var varName : whileScope.getAccessedOutside().keySet()) {
-            whileScope.getParentScope().getNamedVariable(varName).createVariableAccessor().access(maxDelay + 1).accept(whileScope.getVariableProviderGroup());
+            var accessor = whileScope.getParentScope().getNamedVariable(varName).createVariableAccessor();
+            accessor.access(maxDelay + 1).accept(whileScope.getVariableProviderGroup());
+            whileScope.getVariableProviderGroup().getAccessors().add(accessor);
         }
 
         //Loop condition decider
@@ -255,7 +262,15 @@ public class Generator extends LanguageBaseListener {
             }
         }
 
+        CombinatorGroup loopOutputGroup = new CombinatorGroup(null, new NetworkGroup());
+        generatedGroups.add(loopOutputGroup);
+        loopExitConnected.setGreenOut(loopOutputGroup.getOutput());
 
+        for(var defined : context.getVariableScope().getAllVariables().entrySet()) {
+            var v = defined.getValue();
+            var rebound = context.createNamedVariable(defined.getKey(), v.getType(), v.getSignal(), loopOutputGroup);
+            rebound.setDelay(0);
+        }
 
         //TODO
         //1. Loop back modified variables to loop input

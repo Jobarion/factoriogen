@@ -33,7 +33,7 @@ public class WhileVariableScope extends VariableScope {
             var selfDefined = getDefinedVariables().get(name);
             //Shadow the outside variable with the while loop accessor
             var potentialProducer = isInLoopBody ? variableProviderGroup : conditionProviderGroup;
-            if(selfDefined == null || selfDefined.getProducer() != potentialProducer) {
+            if(selfDefined == null || (selfDefined.getProducer() == conditionProviderGroup && isInLoopBody)) {
                 selfDefined = createNamedVariable(name, parentVar.getType(), parentVar.getSignal(), potentialProducer);
                 selfDefined.setDelay(0);
                 accessedOutside.put(name, selfDefined);

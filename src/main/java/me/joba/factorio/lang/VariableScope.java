@@ -2,8 +2,10 @@ package me.joba.factorio.lang;
 
 import me.joba.factorio.CombinatorGroup;
 
+import javax.naming.Name;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 public class VariableScope {
 
@@ -35,5 +37,17 @@ public class VariableScope {
 
     protected VariableScope getParentScope() {
         return parentScope;
+    }
+
+    public Map<String, NamedVariable> getAllVariables() {
+        Map<String, NamedVariable> result = new HashMap<>();
+        var currentScope = this;
+        while(currentScope != null) {
+            for(var e : currentScope.variables.entrySet()) {
+                result.putIfAbsent(e.getKey(), e.getValue());
+            }
+            currentScope = currentScope.getParentScope();
+        }
+        return result;
     }
 }
