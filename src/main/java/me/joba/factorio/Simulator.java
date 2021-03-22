@@ -164,59 +164,6 @@ public class Simulator {
             MSTSolver.solveMst(nodes);
             networkMap.put(ng, connected);
         }
-        //Minimum spanning tree instead of complete graph pls
-//        for(var entry : networkMap.entrySet()) {
-//            var ng = entry.getKey();
-//            for(var combi1 : entry.getValue()) {
-//                var jsonConn = connections.get(combi1.getEntityId());
-//                var jsonObjIn = getOrElse(jsonConn, "1", new JSONObject());
-//                var jsonObjOut = getOrElse(jsonConn, "2", new JSONObject());
-//                var greenIn = getOrElse(jsonObjIn, "green", new JSONArray());
-//                var redIn = getOrElse(jsonObjIn, "red", new JSONArray());
-//                var greenOut = getOrElse(jsonObjOut, "green", new JSONArray());
-//                var redOut = getOrElse(jsonObjOut, "red", new JSONArray());
-//                jsonObjIn.put("green", greenIn);
-//                jsonObjIn.put("red", redIn);
-//                jsonObjOut.put("green", greenOut);
-//                jsonObjOut.put("red", redOut);
-//                jsonConn.put("1", jsonObjIn);
-//                if(!combi1.getCombinator().isOutputOnly()) jsonConn.put("2", jsonObjOut);
-//                for(var combi2 : entry.getValue()) {
-//                    if(combi1 == combi2) {
-//                        if(combi1.getGreenIn() != null && combi1.getGreenIn() == combi1.getGreenOut()) {
-//                            JSONObject conObj = new JSONObject();
-//                            conObj.put("entity_id", combi1.getEntityId());
-//                            conObj.put("circuit_id", "2");
-//                            greenIn.add(conObj);
-//                            conObj = new JSONObject();
-//                            conObj.put("entity_id", combi1.getEntityId());
-//                            conObj.put("circuit_id", "1");
-//                            greenOut.add(conObj);
-//                        }
-//                        if(combi1.getRedIn() != null && combi1.getRedOut() == combi1.getRedIn()) {
-//                            JSONObject conObj = new JSONObject();
-//                            conObj.put("entity_id", combi1.getEntityId());
-//                            conObj.put("circuit_id", "2");
-//                            redIn.add(conObj);
-//                            conObj = new JSONObject();
-//                            conObj.put("entity_id", combi1.getEntityId());
-//                            conObj.put("circuit_id", "1");
-//                            redOut.add(conObj);
-//                        }
-//                        continue;
-//                    }
-//                    JSONObject conObj = new JSONObject();
-//                    conObj.put("entity_id", combi2.getEntityId());
-//                    int circuitId = combi2.getGreenIn() == ng || combi2.getRedIn() == ng || combi2.getCombinator().isOutputOnly() ? 1 : 2;
-//                    conObj.put("circuit_id", circuitId);
-//                    if(combi1.getGreenIn() == ng || (combi1.getGreenOut() == ng && combi1.getCombinator().isOutputOnly())) greenIn.add(conObj);
-//                    else if(combi1.getRedIn() == ng || (combi1.getRedOut() == ng && combi1.getCombinator().isOutputOnly())) redIn.add(conObj);
-//                    else if(combi1.getGreenOut() == ng) greenOut.add(conObj);
-//                    else if(combi1.getRedOut() == ng) redOut.add(conObj);
-//                    else throw new RuntimeException("???");
-//                }
-//            }
-//        }
 
         JSONObject blueprint = new JSONObject();
         blueprint.put("icons", new JSONArray());

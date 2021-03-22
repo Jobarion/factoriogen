@@ -120,6 +120,18 @@ public class Generator extends LanguageBaseListener {
         ((WhileVariableScope)context.getVariableScope()).enterLoopBody();
     }
 
+    /*
+    The idea here is the following:
+        1. Wire up all variables that we need in the loop to an input buffer. That buffer stores the first state it gets.
+        2. Once the buffer receives a signal from the outside, it emits the stored variables.
+        3. Using them, the loop condition is evaluated
+        4. If true, let all variables into the loop + the loop timing pulse.
+        5. Do normal expression evaluation inside the loop
+        6. The loop is evaluated. All signals end up at the loop output gate that only lets stuff pass if the timing pulse is present (don't let intermediary signals pass)
+        7. Back to 3.
+        8. If the loop condition is false, emit the signals + loop pulse that can be used by future circuits (= more loops) to sync with.
+        9. (TODO: Move all other variables into a buffer and write them out together with whatever comes out of 8.)
+     */
     @Override
     public void exitWhileExpr(LanguageParser.WhileExprContext ctx) {
         WhileVariableScope whileScope = (WhileVariableScope) context.getVariableScope();
@@ -294,15 +306,19 @@ public class Generator extends LanguageBaseListener {
             rebound.setDelay(0);
         }
 
-        //TODO
-        //1. Loop back modified variables to loop input
-        //2. Move all untouched variables to separate buffer
-        //3. Loop condition decider that
-        //  1. Either outputs the current loop state into the loop
-        //  2. The current loop state + other variables to outside world
-        //4. Wire up loop propagation/readiness pulse
+        //TODO: Properly delay _all other_ variables so that the entire variable scope is now synced.
     }
 
+    /*
+        The idea:
+        1. Track which variables are assigned in the if/else blocks.
+        2. In parallel, calculate the result of the if & else block + the condition.
+        3. Add variables that exist in if but not in else to the if block result and vice versa.
+            e.g. in the if block a & b are assigned, in the else block b & c. The if block now emits its own a & b + the original value of c.
+            The else block emits its b & c + the original value of a.
+        4. Sync up the condition, results of if and results of else.
+        5. Wire to appropriate combinators that either let the if or the else results pass.
+     */
     @Override
     public void exitIfExpr(LanguageParser.IfExprContext ctx) {
         var condition = context.popTempVariable();
@@ -472,6 +488,10 @@ public class Generator extends LanguageBaseListener {
         }
     }
 
+    /*
+        Get the expression components from the stack, and either calculates the result (if constant) or produces
+        combinators to calculate the result. Puts result back on stack.
+     */
     @Override
     public void exitExpr(LanguageParser.ExprContext ctx) {
         if(ctx.left != null) {
@@ -488,6 +508,11 @@ public class Generator extends LanguageBaseListener {
         }
     }
 
+    /*
+        Assignments either create a new named variable, or override an existing one with a new provider group (and delay)
+        Provider group = a group of combinators with a defined output NetworkGroup that produce a certain variable.
+        Anyone who wants that variable can get it out of the provider group.
+     */
     @Override
     public void exitAssignment(LanguageParser.AssignmentContext ctx) {
         var value = context.popTempVariable();
