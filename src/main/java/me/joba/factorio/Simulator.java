@@ -1,5 +1,7 @@
 package me.joba.factorio;
 
+import me.joba.factorio.graph.Node;
+import me.joba.factorio.graph.SimulatedAnnealingSolver;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
@@ -30,7 +32,7 @@ public class Simulator {
         System.out.println("Loaded " + combinators.size() + " combinators");
         System.out.println("Partitioned in " + networks.size() + " networks");
 
-        System.out.println(writeBlueprint(combinators, networks));
+        System.out.println(writeBlueprint(new ArrayList<>(combinators), networks));
 
         System.exit(0);
         while(true) {
@@ -63,30 +65,65 @@ public class Simulator {
                         StringJoiner::merge).toString();
     }
 
-    public static String writeBlueprint(Collection<ConnectedCombinator> combinators, Collection<NetworkGroup> networks) {
-        int x = 0;
-        int y = 0;
+    public static List<MSTSolver.Point> placeCombinators(List<ConnectedCombinator> combinators, Collection<NetworkGroup> networks) {
+        List<Node> nodes = new ArrayList<>();
+
+        Map<Integer, Integer> entityIdNodeIdMap = new HashMap<>();
+        int currentId = 0;
+        for(var cc : combinators) {
+            entityIdNodeIdMap.put(cc.getEntityId(), currentId++);
+        }
+        Map<NetworkGroup, Set<ConnectedCombinator>> networkMap = new HashMap<>();
+        for(NetworkGroup ng : networks) {
+            Set<ConnectedCombinator> connected = new HashSet<>();
+            for(ConnectedCombinator cc : combinators) {
+                if(cc.getGreenIn() == ng || cc.getGreenOut() == ng || cc.getRedIn() == ng || cc.getRedOut() == ng) {
+                    connected.add(cc);
+                }
+            }
+            networkMap.put(ng, connected);
+        }
+
+        for(var cc : combinators) {
+            Set<Integer> connectedTo = new HashSet<>();
+            List<NetworkGroup> combinatorNetworks = Arrays.asList(cc.getGreenIn(), cc.getGreenOut(), cc.getRedIn(), cc.getRedOut());
+            for(var network : combinatorNetworks) {
+                if(network == null) continue;
+                for(var neighbor : networkMap.get(network)) {
+                    connectedTo.add(entityIdNodeIdMap.get(neighbor.getEntityId()));
+                }
+            }
+            nodes.add(new Node(entityIdNodeIdMap.get(cc.getEntityId()), connectedTo));
+        }
+
+        SimulatedAnnealingSolver.simulatedAnnealing(nodes, 10_000_000);
+        List<MSTSolver.Point> points = new ArrayList<>();
+        for(Node node : nodes) {
+            points.add(new MSTSolver.Point(node.getX(), node.getY()));
+        }
+        return points;
+    }
+
+    public static String writeBlueprint(List<ConnectedCombinator> combinators, Collection<NetworkGroup> networks) {
+        List<MSTSolver.Point> calculatedPositions = placeCombinators(combinators, networks);
         JSONArray entities = new JSONArray();
         Map<Integer, JSONObject> connections = new HashMap<>();
         Map<Integer, MSTSolver.Point> positions = new HashMap<>();
-        for(ConnectedCombinator combinator : combinators) {
+        for(int i = 0; i < combinators.size(); i++) {
+            var combinator = combinators.get(i);
+            var position = calculatedPositions.get(i);
             var json = combinator.getCombinator().createJson();
             JSONObject pos = new JSONObject();
             json.put("position", pos);
             json.put("direction", 2);
             json.put("entity_number", combinator.getEntityId());
-            pos.put("x", x);
-            pos.put("y", y);
-            positions.put(combinator.getEntityId(), new MSTSolver.Point(x, y));
+            pos.put("x", position.getX());
+            pos.put("y", position.getY());
+            positions.put(combinator.getEntityId(), position);
             JSONObject connectionList = new JSONObject();
             json.put("connections", connectionList);
             connections.put(combinator.getEntityId(), connectionList);
             entities.add(json);
-            x += 2;
-            if(x > 8) {
-                x = 0;
-                y++;
-            }
         }
         Map<NetworkGroup, Set<ConnectedCombinator>> networkMap = new HashMap<>();
         for(NetworkGroup ng : networks) {

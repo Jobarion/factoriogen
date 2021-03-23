@@ -27,6 +27,10 @@ public class ConnectedCombinator {
         return entityId;
     }
 
+    public void setEntityId(int entityId) {
+        this.entityId = entityId;
+    }
+
     public void setRedIn(NetworkGroup red) {
         this.redIn = red;
     }

@@ -2,8 +2,6 @@
 package me.joba.factorio.lang;
 
 import me.joba.factorio.Accessor;
-import me.joba.factorio.ConnectedCombinator;
-import me.joba.factorio.NetworkGroup;
 
 public abstract class Variable extends Symbol {
 

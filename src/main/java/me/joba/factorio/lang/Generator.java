@@ -86,7 +86,7 @@ public class Generator extends LanguageBaseListener {
             "  b = a;\n" +
             "}";
 
-    private static final String TEST = NESTED_LOOP;
+    private static final String TEST = COLLATZ_LOOP;
 
     private static final boolean AUTO_RUN_LOOP = true;
 
@@ -489,8 +489,8 @@ public class Generator extends LanguageBaseListener {
     }
 
     /*
-        Get the expression components from the stack, and either calculates the result (if constant) or produces
-        combinators to calculate the result. Puts result back on stack.
+        Get the expression components from the stack, and either calculate the result (if constant) or produce
+        combinators to calculate the result. Put result back on stack.
      */
     @Override
     public void exitExpr(LanguageParser.ExprContext ctx) {
