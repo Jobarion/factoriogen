@@ -38,8 +38,8 @@ public class SimulatedAnnealingSolver {
 
         for(int i = 0; i < maxSteps; i++) {
             double temperature = (i + 1.0) / maxSteps;
-            int aId = (int)(Math.random() * nodes.size());
-            int bId = (int)(Math.random() * nodes.size());
+            int aId = RANDOM.nextInt(nodes.size());
+            int bId = RANDOM.nextInt(nodes.size());
             Node a = nodes.get(aId);
             Node b = nodes.get(bId);
             double afterSwap = energyAfterSwap(nodes, currentEnergy, a, b);
