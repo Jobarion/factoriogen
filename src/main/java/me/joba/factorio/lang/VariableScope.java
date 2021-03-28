@@ -10,7 +10,7 @@ import java.util.Set;
 public class VariableScope {
 
     private static int variableIdCounter = 0;
-    private Map<String, NamedVariable> variables;
+    private Map<String, Variable> variables;
     private VariableScope parentScope;
 
     public VariableScope(VariableScope parent) {
@@ -18,19 +18,19 @@ public class VariableScope {
         this.variables = new HashMap<>();
     }
 
-    public Map<String, NamedVariable> getDefinedVariables() {
+    public Map<String, Variable> getDefinedVariables() {
         return variables;
     }
 
-    public NamedVariable getNamedVariable(String name) {
+    public Variable getNamedVariable(String name) {
         var v = variables.get(name);
         if(v != null) return v;
         if(parentScope != null) return parentScope.getNamedVariable(name);
         return null;
     }
 
-    public NamedVariable createNamedVariable(String name, VarType type, FactorioSignal signal, CombinatorGroup producer) {
-        var var = new NamedVariable(type, variableIdCounter++, signal, producer);
+    public Variable createNamedVariable(String name, VarType type, FactorioSignal signal, CombinatorGroup producer) {
+        var var = new Variable(type, variableIdCounter++, signal, producer);
         variables.put(name, var);
         return var;
     }
@@ -39,8 +39,8 @@ public class VariableScope {
         return parentScope;
     }
 
-    public Map<String, NamedVariable> getAllVariables() {
-        Map<String, NamedVariable> result = new HashMap<>();
+    public Map<String, Variable> getAllVariables() {
+        Map<String, Variable> result = new HashMap<>();
         var currentScope = this;
         while(currentScope != null) {
             for(var e : currentScope.variables.entrySet()) {

@@ -5,7 +5,9 @@ import me.joba.factorio.NetworkGroup;
 
 import java.util.*;
 
-public class Context {
+public class FunctionContext {
+
+    public static final String CONTROL_FLOW_VAR_NAME = "$CONTROL_FLOW";
 
     private int variableIdCounter = 0;
     private Set<FactorioSignal> freeBindings;
@@ -13,6 +15,8 @@ public class Context {
     private Stack<CombinatorContext> combinatorContexts;
     private Stack<VariableScope> variables;
     private Stack<ConditionContext> conditionContexts;
+    private final CombinatorGroup functionHeader;
+    private final CombinatorGroup functionReturn;
 
     private class CombinatorContext {
         private NetworkGroup internalExpressionGroup = new NetworkGroup();
@@ -52,7 +56,8 @@ public class Context {
         }
     }
 
-    public Context() {
+    public FunctionContext(CombinatorGroup functionHeader) {
+        this.functionHeader = functionHeader;
         tempVariables = new Stack<>();
         combinatorContexts = new Stack<>();
         combinatorContexts.push(new CombinatorContext());
@@ -60,15 +65,26 @@ public class Context {
         variables.push(new VariableScope(null));
         freeBindings = new HashSet<>();
         freeBindings.addAll(Arrays.asList(FactorioSignal.values()));
+        freeBindings.removeIf(FactorioSignal::isReserved);
         conditionContexts = new Stack<>();
+        functionReturn = new CombinatorGroup(null, new NetworkGroup());
+        functionHeader.getSubGroups().add(functionReturn);
+    }
+
+    public Variable getControlFlowVariable() {
+        return getNamedVariable(CONTROL_FLOW_VAR_NAME);
+    }
+
+    public Variable overwriteControlFlowVariable(CombinatorGroup producer) {
+        return createNamedVariable(CONTROL_FLOW_VAR_NAME, VarType.INT, CombinatorUtil.CONTROL_FLOW_SIGNAL, producer);
     }
 
     public void pushTempVariable(Symbol var) {
         tempVariables.push(var);
     }
 
-    public Variable createBoundTempVariable(VarType type, FactorioSignal signal) {
-        var var = new AnonymousVariable(type, variableIdCounter++, signal);
+    public Variable createBoundTempVariable(VarType type, FactorioSignal signal, CombinatorGroup producer) {
+        var var = new Variable(type, variableIdCounter++, signal, producer);
         tempVariables.push(var);
         return var;
     }
@@ -89,9 +105,9 @@ public class Context {
         combinatorContexts.peek().startExpressionContext();
     }
 
-    public CombinatorGroup getExpressionContext() {
-        return combinatorContexts.peek().expressionContext;
-    }
+//    public CombinatorGroup getExpressionContext() {
+//        return combinatorContexts.peek().expressionContext;
+//    }
 
     public void enterLoop() {
         variables.push(new WhileVariableScope(variables.peek()));
@@ -145,7 +161,21 @@ public class Context {
         return signal;
     }
 
-    public NetworkGroup getCurrentNetworkGroup() {
-        return combinatorContexts.peek().internalExpressionGroup;
+    public void claimSymbol(FactorioSignal signal) {
+        if(!freeBindings.remove(signal)) {
+            throw new IllegalArgumentException("Attempted to claim unavailable symbol " + signal);
+        }
+    }
+
+//    public NetworkGroup getCurrentNetworkGroup() {
+//        return combinatorContexts.peek().internalExpressionGroup;
+//    }
+
+    public CombinatorGroup getFunctionGroup() {
+        return functionHeader;
+    }
+
+    public CombinatorGroup getFunctionReturnGroup() {
+        return functionReturn;
     }
 }

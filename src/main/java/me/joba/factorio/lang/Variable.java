@@ -2,22 +2,29 @@
 package me.joba.factorio.lang;
 
 import me.joba.factorio.Accessor;
+import me.joba.factorio.CombinatorGroup;
 
-public abstract class Variable extends Symbol {
+public class Variable extends Symbol {
 
+    private final CombinatorGroup producer;
+    private final VariableAccessor accessor;
     private final int id;
     private VarType type;
     private int delay = -1;
 
-    public Variable(VarType type, int id) {
+    public Variable(VarType type, int id, CombinatorGroup producer) {
         this.type = type;
         this.id = id;
+        this.producer = producer;
+        this.accessor = new VariableAccessor(this);
     }
 
-    public Variable(VarType type, int id, FactorioSignal signal) {
+    public Variable(VarType type, int id, FactorioSignal signal, CombinatorGroup producer) {
         super(signal);
         this.type = type;
         this.id = id;
+        this.producer = producer;
+        this.accessor = new VariableAccessor(this);
     }
 
     @Override
@@ -35,20 +42,28 @@ public abstract class Variable extends Symbol {
     }
 
     @Override
-    public Accessor toAccessor(Context context) {
+    public Accessor toAccessor(FunctionContext context) {
         if(getSignal() == null) throw new UnsupportedOperationException("Variable not bound");
         return Accessor.signal(getSignal().ordinal());
     }
 
     @Override
     public int getTickDelay() {
-//        if(delay == -1)
-//            throw new IllegalArgumentException("Delay not set");
+        if(delay == -1)
+            throw new IllegalArgumentException("Delay not set");
         return delay;
     }
 
     public void setDelay(int delay) {
         this.delay = delay;
     }
-    public abstract VariableAccessor createVariableAccessor();
+
+
+    public CombinatorGroup getProducer() {
+        return producer;
+    }
+
+    public VariableAccessor createVariableAccessor() {
+        return accessor;
+    }
 }

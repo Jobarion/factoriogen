@@ -26,7 +26,7 @@ public abstract class Symbol {
         return signal != null;
     }
 
-    public abstract Accessor toAccessor(Context context);
+    public abstract Accessor toAccessor(FunctionContext context);
     public abstract VarType getType();
     public abstract int getTickDelay();
 }

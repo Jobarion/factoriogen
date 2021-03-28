@@ -42,16 +42,27 @@ block: '{' blockStatement+ '}';
 
 blockStatement: statement;
 
+function: 'function ' name=VarName '(' functionParams ')' block;
+
+functionParams: functionParam (',' functionParam)*;
+functionParam: name=VarName '=' signal=VarName;
 statement
     : block
     | assignment ';'
     | ifExpr
-    | whileExpr;
+    | whileExpr
+    | returnStatement
+    ;
+
+returnStatement: 'return(' returnValues ');';
+returnValues: completeExpression (',' completeExpression)*;
+
+
 
 VarName: [a-zA-Z][a-zA-Z0-9_]*;
-Type: 'int';
 IntLiteral: '-'?[0-9]+;
 StringLiteral: '"'[-a-z]'"';
+ParameterSignalName: [a-z]+;
 
 ADD: '+';
 SUB: '-';

@@ -47,18 +47,28 @@ public enum FactorioSignal {
     SIGNAL_WHITE,
     SIGNAL_GREY,
     SIGNAL_BLACK,
-    SIGNAL_CHECK,
-    SIGNAL_INFO,
-    SIGNAL_DOT;
+    SIGNAL_CHECK(null, true),
+    SIGNAL_INFO(null, true),
+    SIGNAL_DOT(null, true);
 
     private final String suffix;
+    private final boolean reserved;
 
     FactorioSignal(String suffix) {
+        this(suffix, false);
+    }
+
+    FactorioSignal(String suffix, boolean reserved) {
+        this.reserved = reserved;
         this.suffix = suffix;
     }
 
     FactorioSignal() {
-        this.suffix = null;
+        this(null);
+    }
+
+    public boolean isReserved() {
+        return reserved;
     }
 
     public String getFactorioName() {

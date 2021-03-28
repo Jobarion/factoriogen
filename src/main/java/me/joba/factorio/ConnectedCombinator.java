@@ -62,13 +62,4 @@ public class ConnectedCombinator {
     public NetworkGroup getGreenOut() {
         return greenOut;
     }
-
-    public Signal tick() {
-        Signal red = this.redIn != null ? this.redIn.getState() : Signal.EMPTY;
-        Signal green = this.greenIn != null ? this.greenIn.getState() : Signal.EMPTY;
-        Signal out = combinator.process(red, green);
-        if(this.redOut != null) this.redOut.addOutput(combinator, out);
-        if(this.greenOut != null) this.greenOut.addOutput(combinator, out);
-        return out;
-    }
 }

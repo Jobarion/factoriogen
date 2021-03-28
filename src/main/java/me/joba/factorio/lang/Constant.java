@@ -26,7 +26,7 @@ public class Constant extends Symbol {
     }
 
     @Override
-    public Accessor toAccessor(Context context) {
+    public Accessor toAccessor(FunctionContext context) {
         return Accessor.constant(val);
     }
 

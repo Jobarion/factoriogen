@@ -8,7 +8,7 @@ import java.util.Map;
 
 public class WhileVariableScope extends VariableScope {
 
-    private Map<String, NamedVariable> accessedOutside = new HashMap<>();
+    private Map<String, Variable> accessedOutside = new HashMap<>();
     private CombinatorGroup variableProviderGroup;
     private CombinatorGroup conditionProviderGroup;
     private boolean isInLoopBody = false;
@@ -24,7 +24,7 @@ public class WhileVariableScope extends VariableScope {
     }
 
     @Override
-    public NamedVariable getNamedVariable(String name) {
+    public Variable getNamedVariable(String name) {
         var parentVar = getParentScope().getNamedVariable(name);
         if(parentVar == null) {
             return super.getNamedVariable(name);
@@ -43,15 +43,15 @@ public class WhileVariableScope extends VariableScope {
     }
 
     @Override
-    public NamedVariable createNamedVariable(String name, VarType type, FactorioSignal signal, CombinatorGroup producer) {
+    public Variable createNamedVariable(String name, VarType type, FactorioSignal signal, CombinatorGroup producer) {
         var created = super.createNamedVariable(name, type, signal, producer);
-        if(accessedOutside.containsKey(name)) {
+        if(name.equals(FunctionContext.CONTROL_FLOW_VAR_NAME) || accessedOutside.containsKey(name)) {
             accessedOutside.put(name, created);
         }
         return created;
     }
 
-    public Map<String, NamedVariable> getAccessedOutside() {
+    public Map<String, Variable> getAccessedOutside() {
         return accessedOutside;
     }
 

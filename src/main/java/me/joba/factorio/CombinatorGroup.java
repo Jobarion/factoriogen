@@ -12,6 +12,7 @@ public class CombinatorGroup {
     private final List<VariableAccessor> accessors = new ArrayList<>();
     private NetworkGroup input, output;
     private String correspondingCode;
+    private final List<CombinatorGroup> subGroups = new ArrayList<>();
 
     public CombinatorGroup(NetworkGroup input, NetworkGroup output) {
         this.input = input;
@@ -44,6 +45,10 @@ public class CombinatorGroup {
 
     public List<VariableAccessor> getAccessors() {
         return accessors;
+    }
+
+    public List<CombinatorGroup> getSubGroups() {
+        return subGroups;
     }
 
     public NetworkGroup getInput() {

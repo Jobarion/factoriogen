@@ -1,24 +1,24 @@
 package me.joba.factorio.lang;
 
+import me.joba.factorio.CombinatorGroup;
+import me.joba.factorio.NetworkGroup;
 import org.antlr.v4.runtime.ParserRuleContext;
 
 import java.util.Arrays;
 
 public abstract class Combiner<RC extends ParserRuleContext, OP> {
 
-    private final Context context;
     private final int requiredValues;
     private final VarType inputType;
     private final VarType outputType;
 
-    protected Combiner(Context context, int requiredValues, VarType inputType, VarType outputType) {
-        this.context = context;
+    protected Combiner(int requiredValues, VarType inputType, VarType outputType) {
         this.requiredValues = requiredValues;
         this.inputType = inputType;
         this.outputType = outputType;
     }
 
-    public void parse(RC ruleContext) {
+    public void parse(FunctionContext context, RC ruleContext) {
         var op = getOperation(ruleContext);
         Symbol[] symbols = new Symbol[requiredValues];
         boolean isConstant = true;
@@ -43,25 +43,28 @@ public abstract class Combiner<RC extends ParserRuleContext, OP> {
                 s.bind(context.getFreeSymbol());
             }
         }
+//        maxInputDelay++;
 
         var outSymbol = context.getFreeSymbol();
-        var bound = context.createBoundTempVariable(outputType, outSymbol);
-        bound.setDelay(maxInputDelay + 1);
-
-        System.out.println(Arrays.toString(symbols) + " (using " + op + ") = " + bound + ", with delay " + bound.getTickDelay());
+        var outputContext = new CombinatorGroup(new NetworkGroup(), new NetworkGroup());
+        context.getFunctionGroup().getSubGroups().add(outputContext);
+        var bound = context.createBoundTempVariable(outputType, outSymbol, outputContext);
 
         for(var s : symbols) {
-            if(s instanceof NamedVariable) {
+            if(s instanceof Variable) {
                 var accessor = ((Variable)s).createVariableAccessor();
-                accessor.access(bound.getTickDelay()).accept(context.getExpressionContext());
-                context.getExpressionContext().getAccessors().add(accessor);
+                accessor.access(maxInputDelay).accept(outputContext);
+                outputContext.getAccessors().add(accessor);
             }
         }
 
-        generateCombinators(symbols, op, outSymbol);
+        int propagationDelay = generateCombinators(symbols, op, outSymbol, outputContext);
+        bound.setDelay(maxInputDelay + propagationDelay);
+
+        System.out.println(Arrays.toString(symbols) + " (using " + op + ") = " + bound + ", with delay " + bound.getTickDelay());
     }
 
     public abstract OP getOperation(RC ruleContext);
     public abstract Constant computeConstExpr(Constant[] constants, OP operation);
-    public abstract void generateCombinators(Symbol[] symbols, OP operation, FactorioSignal outSymbol);
+    public abstract int generateCombinators(Symbol[] symbols, OP operation, FactorioSignal outSymbol, CombinatorGroup group);
 }

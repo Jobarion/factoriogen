@@ -17,6 +17,10 @@ public interface ArithmeticCombinator extends Combinator {
         return false;
     }
 
+    static ArithmeticCombinator copying() {
+        return withEach(Accessor.constant(0), ADD);
+    }
+
     static ArithmeticCombinator copying(FactorioSignal signal) {
         return withLeftRight(Accessor.signal(signal.ordinal()), Accessor.constant(0), signal.ordinal(), ADD);
     }

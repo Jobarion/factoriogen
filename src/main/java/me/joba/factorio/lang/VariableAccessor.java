@@ -13,11 +13,11 @@ public class VariableAccessor {
 
     private static final boolean ACCURATE_TIMING = true;
 
-    private final Map<CombinatorGroup, AccessibleVariable> accessedList;
-    private final NamedVariable variable;
+    private final Map<NetworkGroup, AccessibleVariable> accessedList;
+    private final Variable variable;
     private boolean generated = false;
 
-    public VariableAccessor(NamedVariable variable) {
+    public VariableAccessor(Variable variable) {
         this.variable = variable;
         this.accessedList = new HashMap<>();
     }
@@ -48,16 +48,30 @@ public class VariableAccessor {
     }
 
     private void generateAccurateAccessors() {
+
+        Set<AccessibleVariable> ignored = new HashSet<>();
+        for(var accessing : accessedList.values()) {
+            if(accessing.delay == variable.getTickDelay()) {
+                ignored.add(accessing);
+                NetworkGroup.merge(accessing.networkGroup, variable.getProducer().getOutput());
+            }
+        }
+
+        System.out.println("Generated " + ignored.size() + " accessors via direct access.");
+
+        if(ignored.size() == accessedList.size()) return;
+
         int minDelay = Integer.MAX_VALUE;
         int maxDelay = Integer.MIN_VALUE;
 
         for(var a : accessedList.values()) {
+            if(ignored.contains(a)) continue;
             minDelay = Math.min(minDelay, a.delay);
             maxDelay = Math.max(maxDelay, a.delay);
         }
 
-        if(minDelay < variable.getTickDelay() + 1) {
-            throw new RuntimeException("Unsupported requested access time of " + variable + " with delay " + minDelay + " (has " + (variable.getTickDelay() + 1) + ")");
+        if(minDelay < variable.getTickDelay()) {
+            throw new RuntimeException("Unsupported requested access time of " + variable + " with delay " + minDelay + " (has " + variable.getTickDelay() + ")");
         }
 
         int sharedAccessorChain = minDelay - variable.getTickDelay() - 1;
@@ -75,6 +89,7 @@ public class VariableAccessor {
         while(!done) {
             done = true;
             for(var entry : accessedList.values()) {
+                if(ignored.contains(entry)) continue;
                 if(entry.delay == variable.getTickDelay()) continue;
                 if(entry.delay == variable.getTickDelay() + 1) {
                     var cmb = ArithmeticCombinator.copying(variable.getSignal());
@@ -101,7 +116,7 @@ public class VariableAccessor {
     }
 
     public AccessibleVariable access(int delay) {
-        if(delay < variable.getTickDelay() + 1) {
+        if(delay < variable.getTickDelay()) {
             throw new RuntimeException("Illegal access");
         }
         return new AccessibleVariable(delay);
@@ -131,7 +146,7 @@ public class VariableAccessor {
             accessed = true;
             this.networkGroup = networkGroup;
             this.combinatorGroup = combinatorGroup;
-            var previous = accessedList.put(this.combinatorGroup, this);
+            var previous = accessedList.put(networkGroup, this);
             if(previous != null) {
                 if(previous.delay != delay) throw new RuntimeException("Accessing variable from same group with different delays");
             }
