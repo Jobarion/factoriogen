@@ -42,7 +42,8 @@ public class BlueprintWriter {
             nodes.add(new Node(entityIdNodeIdMap.get(cc.getEntityId()), connectedTo));
         }
 
-        SimulatedAnnealingSolver.simulatedAnnealing(nodes, 40_000_000);
+        SimulatedAnnealingSolver.placeInitial(nodes);
+        SimulatedAnnealingSolver.simulatedAnnealing(nodes, 100_000_000);
         List<MSTSolver.Point> points = new ArrayList<>();
         for(Node node : nodes) {
             points.add(new MSTSolver.Point(node.getX(), node.getY()));

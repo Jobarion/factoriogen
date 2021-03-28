@@ -4,7 +4,7 @@ import java.util.*;
 
 public class SimulatedAnnealingSolver {
 
-    private static final Random RANDOM = new Random(1235); //Repeatable outcomes are nice
+    private static final Random RANDOM = new Random(1234); //Repeatable outcomes are nice
 
 //    public static void main(String[] args) {
 //        int nodeCount = 1000;
@@ -30,7 +30,6 @@ public class SimulatedAnnealingSolver {
 //    }
 
     public static void simulatedAnnealing(List<Node> nodes, int maxSteps) {
-        placeInitial(nodes);
         var matrix = getDistanceMatrix(nodes);
         double currentEnergy = calculateEnergy(matrix);
 
@@ -79,14 +78,14 @@ public class SimulatedAnnealingSolver {
     private static double energyAfterSwap(List<Node> nodes, double currentEnergy, Node a, Node b) {
         for(int anId : a.getNeighbors()) {
             Node x = nodes.get(anId);
-            float energyOldPosition = (float)Math.sqrt(Math.pow(a.getX() - x.getX(), 2) + Math.pow(a.getY() - x.getY(), 2));
-            float energyNewPosition = (float)Math.sqrt(Math.pow(b.getX() - x.getX(), 2) + Math.pow(b.getY() - x.getY(), 2));
+            float energyOldPosition = (float)Math.pow(a.getX() - x.getX(), 2) + (float)Math.pow(a.getY() - x.getY(), 2);
+            float energyNewPosition = (float)Math.pow(b.getX() - x.getX(), 2) + (float)Math.pow(b.getY() - x.getY(), 2);
             currentEnergy += distanceToEnergy(energyNewPosition) - distanceToEnergy(energyOldPosition);
         }
         for(int bnId : b.getNeighbors()) {
             Node x = nodes.get(bnId);
-            float energyOldPosition = (float)Math.sqrt(Math.pow(b.getX() - x.getX(), 2) + Math.pow(b.getY() - x.getY(), 2));
-            float energyNewPosition = (float)Math.sqrt(Math.pow(a.getX() - x.getX(), 2) + Math.pow(a.getY() - x.getY(), 2));
+            float energyOldPosition = (float)Math.pow(b.getX() - x.getX(), 2) + (float)Math.pow(b.getY() - x.getY(), 2);
+            float energyNewPosition = (float)Math.pow(a.getX() - x.getX(), 2) + (float)Math.pow(a.getY() - x.getY(), 2);
             currentEnergy += distanceToEnergy(energyNewPosition) - distanceToEnergy(energyOldPosition);
         }
         return currentEnergy;
@@ -111,7 +110,7 @@ public class SimulatedAnnealingSolver {
         return matrix;
     }
 
-    private static void placeInitial(List<Node> nodes) {
+    public static void placeInitial(List<Node> nodes) {
         double sqrt = Math.ceil(Math.sqrt((double)nodes.size() / 2));
         int shortEdgeLength = (int)Math.ceil(sqrt);
         int x = 0;
