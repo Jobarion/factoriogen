@@ -45,7 +45,7 @@ public class Generator extends LanguageBaseListener {
                     "  return(a);\n" +
                     "}";
 
-    private static final String TEST = SIMPLE_FUNCTION_WHILE;
+    private static final String TEST = COLLATZ;
     public static final boolean PROTECTED_LOOPS = true;
 
     private FunctionContext context;
@@ -180,20 +180,15 @@ public class Generator extends LanguageBaseListener {
         ConnectedCombinator dedupConstants = new ConnectedCombinator(Combinator.constant(Signal.singleValue(CombinatorUtil.TEMP_SIGNAL.ordinal(), -1)));
         whileGroup.getCombinators().add(dedupConstants);
 
+        dedupInput.setGreenIn(whileGroup.getInput());
+        dedupStore.setGreenIn(whileGroup.getInput());
+        dedupStore.setGreenOut(whileGroup.getInput());
+        dedupReset.setGreenOut(whileGroup.getInput());
+
         NetworkGroup tmp = new NetworkGroup();
-        whileGroup.getNetworks().add(tmp);
-        dedupInput.setRedIn(tmp);
-        dedupStore.setRedIn(tmp);
-        dedupStore.setRedOut(tmp);
-        dedupReset.setRedOut(tmp);
-wd
-        tmp = new NetworkGroup();
         whileGroup.getNetworks().add(tmp);
         dedupConstants.setGreenOut(tmp);
         dedupReset.setGreenIn(tmp);
-
-        //Entry point of our while loop
-        dedupInput.setGreenIn(whileGroup.getInput());
 
         NetworkGroup dedupResetInput = new NetworkGroup();
         whileGroup.getNetworks().add(dedupResetInput);
@@ -201,16 +196,16 @@ wd
 
         tmp = new NetworkGroup();
         whileGroup.getNetworks().add(tmp);
-        dedupStore.setGreenIn(tmp);
-        dedupInput.setGreenOut(tmp);
+        dedupStore.setRedIn(tmp);
+        dedupInput.setRedOut(tmp);
 
         ConnectedCombinator loopFeedbackGateInitial = new ConnectedCombinator(DeciderCombinator.withLeftRight(Accessor.signal(CombinatorUtil.CONTROL_FLOW_SIGNAL), Accessor.constant(0), Writer.everything(false), DeciderCombinator.NEQ));
         whileGroup.getCombinators().add(loopFeedbackGateInitial);
 
-        loopFeedbackGateInitial.setGreenIn(tmp);
-
         ConnectedCombinator loopFeedbackGateSubsequent = new ConnectedCombinator(DeciderCombinator.withLeftRight(Accessor.signal(CombinatorUtil.CONTROL_FLOW_SIGNAL), Accessor.constant(0), Writer.everything(false), DeciderCombinator.NEQ));
         whileGroup.getCombinators().add(loopFeedbackGateSubsequent);
+
+        loopFeedbackGateInitial.setRedIn(tmp);
 
         NetworkGroup loopDataPreCondition = whileScope.getConditionVariableProviderGroup().getOutput();
         whileGroup.getNetworks().add(loopDataPreCondition);
@@ -260,7 +255,7 @@ wd
             whileGroup.getCombinators().add(connected);
             var accessor = ((Variable)condition).createVariableAccessor();
             whileGroup.getAccessors().add(accessor);
-            accessor.access(innerLoopDelay - 1).accept(inner, whileGroup);
+            accessor.access(condition.getTickDelay()).accept(inner, whileGroup);
         }
 
         var bufferDelayInput = loopDataPreCondition;
