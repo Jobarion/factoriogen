@@ -238,10 +238,10 @@ public class Generator extends LanguageBaseListener {
         ConnectedCombinator dedupInput = new ConnectedCombinator(DeciderCombinator.withLeftRight(Accessor.signal(CombinatorUtil.TEMP_SIGNAL), Accessor.constant(0), Writer.everything(false), DeciderCombinator.EQ));
         whileGroup.getCombinators().add(dedupInput);
 
-        ConnectedCombinator dedupStore = new ConnectedCombinator(DeciderCombinator.withAny(Accessor.constant(0), Writer.constant(CombinatorUtil.TEMP_SIGNAL.ordinal(), 1), DeciderCombinator.NEQ));
+        ConnectedCombinator dedupStore = new ConnectedCombinator(DeciderCombinator.withAny(Accessor.constant(0), Writer.one(CombinatorUtil.TEMP_SIGNAL), DeciderCombinator.NEQ));
         whileGroup.getCombinators().add(dedupStore);
 
-        ConnectedCombinator dedupReset = new ConnectedCombinator(DeciderCombinator.withLeftRight(Accessor.signal(CombinatorUtil.CONTROL_FLOW_SIGNAL), Accessor.constant(0), Writer.fromInput(CombinatorUtil.TEMP_SIGNAL.ordinal()), DeciderCombinator.NEQ));
+        ConnectedCombinator dedupReset = new ConnectedCombinator(DeciderCombinator.withLeftRight(Accessor.signal(CombinatorUtil.CONTROL_FLOW_SIGNAL), Accessor.constant(0), Writer.fromInput(CombinatorUtil.TEMP_SIGNAL), DeciderCombinator.NEQ));
         whileGroup.getCombinators().add(dedupReset);
 
         ConnectedCombinator dedupConstants = new ConnectedCombinator(Combinator.constant(Signal.singleValue(CombinatorUtil.TEMP_SIGNAL.ordinal(), -1)));
@@ -437,7 +437,7 @@ public class Generator extends LanguageBaseListener {
         CombinatorGroup combinedGroup = new CombinatorGroup(outputNetwork, new NetworkGroup());
 
         var passThroughCmb = ArithmeticCombinator.withEach(Accessor.constant(0), ArithmeticCombinator.ADD);
-        var removeSignalCmb = ArithmeticCombinator.withLeftRight(Accessor.signal(condition.getSignal()), Accessor.constant(-1), condition.getSignal().ordinal(), ArithmeticCombinator.MUL);
+        var removeSignalCmb = ArithmeticCombinator.withLeftRight(Accessor.signal(condition.getSignal()), Accessor.constant(-1), condition.getSignal(), ArithmeticCombinator.MUL);
 
         var passThroughConnected = new ConnectedCombinator(passThroughCmb);
         var removeSignalConnected = new ConnectedCombinator(removeSignalCmb);
@@ -608,7 +608,7 @@ public class Generator extends LanguageBaseListener {
         }
         else {
             //TODO remove this and use the value directly (is this a good idea?)
-            Combinator cmb = ArithmeticCombinator.withLeftRight(Accessor.signal(value.getSignal().ordinal()), Accessor.constant(0), variableSymbol.ordinal(), ArithmeticCombinator.ADD);
+            Combinator cmb = ArithmeticCombinator.withLeftRight(Accessor.signal(value.getSignal()), Accessor.constant(0), variableSymbol, ArithmeticCombinator.ADD);
             connected = new ConnectedCombinator(cmb);
             connected.setGreenOut(group.getOutput());
             connected.setGreenIn(group.getInput());
@@ -649,7 +649,7 @@ public class Generator extends LanguageBaseListener {
 
         @Override
         public int generateCombinators(Symbol[] symbols, ArithmeticOperation operation, FactorioSignal outSymbol, CombinatorGroup group) {
-            var cmb = ArithmeticCombinator.withLeftRight(symbols[0].toAccessor(context),  symbols[1].toAccessor(context), outSymbol.ordinal(), operation);
+            var cmb = ArithmeticCombinator.withLeftRight(symbols[0].toAccessor(context),  symbols[1].toAccessor(context), outSymbol, operation);
             var connected = new ConnectedCombinator(cmb);
             connected.setGreenIn(group.getInput());
             connected.setGreenOut(group.getOutput());
@@ -679,7 +679,7 @@ public class Generator extends LanguageBaseListener {
                 symbols[0] = tmp;
                 operation = DeciderCombinator.getInvertedOperation(operation);
             }
-            var cmb = DeciderCombinator.withLeftRight(symbols[0].toAccessor(context),  symbols[1].toAccessor(context), Writer.constant(outSymbol.ordinal(), 1), operation);
+            var cmb = DeciderCombinator.withLeftRight(symbols[0].toAccessor(context),  symbols[1].toAccessor(context), Writer.one(outSymbol), operation);
             var connected = new ConnectedCombinator(cmb);
             connected.setGreenIn(group.getInput());
             connected.setGreenOut(group.getOutput());
@@ -708,7 +708,7 @@ public class Generator extends LanguageBaseListener {
 
         @Override
         public int generateCombinators(Symbol[] symbols, ArithmeticOperation operation, FactorioSignal outSymbol, CombinatorGroup group) {
-            var cmb = ArithmeticCombinator.withLeftRight(symbols[0].toAccessor(context),  symbols[1].toAccessor(context), outSymbol.ordinal(), operation);
+            var cmb = ArithmeticCombinator.withLeftRight(symbols[0].toAccessor(context),  symbols[1].toAccessor(context), outSymbol, operation);
             var connected = new ConnectedCombinator(cmb);
             connected.setGreenIn(group.getInput());
             connected.setGreenOut(group.getOutput());
@@ -731,7 +731,7 @@ public class Generator extends LanguageBaseListener {
 
         @Override
         public int generateCombinators(Symbol[] symbols, Void operation, FactorioSignal outSymbol, CombinatorGroup group) {
-            var cmb = DeciderCombinator.withLeftRight(symbols[0].toAccessor(context), Accessor.constant(0), Writer.constant(outSymbol.ordinal(), 1), DeciderCombinator.EQ);
+            var cmb = DeciderCombinator.withLeftRight(symbols[0].toAccessor(context), Accessor.constant(0), Writer.one(outSymbol), DeciderCombinator.EQ);
             var connected = new ConnectedCombinator(cmb);
             connected.setGreenIn(group.getInput());
             connected.setGreenOut(group.getOutput());

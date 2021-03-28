@@ -44,7 +44,7 @@ public class Variable extends Symbol {
     @Override
     public Accessor toAccessor(FunctionContext context) {
         if(getSignal() == null) throw new UnsupportedOperationException("Variable not bound");
-        return Accessor.signal(getSignal().ordinal());
+        return Accessor.signal(getSignal());
     }
 
     @Override
