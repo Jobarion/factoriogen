@@ -8,7 +8,7 @@ import java.util.function.Consumer;
 
 public class MSTSolver {
 
-    //Assumes compete graph
+    //Assumes complete graph
     public static void solveMst(Collection<Node> nodes) {
         if(nodes.size() <= 1) return;
         Set<Node> connected = new HashSet<>();
@@ -34,12 +34,14 @@ public class MSTSolver {
 
     public static abstract class Node implements Consumer<Node> {
         private final Point point;
-        private int entityId, circuitId;
+        private final int entityId, circuitId;
+        private final boolean withCircuitId;
 
-        public Node(Point point, int entityId, int circuitId) {
+        public Node(Point point, int entityId, int circuitId, boolean withCircuitId) {
             this.point = point;
             this.entityId = entityId;
             this.circuitId = circuitId;
+            this.withCircuitId = withCircuitId;
         }
 
         public int getEntityId() {
@@ -48,6 +50,10 @@ public class MSTSolver {
 
         public int getCircuitId() {
             return circuitId;
+        }
+
+        public boolean isWithCircuitId() {
+            return withCircuitId;
         }
 
         public int distance(Node other) {

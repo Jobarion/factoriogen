@@ -4,6 +4,11 @@ import me.joba.factorio.lang.FactorioSignal;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
 public interface Combinator {
 
     Signal process(Signal red, Signal green);
@@ -33,9 +38,13 @@ public interface Combinator {
                 JSONObject cbehavior = new JSONObject();
                 int index = 1;
                 JSONArray filters = new JSONArray();
+                Set<Integer> alwaysIncludeList = new HashSet<>();
+                for(FactorioSignal s : out.includeSignal()) {
+                    alwaysIncludeList.add(s.ordinal());
+                }
                 for(int i = 0; i < Signal.SIGNAL_TYPES.get(); i++) {
                     int val = out.get(i);
-                    if(val != 0) {
+                    if(val != 0 || alwaysIncludeList.contains(i)) {
                         JSONObject filter = new JSONObject();
                         filter.put("index", index++);
                         filter.put("count", val);

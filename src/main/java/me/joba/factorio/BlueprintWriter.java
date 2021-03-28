@@ -85,27 +85,35 @@ public class BlueprintWriter {
 
                 var jsonConn = connections.get(cc.getEntityId());
                 var jsonObjIn = getOrElse(jsonConn, "1", new JSONObject());
-                var jsonObjOut = getOrElse(jsonConn, "2", new JSONObject());
 
                 var greenIn = getOrElse(jsonObjIn, "green", new JSONArray());
-                var greenOut = getOrElse(jsonObjOut, "green", new JSONArray());
+                JSONArray greenOut;
                 var redIn = getOrElse(jsonObjIn, "red", new JSONArray());
-                var redOut = getOrElse(jsonObjOut, "red", new JSONArray());
+                JSONArray redOut;
 
                 jsonObjIn.put("green", greenIn);
                 jsonObjIn.put("red", redIn);
-                jsonObjOut.put("green", greenOut);
-                jsonObjOut.put("red", redOut);
                 jsonConn.put("1", jsonObjIn);
-                jsonConn.put("2", jsonObjOut);
+                if(cc.getCombinator().isOutputOnly()) {
+                    redOut = redIn;
+                    greenOut = greenIn;
+                }
+                else {
+                    var jsonObjOut = getOrElse(jsonConn, "2", new JSONObject());
+                    greenOut = getOrElse(jsonObjOut, "green", new JSONArray());
+                    redOut = getOrElse(jsonObjOut, "red", new JSONArray());
+                    jsonConn.put("2", jsonObjOut);
+                    jsonObjOut.put("green", greenOut);
+                    jsonObjOut.put("red", redOut);
+                }
 
                 if(NetworkGroup.isEqual(cc.getGreenIn(), ng)) {
-                    nodes.add(new MSTSolver.Node(positions.get(cc.getEntityId()), cc.getEntityId(), 1) {
+                    nodes.add(new MSTSolver.Node(positions.get(cc.getEntityId()), cc.getEntityId(), 1, !cc.getCombinator().isOutputOnly()) {
                         @Override
                         public void accept(MSTSolver.Node node) {
                             JSONObject conObj = new JSONObject();
                             conObj.put("entity_id", node.getEntityId());
-                            conObj.put("circuit_id", node.getCircuitId());
+                            if(node.isWithCircuitId()) conObj.put("circuit_id", node.getCircuitId());
                             greenIn.add(conObj);
                         }
                     });
@@ -113,12 +121,12 @@ public class BlueprintWriter {
 
 
                 if(NetworkGroup.isEqual(cc.getGreenOut(), ng)) {
-                    nodes.add(new MSTSolver.Node(positions.get(cc.getEntityId()), cc.getEntityId(), cc.getCombinator().isOutputOnly() ? 1 : 2) {
+                    nodes.add(new MSTSolver.Node(positions.get(cc.getEntityId()), cc.getEntityId(), cc.getCombinator().isOutputOnly() ? 1 : 2, !cc.getCombinator().isOutputOnly()) {
                         @Override
                         public void accept(MSTSolver.Node node) {
                             JSONObject conObj = new JSONObject();
                             conObj.put("entity_id", node.getEntityId());
-                            conObj.put("circuit_id", node.getCircuitId());
+                            if(node.isWithCircuitId()) conObj.put("circuit_id", node.getCircuitId());
                             greenOut.add(conObj);
                         }
                     });
@@ -126,12 +134,12 @@ public class BlueprintWriter {
 
 
                 if(NetworkGroup.isEqual(cc.getRedIn(), ng)) {
-                    nodes.add(new MSTSolver.Node(positions.get(cc.getEntityId()), cc.getEntityId(), 1) {
+                    nodes.add(new MSTSolver.Node(positions.get(cc.getEntityId()), cc.getEntityId(), 1, !cc.getCombinator().isOutputOnly()) {
                         @Override
                         public void accept(MSTSolver.Node node) {
                             JSONObject conObj = new JSONObject();
                             conObj.put("entity_id", node.getEntityId());
-                            conObj.put("circuit_id", node.getCircuitId());
+                            if(node.isWithCircuitId()) conObj.put("circuit_id", node.getCircuitId());
                             redIn.add(conObj);
                         }
                     });
@@ -139,12 +147,12 @@ public class BlueprintWriter {
 
 
                 if(NetworkGroup.isEqual(cc.getRedOut(), ng)) {
-                    nodes.add(new MSTSolver.Node(positions.get(cc.getEntityId()), cc.getEntityId(), cc.getCombinator().isOutputOnly() ? 1 : 2) {
+                    nodes.add(new MSTSolver.Node(positions.get(cc.getEntityId()), cc.getEntityId(), cc.getCombinator().isOutputOnly() ? 1 : 2, !cc.getCombinator().isOutputOnly()) {
                         @Override
                         public void accept(MSTSolver.Node node) {
                             JSONObject conObj = new JSONObject();
                             conObj.put("entity_id", node.getEntityId());
-                            conObj.put("circuit_id", node.getCircuitId());
+                            if(node.isWithCircuitId()) conObj.put("circuit_id", node.getCircuitId());
                             redOut.add(conObj);
                         }
                     });

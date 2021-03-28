@@ -12,9 +12,23 @@ public interface Signal {
     Signal EMPTY = x -> 0;
 
     int get(int sid);
+    default FactorioSignal[] includeSignal() {
+        return new FactorioSignal[0];
+    }
 
     static Signal singleValue(int sid, int val) {
-        return x -> x == sid ? val : 0;
+        return new Signal() {
+
+            @Override
+            public int get(int x) {
+                return x == sid ? val : 0;
+            }
+
+            @Override
+            public FactorioSignal[] includeSignal() {
+                return new FactorioSignal[]{FactorioSignal.values()[sid]};
+            }
+        };
     }
 
     static Signal multiValue(int[] values) {
