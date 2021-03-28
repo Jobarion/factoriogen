@@ -146,9 +146,9 @@ public interface ArithmeticCombinator extends Combinator {
     ArithmeticOperation MOD =new ArithmeticOperation("%", (a, b) -> a % b);
     ArithmeticOperation LSH =new ArithmeticOperation("<<", (a, b) -> a << b);
     ArithmeticOperation RSH =new ArithmeticOperation(">>", (a, b) -> a >> b);
-    ArithmeticOperation AND =new ArithmeticOperation("&", (a, b) -> a & b);
-    ArithmeticOperation OR = new ArithmeticOperation("|", (a, b) -> a | b);
-    ArithmeticOperation XOR =new ArithmeticOperation("^", (a, b) -> a ^ b);
+    ArithmeticOperation AND =new ArithmeticOperation("AND", (a, b) -> a & b);
+    ArithmeticOperation OR = new ArithmeticOperation("OR", (a, b) -> a | b);
+    ArithmeticOperation XOR =new ArithmeticOperation("XOR", (a, b) -> a ^ b);
 
     static ArithmeticOperation getOperation(String op) {
         return switch (op) {

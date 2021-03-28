@@ -4,7 +4,7 @@ import java.util.*;
 
 public class SimulatedAnnealingSolver {
 
-    private static final Random RANDOM = new Random(1234); //Repeatable outcomes are nice
+    private static final Random RANDOM = new Random(1235); //Repeatable outcomes are nice
 
 //    public static void main(String[] args) {
 //        int nodeCount = 1000;

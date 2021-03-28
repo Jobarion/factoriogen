@@ -37,16 +37,79 @@ public class Generator extends LanguageBaseListener {
                     "  return(currentVal);\n" +
                     "}";
 
-    private static final String SIMPLE_FUNCTION_WHILE =
+    private static final String WHILE_OUTSIDE_VAR =
             "function simple(a=red) {\n" +
-                    "  while(a > 0) {\n" +
-                    "    a = a - 1;\n" +
+                    "  b = a * a;\n" +
+                    "  while(a > 10) {\n" +
+                    "    a = a / 2;\n" +
                     "  }\n" +
-                    "  return(a);\n" +
+                    "  return(a, b);\n" +
                     "}";
 
-    private static final String TEST = COLLATZ;
-    public static final boolean PROTECTED_LOOPS = true;
+    private static final String FUNCTION_NESTED_WHILE =
+            "function nested(a=red) {\n" +
+            "  while(a > 8) {\n" +
+            "    while(a > 10) {\n" +
+            "      a = a / 2;\n" +
+            "    }\n" +
+            "    a = a - 1;\n" +
+            "  }\n" +
+            "  return(a);\n" +
+            "}";
+
+    private static final String PYTH_TRIPLE = "function nested(max: red) {\n" +
+            "  a = 0;\n" +
+            "  b = 0;\n" +
+            "  c = 0;\n" +
+            "  terminate = 0;\n" +
+            "    while(terminate == 0 && a <= max) {\n" +
+            "      b = a;\n" +
+            "      a = a + 1;\n" +
+            "      while(terminate == 0 && b <= max) {\n" +
+            "        c = b;\n" +
+            "        b = b + 1;\n" +
+            "        while(terminate == 0 && c <= max) {\n" +
+            "          c = c + 1;\n" +
+            "          if(a * a + b * b == c * c) {\n" +
+            "            terminate = 1;\n" +
+            "          }\n" +
+            "        }\n" +
+            "      }\n" +
+            "    }\n" +
+            "  return(a, b, c);\n" +
+            "}";
+
+    private static final String NESTED_SMALLER = "function nested1(max= red) {\n" +
+            "  a = 3;\n" +
+            "  b = 0;\n" +
+            "  c = 0;\n" +
+            "  terminate = 0;\n" +
+            "      while(terminate == 0 && b <= max) {\n" +
+            "        c = 0;\n" +
+            "        b = b + 1;\n" +
+            "        while(terminate == 0 && c <= max) {\n" +
+            "          c = c + 1;\n" +
+            "          if(a * a + b * b == c * c) {\n" +
+            "            terminate = 1;\n" +
+            "          }\n" +
+            "        }\n" +
+            "      }\n" +
+            "  return(b, c);\n" +
+            "}";
+
+    private static final String COMPLEX_CONDITION = "function complexLoopCondition(max= red) {\n" +
+            "  terminate = 0;\n" +
+            "  b = 0;\n" +
+            "  while(terminate == 0 && b <= max) {\n" +
+            "    b = b + 1;\n" +
+            "    if(1 + b * b == 1 + b + b) {\n" +
+            "      terminate = 1;\n" +
+            "    }\n" +
+            "  }\n" +
+            "  return(b);\n" +
+            "}";
+
+    private static final String TEST = PYTH_TRIPLE;
 
     private FunctionContext context;
 
@@ -56,6 +119,7 @@ public class Generator extends LanguageBaseListener {
         NetworkGroup out = new NetworkGroup();
         CombinatorGroup functionHeader = new CombinatorGroup(in, out);
         var inputCombinator = new ConnectedCombinator(DeciderCombinator.withLeftRight(Accessor.signal(CombinatorUtil.CONTROL_FLOW_SIGNAL), Accessor.constant(0), Writer.everything(false), DeciderCombinator.NEQ));
+        inputCombinator.setName("Input function");
         functionHeader.getCombinators().add(inputCombinator);
         inputCombinator.setGreenIn(in);
         inputCombinator.setGreenOut(out);
@@ -67,7 +131,7 @@ public class Generator extends LanguageBaseListener {
     public void exitFunctionParams(LanguageParser.FunctionParamsContext ctx) {
         for(var param : ctx.functionParam()) {
             FactorioSignal signal = FactorioSignal.valueOf("SIGNAL_" + param.signal.getText().toUpperCase().replace('-', '_'));
-            System.out.println("Param " + param.name.getText() + " supplied as " + signal);
+            log("Param " + param.name.getText() + " supplied as " + signal);
             if(signal.isReserved()) {
                 throw new IllegalArgumentException("Signal " + signal + " is reserved");
             }
@@ -87,6 +151,7 @@ public class Generator extends LanguageBaseListener {
         returnGroup.getCombinators().add(outputGate);
         outputGate.setGreenOut(returnGroup.getOutput());
         outputGate.setGreenIn(gateInput);
+        outputGate.setName("Output " + ctx.getText());
 
         int maxDelay = context.getControlFlowVariable().getTickDelay();
         List<Symbol> valuesToReturn = new ArrayList<>();
@@ -100,6 +165,7 @@ public class Generator extends LanguageBaseListener {
             if(!returnVal.isBound()) {
                 returnVal.bind(context.getFreeSymbol());
             }
+            log("Returning " + returnVal + " with delay " + returnVal.getTickDelay());
             if(returnVal instanceof Constant) {
                 if(((Constant) returnVal).getVal() == 0) continue;
                 ConnectedCombinator constant = new ConnectedCombinator(Combinator.constant(Signal.singleValue(returnVal.getSignal().ordinal(), ((Constant) returnVal).getVal())));
@@ -108,7 +174,7 @@ public class Generator extends LanguageBaseListener {
             }
             else {
                 var accessor = ((Variable)returnVal).createVariableAccessor();
-                accessor.access(maxDelay).accept(gateInput, returnGroup);
+                accessor.access(maxDelay + 1).accept(gateInput, returnGroup);//Ensure our output is clean
                 returnGroup.getAccessors().add(accessor);
             }
         }
@@ -139,7 +205,6 @@ public class Generator extends LanguageBaseListener {
     @Override
     public void enterLoopBody(LanguageParser.LoopBodyContext ctx) {
         ((WhileVariableScope)context.getVariableScope()).enterLoopBody();
-        context.overwriteControlFlowVariable(((WhileVariableScope)context.getVariableScope()).getVariableProviderGroup()).setDelay(0);
     }
 
     /*
@@ -159,14 +224,15 @@ public class Generator extends LanguageBaseListener {
         WhileVariableScope whileScope = (WhileVariableScope) context.getVariableScope();
         context.leaveLoop();
 
-        if(whileScope.getAccessedOutside().isEmpty()) {//The loop has no side effect and can be eliminated
-            return;
-        }
-
-        CombinatorGroup whileGroup = new CombinatorGroup(new NetworkGroup(), new NetworkGroup());
+        CombinatorGroup whileGroup = new CombinatorGroup(new NetworkGroup("while in"), new NetworkGroup("while out"));
         context.getFunctionGroup().getSubGroups().add(whileGroup);
-        whileGroup.getSubGroups().add(whileScope.getVariableProviderGroup());
-        whileGroup.getSubGroups().add(whileScope.getConditionVariableProviderGroup());
+        whileGroup.getSubGroups().add(whileScope.getPreConditionProvider());
+        whileGroup.getSubGroups().add(whileScope.getPostConditionProvider());
+
+        ConnectedCombinator inputGate = new ConnectedCombinator(DeciderCombinator.withLeftRight(Accessor.signal(CombinatorUtil.CONTROL_FLOW_SIGNAL), Accessor.constant(0), Writer.everything(false), DeciderCombinator.NEQ));
+        whileGroup.getCombinators().add(inputGate);
+
+        inputGate.setGreenIn(whileGroup.getInput());
 
         ConnectedCombinator dedupInput = new ConnectedCombinator(DeciderCombinator.withLeftRight(Accessor.signal(CombinatorUtil.TEMP_SIGNAL), Accessor.constant(0), Writer.everything(false), DeciderCombinator.EQ));
         whileGroup.getCombinators().add(dedupInput);
@@ -180,21 +246,24 @@ public class Generator extends LanguageBaseListener {
         ConnectedCombinator dedupConstants = new ConnectedCombinator(Combinator.constant(Signal.singleValue(CombinatorUtil.TEMP_SIGNAL.ordinal(), -1)));
         whileGroup.getCombinators().add(dedupConstants);
 
-        dedupInput.setGreenIn(whileGroup.getInput());
-        dedupStore.setGreenIn(whileGroup.getInput());
-        dedupStore.setGreenOut(whileGroup.getInput());
-        dedupReset.setGreenOut(whileGroup.getInput());
+        NetworkGroup tmp = new NetworkGroup("dedup network");
+        whileGroup.getNetworks().add(tmp);
+        inputGate.setGreenOut(tmp);
+        dedupInput.setGreenIn(tmp);
+        dedupStore.setGreenIn(tmp);
+        dedupStore.setGreenOut(tmp);
+        dedupReset.setGreenOut(tmp);
 
-        NetworkGroup tmp = new NetworkGroup();
+        tmp = new NetworkGroup("dedup reset constant");
         whileGroup.getNetworks().add(tmp);
         dedupConstants.setGreenOut(tmp);
         dedupReset.setGreenIn(tmp);
 
-        NetworkGroup dedupResetInput = new NetworkGroup();
+        NetworkGroup dedupResetInput = new NetworkGroup("dedup reset input");
         whileGroup.getNetworks().add(dedupResetInput);
         dedupReset.setRedIn(dedupResetInput);
 
-        tmp = new NetworkGroup();
+        tmp = new NetworkGroup("dedup input blocker internal");
         whileGroup.getNetworks().add(tmp);
         dedupStore.setRedIn(tmp);
         dedupInput.setRedOut(tmp);
@@ -207,20 +276,20 @@ public class Generator extends LanguageBaseListener {
 
         loopFeedbackGateInitial.setRedIn(tmp);
 
-        NetworkGroup loopDataPreCondition = whileScope.getConditionVariableProviderGroup().getOutput();
+        NetworkGroup loopDataPreCondition = whileScope.getPreConditionProvider().getOutput();
         whileGroup.getNetworks().add(loopDataPreCondition);
 
         loopFeedbackGateInitial.setGreenOut(loopDataPreCondition);
         loopFeedbackGateSubsequent.setGreenOut(loopDataPreCondition);
 
-        NetworkGroup loopFeedbackWire = new NetworkGroup();
+        NetworkGroup loopFeedbackWire = new NetworkGroup("loop feedback");
         whileGroup.getNetworks().add(loopFeedbackWire);
         loopFeedbackGateSubsequent.setGreenIn(loopFeedbackWire);
 
         //The loop condition
         var condition = context.popTempVariable();
 
-        NetworkGroup conditionSignal = new NetworkGroup();
+        NetworkGroup conditionSignal = new NetworkGroup("loop condition");
         whileGroup.getNetworks().add(conditionSignal);
 
         var loopFeedback = new ConnectedCombinator(DeciderCombinator.withLeftRight(Accessor.signal(condition.getSignal()), Accessor.constant(1), Writer.everything(false), DeciderCombinator.EQ));
@@ -232,12 +301,11 @@ public class Generator extends LanguageBaseListener {
         loopExit.setRedIn(conditionSignal);
         loopExit.setRedOut(dedupResetInput);
 
-        //TODO delay for input?
-        loopFeedback.setGreenOut(whileScope.getVariableProviderGroup().getOutput());
+        loopFeedback.setGreenOut(whileScope.getPostConditionProvider().getOutput());
         loopExit.setGreenOut(whileGroup.getOutput());
 
         int innerLoopDelay = condition.getTickDelay();
-        for(var x : whileScope.getAccessedOutside().values()) {
+        for(var x : whileScope.getDefinedVariables().values()) {
             innerLoopDelay = Math.max(innerLoopDelay, x.getTickDelay());
         }
 
@@ -247,7 +315,7 @@ public class Generator extends LanguageBaseListener {
             whileGroup.getCombinators().add(connected);
         }
         else {
-            NetworkGroup inner = new NetworkGroup();
+            NetworkGroup inner = new NetworkGroup("condition inner");
             whileGroup.getNetworks().add(inner);
             ConnectedCombinator connected = new ConnectedCombinator(ArithmeticCombinator.copying(condition.getSignal()));
             connected.setRedOut(conditionSignal);
@@ -266,42 +334,42 @@ public class Generator extends LanguageBaseListener {
             bufferDelayConnected.setGreenIn(bufferDelayInput);
             whileGroup.getCombinators().add(bufferDelayConnected);
             if(i > 0) {
-                bufferDelayInput = new NetworkGroup();
+                bufferDelayInput = new NetworkGroup("loop data delay internal " + i);
                 whileGroup.getNetworks().add(bufferDelayInput);
                 bufferDelayConnected.setGreenOut(bufferDelayInput);
             }
         }
-        NetworkGroup delayedSignal = new NetworkGroup();
+        NetworkGroup delayedSignal = new NetworkGroup("loop data delay out");
         whileGroup.getNetworks().add(delayedSignal);
         bufferDelayConnected.setGreenOut(delayedSignal);
         loopExit.setGreenIn(delayedSignal);
         loopFeedback.setGreenIn(delayedSignal);
 
-        System.out.println("Variables relevant for while: " + whileScope.getAccessedOutside());
         int outsideVariableDelay = 0;
-        for(var varName : whileScope.getAccessedOutside().keySet()) {
+        for(var varName : whileScope.getParentScope().getAllVariables().keySet()) {
             outsideVariableDelay = Math.max(outsideVariableDelay, whileScope.getParentScope().getNamedVariable(varName).getTickDelay());
         }
 
-        for(var varName : whileScope.getAccessedOutside().keySet()) {
+        log("Delay before loop start: " + outsideVariableDelay);
+
+        //Get outside variables into the while loop
+        for(var varName : whileScope.getParentScope().getAllVariables().keySet()) {
             var accessor = whileScope.getParentScope().getNamedVariable(varName).createVariableAccessor();
             whileGroup.getAccessors().add(accessor);
             accessor.access(outsideVariableDelay).accept(whileGroup);
         }
 
-        for(var accessedVar : whileScope.getAccessedOutside().values()) {
+        for(var accessedVar : whileScope.getAllVariables().values()) {
             var accessor = accessedVar.createVariableAccessor();
             whileGroup.getAccessors().add(accessor);
             accessor.access(innerLoopDelay).accept(loopFeedbackWire, whileGroup);
         }
 
-        for(var defined : whileScope.getAccessedOutside().entrySet()) {
+        for(var defined : whileScope.getParentScope().getAllVariables().entrySet()) {
             var v = defined.getValue();
             var rebound = context.createNamedVariable(defined.getKey(), v.getType(), v.getSignal(), whileGroup);
             rebound.setDelay(0);
         }
-
-        //TODO: Properly delay _all other_ variables so that the entire variable scope is now synced.
     }
 
     /*
@@ -323,8 +391,8 @@ public class Generator extends LanguageBaseListener {
 
         context.leaveConditional();
 
-        System.out.println("Assigned in if: " + assignedIf);
-        System.out.println("Assigned in else: " + assignedElse);
+        log("Assigned in if: " + assignedIf);
+        log("Assigned in else: " + assignedElse);
 
         //Remove if variables only existed in if/else block and are now out of scope
         assignedIf.keySet().removeIf(key -> context.getNamedVariable(key) == null);
@@ -333,6 +401,7 @@ public class Generator extends LanguageBaseListener {
         Set<String> allVariables = new HashSet<>();
         allVariables.addAll(assignedIf.keySet());
         allVariables.addAll(assignedElse.keySet());
+        context.getVariableScope().getAllVariables();
         allVariables.add(FunctionContext.CONTROL_FLOW_VAR_NAME);
 
         if(allVariables.isEmpty()) {
@@ -436,7 +505,7 @@ public class Generator extends LanguageBaseListener {
 
         ConnectedCombinator currentConditionCombinator = connected;
         for(int i = delay; i > condition.getTickDelay() + 2; i--) {
-            System.out.println("Added manual if condition delay");
+            log("Added manual if condition delay");
             ConnectedCombinator next = new ConnectedCombinator(ArithmeticCombinator.copying(condition.getSignal()));
             var connection = new NetworkGroup();
             currentConditionCombinator.setGreenOut(connection);
@@ -475,10 +544,10 @@ public class Generator extends LanguageBaseListener {
     @Override
     public void exitBoolExpr(LanguageParser.BoolExprContext ctx) {
         if(ctx.leftComponent != null) {
-            System.out.println("Exit " + ctx.getText());
+            log("Exit " + ctx.getText());
             BOOL_EXPR_COMPONENT_PARSER.parse(context, ctx);
         }
-        else if(ctx.left != null) {System.out.println("Exit " + ctx.getText());
+        else if(ctx.left != null) {log("Exit " + ctx.getText());
             BOOL_EXPR_PARSER.parse(context, ctx);
         }
         else if(ctx.negated != null) {
@@ -551,7 +620,7 @@ public class Generator extends LanguageBaseListener {
             group.getAccessors().add(accessor);
             accessor.access(value.getTickDelay()).accept(group);
         }
-        System.out.println("Creating named " + varName + " = " + named + ", with delay " + named.getTickDelay());
+        log("Creating named " + varName + " = " + named + ", with delay " + named.getTickDelay());
     }
 
     @Override
@@ -588,7 +657,7 @@ public class Generator extends LanguageBaseListener {
         }
     };
 
-    private final Combiner<LanguageParser.BoolExprContext, DeciderOperation> BOOL_EXPR_COMPONENT_PARSER = new Combiner<>(2, VarType.INT, VarType.INT) {
+    private final Combiner<LanguageParser.BoolExprContext, DeciderOperation> BOOL_EXPR_COMPONENT_PARSER = new Combiner<>(2, VarType.INT, VarType.BOOLEAN) {
 
         @Override
         public DeciderOperation getOperation(LanguageParser.BoolExprContext ruleContext) {
@@ -670,6 +739,10 @@ public class Generator extends LanguageBaseListener {
         }
     };
 
+    private void log(String msg) {
+        System.out.println("\t".repeat(context.getDepth()) + msg);
+    }
+
     public static void main(String[] args) {
         LanguageLexer lexer = new LanguageLexer(CharStreams.fromString(TEST));
         LanguageParser parser = new LanguageParser(new CommonTokenStream(lexer));
@@ -689,7 +762,6 @@ public class Generator extends LanguageBaseListener {
             generatedGroups.add(group);
             toExpand.addAll(group.getSubGroups());
         }
-        System.out.println(generatedGroups);
 
 //        generator.accessors.forEach(VariableAccessor::generateAccessors);
         generatedGroups.forEach(g -> {
@@ -706,8 +778,6 @@ public class Generator extends LanguageBaseListener {
                 .flatMap(Collection::stream)
                 .collect(Collectors.toList());
 
-        System.out.println(combinators);
-        System.out.println(networks);
 
         System.out.println(BlueprintWriter.writeBlueprint(combinators, networks));
     }

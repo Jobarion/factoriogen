@@ -8,15 +8,23 @@ public class ConnectedCombinator {
     private NetworkGroup redIn, greenIn;
     private NetworkGroup redOut, greenOut;
     private int entityId;
+    private String name;
 
     public ConnectedCombinator(Combinator combinator) {
-        this.combinator = combinator;
-        this.entityId = entityIdCounter++;
+        this(entityIdCounter++, combinator);
     }
 
     public ConnectedCombinator(int entityId, Combinator combinator) {
         this.combinator = combinator;
         this.entityId = entityId;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
     }
 
     public Combinator getCombinator() {

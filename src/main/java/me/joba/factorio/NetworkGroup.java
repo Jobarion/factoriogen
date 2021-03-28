@@ -6,6 +6,21 @@ public class NetworkGroup {
 
     private static Map<NetworkGroup, Set<NetworkGroup>> mergedMap = new HashMap<>();
 
+
+    private final String name;
+
+    public NetworkGroup() {
+        this(null);
+    }
+
+    public NetworkGroup(String name) {
+        this.name = name;
+    }
+
+    public String getName() {
+        return name;
+    }
+
     public static void merge(NetworkGroup... groups) {
         Set<NetworkGroup> totalGroup = new HashSet<>();
         for(var group : groups) {
@@ -17,11 +32,13 @@ public class NetworkGroup {
         }
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        NetworkGroup that = (NetworkGroup) o;
-        return mergedMap.getOrDefault(this, Collections.emptySet()).contains(that);
+    public static Set<NetworkGroup> getMerged(NetworkGroup g) {
+        return mergedMap.getOrDefault(g, Collections.emptySet());
     }
+
+     public static boolean isEqual(NetworkGroup a, NetworkGroup b) {
+        if(a == b) return true;
+        if(a == null || b == null) return false;
+         return mergedMap.getOrDefault(a, Collections.emptySet()).contains(b);
+     }
 }

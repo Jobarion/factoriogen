@@ -11,21 +11,6 @@ import java.util.zip.Deflater;
 
 public class BlueprintWriter {
 
-    public static Map<NetworkGroup, Set<ConnectedCombinator>> createNetworkMap(List<ConnectedCombinator> combinators, Collection<NetworkGroup> networks) {
-        Map<NetworkGroup, Set<ConnectedCombinator>> networkMap = new HashMap<>();
-        for(NetworkGroup ng : networks) {
-            if(networkMap.containsKey(ng)) continue;
-            Set<ConnectedCombinator> connected = new HashSet<>();
-            for(ConnectedCombinator cc : combinators) {
-                if(Objects.equals(cc.getGreenIn(), ng) || Objects.equals(cc.getGreenOut(), ng) || Objects.equals(cc.getRedIn(), ng) || Objects.equals(cc.getRedOut(), ng)) {
-                    connected.add(cc);
-                }
-            }
-            networkMap.put(ng, connected);
-        }
-        return networkMap;
-    }
-
     public static List<MSTSolver.Point> placeCombinators(List<ConnectedCombinator> combinators, Collection<NetworkGroup> networks) {
         List<Node> nodes = new ArrayList<>();
 
@@ -36,10 +21,9 @@ public class BlueprintWriter {
         }
         Map<NetworkGroup, Set<ConnectedCombinator>> networkMap = new HashMap<>();
         for(NetworkGroup ng : networks) {
-            if(networkMap.containsKey(ng)) continue;
             Set<ConnectedCombinator> connected = new HashSet<>();
             for(ConnectedCombinator cc : combinators) {
-                if(Objects.equals(cc.getGreenIn(), ng) || Objects.equals(cc.getGreenOut(), ng) || Objects.equals(cc.getRedIn(), ng) || Objects.equals(cc.getRedOut(), ng)) {
+                if(NetworkGroup.isEqual(cc.getGreenIn(), ng) || NetworkGroup.isEqual(cc.getGreenOut(), ng) || NetworkGroup.isEqual(cc.getRedIn(), ng) || NetworkGroup.isEqual(cc.getRedOut(), ng)) {
                     connected.add(cc);
                 }
             }
@@ -58,7 +42,7 @@ public class BlueprintWriter {
             nodes.add(new Node(entityIdNodeIdMap.get(cc.getEntityId()), connectedTo));
         }
 
-        SimulatedAnnealingSolver.simulatedAnnealing(nodes, 10_000_000);
+        SimulatedAnnealingSolver.simulatedAnnealing(nodes, 40_000_000);
         List<MSTSolver.Point> points = new ArrayList<>();
         for(Node node : nodes) {
             points.add(new MSTSolver.Point(node.getX(), node.getY()));
@@ -74,6 +58,9 @@ public class BlueprintWriter {
         for(int i = 0; i < combinators.size(); i++) {
             var combinator = combinators.get(i);
             var position = calculatedPositions.get(i);
+            if(combinator.getName() != null) {
+                System.out.println("Placed '" + combinator.getName() + "' at x=" + position.getX() + " y=" + position.getY());
+            }
             var json = combinator.getCombinator().createJson();
             JSONObject pos = new JSONObject();
             json.put("position", pos);
@@ -88,8 +75,9 @@ public class BlueprintWriter {
             entities.add(json);
         }
         Map<NetworkGroup, Set<ConnectedCombinator>> networkMap = new HashMap<>();
+        Set<NetworkGroup> handled = new HashSet<>();
         for(NetworkGroup ng : networks) {
-            if(networkMap.containsKey(ng)) continue;
+            if(handled.contains(ng)) continue;
             Set<ConnectedCombinator> connected = new HashSet<>();
             List<MSTSolver.Node> nodes = new ArrayList<>();
             for(ConnectedCombinator cc : combinators) {
@@ -110,7 +98,7 @@ public class BlueprintWriter {
                 jsonConn.put("1", jsonObjIn);
                 jsonConn.put("2", jsonObjOut);
 
-                if(Objects.equals(cc.getGreenIn(), ng)) {
+                if(NetworkGroup.isEqual(cc.getGreenIn(), ng)) {
                     nodes.add(new MSTSolver.Node(positions.get(cc.getEntityId()), cc.getEntityId(), 1) {
                         @Override
                         public void accept(MSTSolver.Node node) {
@@ -123,7 +111,7 @@ public class BlueprintWriter {
                 }
 
 
-                if(Objects.equals(cc.getGreenOut(), ng)) {
+                if(NetworkGroup.isEqual(cc.getGreenOut(), ng)) {
                     nodes.add(new MSTSolver.Node(positions.get(cc.getEntityId()), cc.getEntityId(), cc.getCombinator().isOutputOnly() ? 1 : 2) {
                         @Override
                         public void accept(MSTSolver.Node node) {
@@ -136,7 +124,7 @@ public class BlueprintWriter {
                 }
 
 
-                if(Objects.equals(cc.getRedIn(), ng)) {
+                if(NetworkGroup.isEqual(cc.getRedIn(), ng)) {
                     nodes.add(new MSTSolver.Node(positions.get(cc.getEntityId()), cc.getEntityId(), 1) {
                         @Override
                         public void accept(MSTSolver.Node node) {
@@ -149,7 +137,7 @@ public class BlueprintWriter {
                 }
 
 
-                if(Objects.equals(cc.getRedOut(), ng)) {
+                if(NetworkGroup.isEqual(cc.getRedOut(), ng)) {
                     nodes.add(new MSTSolver.Node(positions.get(cc.getEntityId()), cc.getEntityId(), cc.getCombinator().isOutputOnly() ? 1 : 2) {
                         @Override
                         public void accept(MSTSolver.Node node) {
@@ -163,6 +151,7 @@ public class BlueprintWriter {
             }
             MSTSolver.solveMst(nodes);
             networkMap.put(ng, connected);
+            handled.addAll(NetworkGroup.getMerged(ng));
         }
 
         JSONObject blueprint = new JSONObject();

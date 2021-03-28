@@ -110,7 +110,13 @@ public class FunctionContext {
 //    }
 
     public void enterLoop() {
-        variables.push(new WhileVariableScope(variables.peek()));
+        var preConditionGroup = new CombinatorGroup(null, new NetworkGroup("while pre condition out"));
+        var postConditionGroup = new CombinatorGroup(null, new NetworkGroup("while post condition out"));
+        variables.push(new WhileVariableScope(variables.peek(), preConditionGroup, postConditionGroup));
+    }
+
+    public int getDepth() {
+        return variables.size();
     }
 
     public VariableScope getVariableScope() {

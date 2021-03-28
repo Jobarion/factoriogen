@@ -32,7 +32,7 @@ public abstract class Combiner<RC extends ParserRuleContext, OP> {
             Constant[] consts = new Constant[symbols.length];
             System.arraycopy(symbols, 0, consts, 0, consts.length);
             var computedConstant = computeConstExpr(consts, op);
-            System.out.println("Collapsed constants " + Arrays.toString(symbols) + " (using " + op + ") = " + computedConstant);
+            log(context, "Collapsed constants " + Arrays.toString(symbols) + " (using " + op + ") = " + computedConstant);
             context.pushTempVariable(computedConstant);
             return;
         }
@@ -61,7 +61,11 @@ public abstract class Combiner<RC extends ParserRuleContext, OP> {
         int propagationDelay = generateCombinators(symbols, op, outSymbol, outputContext);
         bound.setDelay(maxInputDelay + propagationDelay);
 
-        System.out.println(Arrays.toString(symbols) + " (using " + op + ") = " + bound + ", with delay " + bound.getTickDelay());
+        log(context, Arrays.toString(symbols) + " (using " + op + ") = " + bound + ", with delay " + bound.getTickDelay());
+    }
+
+    protected void log(FunctionContext context, String msg) {
+        System.out.println("\t".repeat(context.getDepth()) + msg);
     }
 
     public abstract OP getOperation(RC ruleContext);
