@@ -24,6 +24,7 @@ public class NetworkGroup {
     public static void merge(NetworkGroup... groups) {
         Set<NetworkGroup> totalGroup = new HashSet<>();
         for(var group : groups) {
+            if(group == null) throw new NullPointerException("Merging with the null group is illegal");
             totalGroup.add(group);
             totalGroup.addAll(mergedMap.getOrDefault(group, Collections.emptySet()));
         }

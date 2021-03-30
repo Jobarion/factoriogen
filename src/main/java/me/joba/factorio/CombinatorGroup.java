@@ -10,7 +10,7 @@ public class CombinatorGroup {
     private final List<ConnectedCombinator> combinators = new ArrayList<>();
     private final List<NetworkGroup> networks = new ArrayList<>();
     private final List<VariableAccessor> accessors = new ArrayList<>();
-    private NetworkGroup input, output;
+    private final NetworkGroup input, output;
     private String correspondingCode;
     private final List<CombinatorGroup> subGroups = new ArrayList<>();
 
@@ -18,13 +18,7 @@ public class CombinatorGroup {
         this.input = input;
         this.output = output;
         if(input != null) this.networks.add(input);
-        if(input != output) this.networks.add(output);
-    }
-
-    public void setInput(NetworkGroup input) {
-        if(input == null || this.input != null) throw new IllegalArgumentException("Cannot unset input");
-        this.input = input;
-        this.networks.add(input);
+        if(output != null && input != output) this.networks.add(output);
     }
 
     public String getCorrespondingCode() {

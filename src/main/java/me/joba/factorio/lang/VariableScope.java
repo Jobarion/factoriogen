@@ -2,16 +2,15 @@ package me.joba.factorio.lang;
 
 import me.joba.factorio.CombinatorGroup;
 
-import javax.naming.Name;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 
 public class VariableScope {
 
     private static int variableIdCounter = 0;
     private Map<String, Variable> variables;
     private VariableScope parentScope;
+    private boolean sync = true;
 
     public VariableScope(VariableScope parent) {
         this.parentScope = parent;
@@ -20,6 +19,14 @@ public class VariableScope {
 
     public Map<String, Variable> getDefinedVariables() {
         return variables;
+    }
+
+    public void markAsAsync() {
+        sync = false;
+    }
+
+    public boolean isSync() {
+        return sync;
     }
 
     public Variable getNamedVariable(String name) {

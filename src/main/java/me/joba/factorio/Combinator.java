@@ -5,6 +5,7 @@ import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 public interface Combinator {
@@ -23,28 +24,22 @@ public interface Combinator {
     }
     JSONObject createControlBehaviorJson();
 
-    static Combinator constant(Signal out) {
+    static Combinator constant(Map<FactorioSignal, Integer> signals) {
         return () -> {
             JSONObject cbehavior = new JSONObject();
             int index = 1;
             JSONArray filters = new JSONArray();
-            Set<Integer> alwaysIncludeList = new HashSet<>();
-            for(FactorioSignal s : out.includeSignal()) {
-                alwaysIncludeList.add(s.ordinal());
+            for(var e : signals.entrySet()) {
+                JSONObject filter = new JSONObject();
+                filter.put("index", index++);
+                filter.put("count", e.getValue());
+                JSONObject signal = new JSONObject();
+                signal.put("type", "virtual");
+                signal.put("name", e.getKey().getFactorioName());
+                filter.put("signal", signal);
+                filters.add(filter);
             }
-            for(int i = 0; i < Signal.SIGNAL_TYPES.get(); i++) {
-                int val = out.get(i);
-                if(val != 0 || alwaysIncludeList.contains(i)) {
-                    JSONObject filter = new JSONObject();
-                    filter.put("index", index++);
-                    filter.put("count", val);
-                    JSONObject signal = new JSONObject();
-                    signal.put("type", "virtual");
-                    signal.put("name", FactorioSignal.values()[i].getFactorioName());
-                    filter.put("signal", signal);
-                    filters.add(filter);
-                }
-            }
+
             cbehavior.put("filters", filters);
             return cbehavior;
         };

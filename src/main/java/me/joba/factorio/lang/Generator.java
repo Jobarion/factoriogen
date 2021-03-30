@@ -119,7 +119,7 @@ public class Generator extends LanguageBaseListener {
         NetworkGroup in = new NetworkGroup();
         NetworkGroup out = new NetworkGroup();
         CombinatorGroup functionHeader = new CombinatorGroup(in, out);
-        var inputCombinator = new ConnectedCombinator(DeciderCombinator.withLeftRight(Accessor.signal(CombinatorUtil.CONTROL_FLOW_SIGNAL), Accessor.constant(0), Writer.everything(false), DeciderCombinator.NEQ));
+        var inputCombinator = new ConnectedCombinator(DeciderCombinator.withLeftRight(Accessor.signal(Constants.CONTROL_FLOW_SIGNAL), Accessor.constant(0), Writer.everything(false), DeciderCombinator.NEQ));
         inputCombinator.setName("Input function");
         functionHeader.getCombinators().add(inputCombinator);
         inputCombinator.setGreenIn(in);
@@ -148,7 +148,7 @@ public class Generator extends LanguageBaseListener {
         NetworkGroup gateInput = new NetworkGroup();
         returnGroup.getNetworks().add(gateInput);
 
-        var outputGate = new ConnectedCombinator(DeciderCombinator.withLeftRight(Accessor.signal(CombinatorUtil.CONTROL_FLOW_SIGNAL), Accessor.constant(0), Writer.everything(false), DeciderCombinator.NEQ));
+        var outputGate = new ConnectedCombinator(DeciderCombinator.withLeftRight(Accessor.signal(Constants.CONTROL_FLOW_SIGNAL), Accessor.constant(0), Writer.everything(false), DeciderCombinator.NEQ));
         returnGroup.getCombinators().add(outputGate);
         outputGate.setGreenOut(returnGroup.getOutput());
         outputGate.setGreenIn(gateInput);
@@ -169,7 +169,7 @@ public class Generator extends LanguageBaseListener {
             log("Returning " + returnVal + " with delay " + returnVal.getTickDelay());
             if(returnVal instanceof Constant) {
                 if(((Constant) returnVal).getVal() == 0) continue;
-                ConnectedCombinator constant = new ConnectedCombinator(Combinator.constant(Signal.singleValue(returnVal.getSignal().ordinal(), ((Constant) returnVal).getVal())));
+                ConnectedCombinator constant = new ConnectedCombinator(Combinator.constant(Map.of(returnVal.getSignal(), ((Constant) returnVal).getVal())));
                 constant.setGreenOut(gateInput);
                 returnGroup.getCombinators().add(constant);
             }
@@ -193,13 +193,11 @@ public class Generator extends LanguageBaseListener {
 
     @Override
     public void enterIfExpr(LanguageParser.IfExprContext ctx) {
-        context.startExpressionContext();
         context.enterConditional();
     }
 
     @Override
     public void enterWhileExpr(LanguageParser.WhileExprContext ctx) {
-        context.startExpressionContext();
         context.enterLoop();
     }
 
@@ -208,18 +206,6 @@ public class Generator extends LanguageBaseListener {
         ((WhileVariableScope)context.getVariableScope()).enterLoopBody();
     }
 
-    /*
-    The idea here is the following:
-        1. Wire up all variables that we need in the loop to an input buffer. That buffer stores the first state it gets.
-        2. Once the buffer receives a signal from the outside, it emits the stored variables.
-        3. Using them, the loop condition is evaluated
-        4. If true, let all variables into the loop + the loop timing pulse.
-        5. Do normal expression evaluation inside the loop
-        6. The loop is evaluated. All signals end up at the loop output gate that only lets stuff pass if the timing pulse is present (don't let intermediary signals pass)
-        7. Back to 3.
-        8. If the loop condition is false, emit the signals + loop pulse that can be used by future circuits (= more loops) to sync with.
-        9. (TODO: Move all other variables into a buffer and write them out together with whatever comes out of 8.)
-     */
     @Override
     public void exitWhileExpr(LanguageParser.WhileExprContext ctx) {
         WhileVariableScope whileScope = (WhileVariableScope) context.getVariableScope();
@@ -230,21 +216,21 @@ public class Generator extends LanguageBaseListener {
         whileGroup.getSubGroups().add(whileScope.getPreConditionProvider());
         whileGroup.getSubGroups().add(whileScope.getPostConditionProvider());
 
-        ConnectedCombinator inputGate = new ConnectedCombinator(DeciderCombinator.withLeftRight(Accessor.signal(CombinatorUtil.CONTROL_FLOW_SIGNAL), Accessor.constant(0), Writer.everything(false), DeciderCombinator.NEQ));
+        ConnectedCombinator inputGate = new ConnectedCombinator(DeciderCombinator.withLeftRight(Accessor.signal(Constants.CONTROL_FLOW_SIGNAL), Accessor.constant(0), Writer.everything(false), DeciderCombinator.NEQ));
         whileGroup.getCombinators().add(inputGate);
 
         inputGate.setGreenIn(whileGroup.getInput());
 
-        ConnectedCombinator dedupInput = new ConnectedCombinator(DeciderCombinator.withLeftRight(Accessor.signal(CombinatorUtil.TEMP_SIGNAL), Accessor.constant(0), Writer.everything(false), DeciderCombinator.EQ));
+        ConnectedCombinator dedupInput = new ConnectedCombinator(DeciderCombinator.withLeftRight(Accessor.signal(Constants.TEMP_SIGNAL), Accessor.constant(0), Writer.everything(false), DeciderCombinator.EQ));
         whileGroup.getCombinators().add(dedupInput);
 
-        ConnectedCombinator dedupStore = new ConnectedCombinator(DeciderCombinator.withAny(Accessor.constant(0), Writer.one(CombinatorUtil.TEMP_SIGNAL), DeciderCombinator.NEQ));
+        ConnectedCombinator dedupStore = new ConnectedCombinator(DeciderCombinator.withAny(Accessor.constant(0), Writer.one(Constants.TEMP_SIGNAL), DeciderCombinator.NEQ));
         whileGroup.getCombinators().add(dedupStore);
 
-        ConnectedCombinator dedupReset = new ConnectedCombinator(DeciderCombinator.withLeftRight(Accessor.signal(CombinatorUtil.CONTROL_FLOW_SIGNAL), Accessor.constant(0), Writer.fromInput(CombinatorUtil.TEMP_SIGNAL), DeciderCombinator.NEQ));
+        ConnectedCombinator dedupReset = new ConnectedCombinator(DeciderCombinator.withLeftRight(Accessor.signal(Constants.CONTROL_FLOW_SIGNAL), Accessor.constant(0), Writer.fromInput(Constants.TEMP_SIGNAL), DeciderCombinator.NEQ));
         whileGroup.getCombinators().add(dedupReset);
 
-        ConnectedCombinator dedupConstants = new ConnectedCombinator(Combinator.constant(Signal.singleValue(CombinatorUtil.TEMP_SIGNAL.ordinal(), -1)));
+        ConnectedCombinator dedupConstants = new ConnectedCombinator(Combinator.constant(Map.of(Constants.TEMP_SIGNAL, -1)));
         whileGroup.getCombinators().add(dedupConstants);
 
         NetworkGroup tmp = new NetworkGroup("dedup network");
@@ -269,10 +255,10 @@ public class Generator extends LanguageBaseListener {
         dedupStore.setRedIn(tmp);
         dedupInput.setRedOut(tmp);
 
-        ConnectedCombinator loopFeedbackGateInitial = new ConnectedCombinator(DeciderCombinator.withLeftRight(Accessor.signal(CombinatorUtil.CONTROL_FLOW_SIGNAL), Accessor.constant(0), Writer.everything(false), DeciderCombinator.NEQ));
+        ConnectedCombinator loopFeedbackGateInitial = new ConnectedCombinator(DeciderCombinator.withLeftRight(Accessor.signal(Constants.CONTROL_FLOW_SIGNAL), Accessor.constant(0), Writer.everything(false), DeciderCombinator.NEQ));
         whileGroup.getCombinators().add(loopFeedbackGateInitial);
 
-        ConnectedCombinator loopFeedbackGateSubsequent = new ConnectedCombinator(DeciderCombinator.withLeftRight(Accessor.signal(CombinatorUtil.CONTROL_FLOW_SIGNAL), Accessor.constant(0), Writer.everything(false), DeciderCombinator.NEQ));
+        ConnectedCombinator loopFeedbackGateSubsequent = new ConnectedCombinator(DeciderCombinator.withLeftRight(Accessor.signal(Constants.CONTROL_FLOW_SIGNAL), Accessor.constant(0), Writer.everything(false), DeciderCombinator.NEQ));
         whileGroup.getCombinators().add(loopFeedbackGateSubsequent);
 
         loopFeedbackGateInitial.setRedIn(tmp);
@@ -311,7 +297,7 @@ public class Generator extends LanguageBaseListener {
         }
 
         if(condition instanceof Constant) {
-            ConnectedCombinator connected = new ConnectedCombinator(Combinator.constant(Signal.singleValue(condition.getSignal().ordinal(), ((Constant) condition).getVal())));
+            ConnectedCombinator connected = new ConnectedCombinator(Combinator.constant(Map.of(condition.getSignal(), ((Constant) condition).getVal())));
             connected.setRedOut(conditionSignal);
             whileGroup.getCombinators().add(connected);
         }
@@ -373,174 +359,110 @@ public class Generator extends LanguageBaseListener {
         }
     }
 
-    /*
-        The idea:
-        1. Track which variables are assigned in the if/else blocks.
-        2. In parallel, calculate the result of the if & else block + the condition.
-        3. Add variables that exist in if but not in else to the if block result and vice versa.
-            e.g. in the if block a & b are assigned, in the else block b & c. The if block now emits its own a & b + the original value of c.
-            The else block emits its b & c + the original value of a.
-        4. Sync up the condition, results of if and results of else.
-        5. Wire to appropriate combinators that either let the if or the else results pass.
-     */
+    //This is a general implementation that can handle loops inside if statements.
+    //There are better solutions if we know the if statement doesn't contain loops
     @Override
     public void exitIfExpr(LanguageParser.IfExprContext ctx) {
         var condition = context.popTempVariable();
 
-        var assignedIf = context.getConditionContext().getIfScope().getDefinedVariables();
-        var assignedElse = context.getConditionContext().getElseScope().map(VariableScope::getDefinedVariables).orElse(Collections.emptyMap());
+        var conditionContext = context.leaveConditional();
 
-        context.leaveConditional();
+        CombinatorGroup conditionGroup = new CombinatorGroup(new NetworkGroup("condition input"), null);
+        context.getFunctionGroup().getSubGroups().add(conditionGroup);
 
-        log("Assigned in if: " + assignedIf);
-        log("Assigned in else: " + assignedElse);
+        conditionGroup.getSubGroups().add(conditionContext.getIfProvider());
+        conditionGroup.getSubGroups().add(conditionContext.getElseProvider());
 
-        //Remove if variables only existed in if/else block and are now out of scope
-        assignedIf.keySet().removeIf(key -> context.getNamedVariable(key) == null);
-        assignedElse.keySet().removeIf(key -> context.getNamedVariable(key) == null);
+        var ifInput = new ConnectedCombinator(DeciderCombinator.withLeftRight(Accessor.signal(condition.getSignal()), Accessor.constant(1), Writer.everything(false), DeciderCombinator.EQ));
+        var elseInput = new ConnectedCombinator(DeciderCombinator.withLeftRight(Accessor.signal(condition.getSignal()), Accessor.constant(0), Writer.everything(false), DeciderCombinator.EQ));
+        conditionGroup.getCombinators().add(ifInput);
+        conditionGroup.getCombinators().add(elseInput);
 
-        Set<String> allVariables = new HashSet<>();
-        allVariables.addAll(assignedIf.keySet());
-        allVariables.addAll(assignedElse.keySet());
-        context.getVariableScope().getAllVariables();
-        allVariables.add(FunctionContext.CONTROL_FLOW_VAR_NAME);
+        ifInput.setGreenIn(conditionGroup.getInput());
+        ifInput.setGreenOut(conditionContext.getIfProvider().getOutput());
+        elseInput.setGreenIn(conditionGroup.getInput());
+        elseInput.setGreenOut(conditionContext.getElseProvider().getOutput());
 
-        if(allVariables.isEmpty()) {
-            return;
+        int conditionDelay = condition.getTickDelay() + 1;//green -> red conversion :( @TODO allow accessors to use red wires instead
+
+        int outsideVariableDelay = conditionDelay;
+        int ifDelay = 0;
+        int elseDelay = 0;
+        for(var varName : context.getVariableScope().getAllVariables().keySet()) {
+            outsideVariableDelay = Math.max(outsideVariableDelay, context.getNamedVariable(varName).getTickDelay());
+            ifDelay = Math.max(ifDelay, conditionContext.getIfScope().getNamedVariable(varName).getTickDelay());
+            elseDelay = Math.max(elseDelay, conditionContext.getElseScope().getNamedVariable(varName).getTickDelay());
         }
 
-        CombinatorGroup group = new CombinatorGroup(new NetworkGroup(), new NetworkGroup());
-        context.getFunctionGroup().getSubGroups().add(group);
+        log("Outside delay " + outsideVariableDelay);
+        log("If delay " + ifDelay);
+        log("Else delay " + elseDelay);
+
+        CombinatorGroup conditionOutputGroup = new CombinatorGroup(null, new NetworkGroup("if output (if/else merged)"));
+        conditionGroup.getSubGroups().add(conditionOutputGroup);
+        NetworkGroup ifDataOut = new NetworkGroup("if result output");
+        NetworkGroup elseDataOut = new NetworkGroup("else result output");
+        conditionOutputGroup.getNetworks().add(ifDataOut);
+        conditionOutputGroup.getNetworks().add(elseDataOut);
+
+        ConnectedCombinator ifOutGate = new ConnectedCombinator(DeciderCombinator.withLeftRight(Accessor.signal(Constants.CONTROL_FLOW_SIGNAL), Accessor.constant(0), Writer.everything(false), DeciderCombinator.NEQ));
+        ConnectedCombinator elseOutGate = new ConnectedCombinator(DeciderCombinator.withLeftRight(Accessor.signal(Constants.CONTROL_FLOW_SIGNAL), Accessor.constant(0), Writer.everything(false), DeciderCombinator.NEQ));
+        conditionOutputGroup.getCombinators().add(ifOutGate);
+        conditionOutputGroup.getCombinators().add(elseOutGate);
+
+        ifOutGate.setGreenIn(ifDataOut);
+        elseOutGate.setGreenIn(elseDataOut);
+        ifOutGate.setGreenOut(conditionOutputGroup.getOutput());
+        elseOutGate.setGreenOut(conditionOutputGroup.getOutput());
 
 
-        var ifCmb = DeciderCombinator.withLeftRight(Accessor.signal(condition.getSignal()), Accessor.constant(1), Writer.everything(false), DeciderCombinator.EQ);
-        var elseCmb = DeciderCombinator.withLeftRight(Accessor.signal(condition.getSignal()), Accessor.constant(0), Writer.everything(false), DeciderCombinator.EQ);
+        //Get outside variables into the if/else
+        for(var e : context.getVariableScope().getAllVariables().entrySet()) {
+            var varName = e.getKey();
+            var variable = e.getValue();
 
-        var ifConnected = new ConnectedCombinator(ifCmb);
-        var elseConnected = new ConnectedCombinator(elseCmb);
+            //Outside into if/else
+            var accessor = context.getNamedVariable(varName).createVariableAccessor();
+            conditionGroup.getAccessors().add(accessor);
+            accessor.access(outsideVariableDelay).accept(conditionGroup);
 
-        NetworkGroup outputNetwork = new NetworkGroup();
+            //If var out
+            accessor = conditionContext.getIfScope().getNamedVariable(varName).createVariableAccessor();
+            conditionGroup.getAccessors().add(accessor);
+            accessor.access(ifDelay).accept(ifDataOut, conditionOutputGroup);
 
-        CombinatorGroup ifGroup = new CombinatorGroup(new NetworkGroup(), outputNetwork);
-        CombinatorGroup elseGroup = new CombinatorGroup(new NetworkGroup(), outputNetwork);
+            //Else var out
+            accessor = conditionContext.getElseScope().getNamedVariable(varName).createVariableAccessor();
+            conditionGroup.getAccessors().add(accessor);
+            accessor.access(elseDelay).accept(elseDataOut, conditionOutputGroup);
 
-        ifConnected.setRedIn(group.getOutput());
-        ifConnected.setGreenIn(ifGroup.getInput());
-        ifConnected.setGreenOut(ifGroup.getOutput());
-        elseConnected.setRedIn(group.getOutput());
-        elseConnected.setGreenIn(elseGroup.getInput());
-        elseConnected.setGreenOut(elseGroup.getOutput());
-
-        ifGroup.getCombinators().add(ifConnected);
-        elseGroup.getCombinators().add(elseConnected);
-
-        CombinatorGroup combinedGroup = new CombinatorGroup(outputNetwork, new NetworkGroup());
-
-        var passThroughCmb = ArithmeticCombinator.withEach(Accessor.constant(0), ArithmeticCombinator.ADD);
-        var removeSignalCmb = ArithmeticCombinator.withLeftRight(Accessor.signal(condition.getSignal()), Accessor.constant(-1), condition.getSignal(), ArithmeticCombinator.MUL);
-
-        var passThroughConnected = new ConnectedCombinator(passThroughCmb);
-        var removeSignalConnected = new ConnectedCombinator(removeSignalCmb);
-
-        passThroughConnected.setGreenIn(combinedGroup.getInput());
-        removeSignalConnected.setGreenIn(combinedGroup.getInput());
-        passThroughConnected.setGreenOut(combinedGroup.getOutput());
-        removeSignalConnected.setGreenOut(combinedGroup.getOutput());
-
-        combinedGroup.getCombinators().add(passThroughConnected);
-        combinedGroup.getCombinators().add(removeSignalConnected);
-
-        context.getFunctionGroup().getSubGroups().add(ifGroup);
-        context.getFunctionGroup().getSubGroups().add(elseGroup);
-        context.getFunctionGroup().getSubGroups().add(combinedGroup);
-
-        int delay = condition.getTickDelay() + 1;//Condition signal has to be first
-
-        List<Variable> createdVariables = new ArrayList<>();
-
-        List<VariableAccessor> ifAccessors = new ArrayList<>();
-        List<VariableAccessor> elseAccessors = new ArrayList<>();
-
-        for(String name : allVariables) {
-            var original = context.getNamedVariable(name);
-            VariableAccessor ifAccessor;
-            if(assignedIf.containsKey(name)) {
-                var ifVar = assignedIf.get(name);
-                ifAccessor = ifVar.createVariableAccessor();
-                delay = Math.max(delay, ifVar.getTickDelay());
-            }
-            else {
-                ifAccessor = original.createVariableAccessor();
-                delay = Math.max(delay, original.getTickDelay());
-            }
-            VariableAccessor elseAccessor;
-            if(assignedElse.containsKey(name)) {
-                var elseVar = assignedElse.get(name);
-                elseAccessor = elseVar.createVariableAccessor();
-                delay = Math.max(delay, elseVar.getTickDelay());
-            }
-            else {
-                elseAccessor = original.createVariableAccessor();
-                delay = Math.max(delay, original.getTickDelay());
-            }
-            ifAccessors.add(ifAccessor);
-            elseAccessors.add(elseAccessor);
-            createdVariables.add(context.createNamedVariable(name, original.getType(), original.getSignal(), combinedGroup));
+            var produced = context.getVariableScope().createNamedVariable(varName, variable.getType(), variable.getSignal(), conditionOutputGroup);
+            produced.setDelay(0);
         }
+
+        NetworkGroup conditionWire = new NetworkGroup("condition wire");
+        conditionGroup.getNetworks().add(conditionWire);
+        ifInput.setRedIn(conditionWire);
+        elseInput.setRedIn(conditionWire);
 
         ConnectedCombinator connected;
         if(condition instanceof Constant) {
-            connected = new ConnectedCombinator(Combinator.constant(Signal.singleValue(condition.getSignal().ordinal(), ((Constant) condition).getVal())));
-            connected.setRedOut(group.getOutput());
-            group.getCombinators().add(connected);
+            connected = new ConnectedCombinator(Combinator.constant(Map.of(condition.getSignal(), ((Constant) condition).getVal())));
+            connected.setRedOut(conditionWire);
+            conditionGroup.getCombinators().add(connected);
         }
         else {
             connected = new ConnectedCombinator(ArithmeticCombinator.copying(condition.getSignal()));
-            connected.setGreenIn(group.getInput());
-            connected.setRedOut(group.getOutput());
-            group.getCombinators().add(connected);
+            NetworkGroup conditionWireGreen = new NetworkGroup("green -> red input wire");
+            conditionGroup.getNetworks().add(conditionWireGreen);
+            connected.setGreenIn(conditionWireGreen);
+            connected.setRedOut(conditionWire);
+            conditionGroup.getCombinators().add(connected);
             var accessor = ((Variable)condition).createVariableAccessor();
-            group.getAccessors().add(accessor);
-            accessor.access(delay - 1).accept(group);
-        }
-
-        ConnectedCombinator currentConditionCombinator = connected;
-        for(int i = delay; i > condition.getTickDelay() + 2; i--) {
-            log("Added manual if condition delay");
-            ConnectedCombinator next = new ConnectedCombinator(ArithmeticCombinator.copying(condition.getSignal()));
-            var connection = new NetworkGroup();
-            currentConditionCombinator.setGreenOut(connection);
-            next.setGreenIn(connection);
-            currentConditionCombinator = next;
-            group.getNetworks().add(connection);
-            group.getCombinators().add(next);
-        }
-        currentConditionCombinator.setRedOut(group.getOutput());
-
-        for(var accessor : ifAccessors) {
-            accessor.access(delay).accept(ifGroup);
-            group.getAccessors().add(accessor);
-        }
-
-        for(var accessor : elseAccessors) {
-            accessor.access(delay).accept(elseGroup);
-            group.getAccessors().add(accessor);
-        }
-
-        for(var v : createdVariables) {
-            v.setDelay(delay + 2); //1 for the if, 1 for filtering the condition signal out of the passed through one
+            conditionGroup.getAccessors().add(accessor);
+            accessor.access(outsideVariableDelay - 1).accept(conditionWireGreen, conditionGroup);
         }
     }
-
-//    @Override
-//    public void enterCompleteExpression(LanguageParser.CompleteExpressionContext ctx) {
-//        context.startExpressionContext();
-//    }
-//
-//    @Override
-//    public void exitCompleteExpression(LanguageParser.CompleteExpressionContext ctx) {
-//
-//    }
 
     @Override
     public void exitBoolExpr(LanguageParser.BoolExprContext ctx) {
@@ -601,7 +523,7 @@ public class Generator extends LanguageBaseListener {
 
         ConnectedCombinator connected;
         if(value instanceof Constant) {
-            Combinator cmb = Combinator.constant(Signal.singleValue(variableSymbol.ordinal(), ((Constant) value).getVal()));
+            Combinator cmb = Combinator.constant(Map.of(variableSymbol, ((Constant) value).getVal()));
             connected = new ConnectedCombinator(cmb);
             connected.setGreenOut(group.getOutput());
             group.getCombinators().add(connected);
@@ -622,16 +544,6 @@ public class Generator extends LanguageBaseListener {
             accessor.access(value.getTickDelay()).accept(group);
         }
         log("Creating named " + varName + " = " + named + ", with delay " + named.getTickDelay());
-    }
-
-    @Override
-    public void enterBlock(LanguageParser.BlockContext ctx) {
-        context.enterScope();
-    }
-
-    @Override
-    public void exitBlock(LanguageParser.BlockContext ctx) {
-        context.leaveScope();
     }
 
     private final Combiner<LanguageParser.ExprContext, ArithmeticOperation> EXPR_PARSER = new Combiner<>(2, VarType.INT, VarType.INT) {
@@ -753,7 +665,6 @@ public class Generator extends LanguageBaseListener {
         parser.addParseListener(generator);
 
         var func = parser.function();
-        Signal.SIGNAL_TYPES.set(FactorioSignal.values().length);
 
         Set<CombinatorGroup> generatedGroups = new HashSet<>();
         Queue<CombinatorGroup> toExpand = new LinkedList<>();
@@ -775,6 +686,11 @@ public class Generator extends LanguageBaseListener {
                 .collect(Collectors.toList());
 
         var networks = generatedGroups.stream()
+                .peek(x -> {
+                    if(x.getNetworks().contains(null)) {
+                        System.out.println(x);
+                    }
+                })
                 .map(CombinatorGroup::getNetworks)
                 .flatMap(Collection::stream)
                 .collect(Collectors.toList());

@@ -12,55 +12,45 @@ public class FunctionContext {
     private int variableIdCounter = 0;
     private Set<FactorioSignal> freeBindings;
     private Stack<Symbol> tempVariables;
-    private Stack<CombinatorContext> combinatorContexts;
     private Stack<VariableScope> variables;
     private Stack<ConditionContext> conditionContexts;
     private final CombinatorGroup functionHeader;
     private final CombinatorGroup functionReturn;
 
-    private class CombinatorContext {
-        private NetworkGroup internalExpressionGroup = new NetworkGroup();
-        private CombinatorGroup expressionContext;
-
-        public CombinatorContext() {
-            this.expressionContext = new CombinatorGroup(internalExpressionGroup, new NetworkGroup());
-            expressionContext.getNetworks().add(internalExpressionGroup);
-        }
-
-        public CombinatorGroup startExpressionContext() {
-            this.internalExpressionGroup = new NetworkGroup();
-            this.expressionContext = new CombinatorGroup(internalExpressionGroup, new NetworkGroup());
-            return expressionContext;
-        }
-    }
-
     public class ConditionContext {
 
-        private VariableScope ifScope;
-        private VariableScope elseScope;
+        private final VariableScope ifScope;
+        private final VariableScope elseScope;
+        private final CombinatorGroup ifProvider;
+        private final CombinatorGroup elseProvider;
+
+
+        public ConditionContext(VariableScope ifScope, VariableScope elseScope, CombinatorGroup ifProvider, CombinatorGroup elseProvider) {
+            this.ifScope = ifScope;
+            this.elseScope = elseScope;
+            this.ifProvider = ifProvider;
+            this.elseProvider = elseProvider;
+        }
 
         public VariableScope getIfScope() {
             return ifScope;
         }
-
-        public void setIfScope(VariableScope ifScope) {
-            this.ifScope = ifScope;
+        public VariableScope getElseScope() {
+            return elseScope;
         }
 
-        public Optional<VariableScope> getElseScope() {
-            return Optional.ofNullable(elseScope);
+        public CombinatorGroup getIfProvider() {
+            return ifProvider;
         }
 
-        public void setElseScope(VariableScope elseScope) {
-            this.elseScope = elseScope;
+        public CombinatorGroup getElseProvider() {
+            return elseProvider;
         }
     }
 
     public FunctionContext(CombinatorGroup functionHeader) {
         this.functionHeader = functionHeader;
         tempVariables = new Stack<>();
-        combinatorContexts = new Stack<>();
-        combinatorContexts.push(new CombinatorContext());
         variables = new Stack<>();
         variables.push(new VariableScope(null));
         freeBindings = new HashSet<>();
@@ -76,7 +66,7 @@ public class FunctionContext {
     }
 
     public Variable overwriteControlFlowVariable(CombinatorGroup producer) {
-        return createNamedVariable(CONTROL_FLOW_VAR_NAME, VarType.INT, CombinatorUtil.CONTROL_FLOW_SIGNAL, producer);
+        return createNamedVariable(CONTROL_FLOW_VAR_NAME, VarType.INT, Constants.CONTROL_FLOW_SIGNAL, producer);
     }
 
     public void pushTempVariable(Symbol var) {
@@ -101,14 +91,6 @@ public class FunctionContext {
         return variables.peek().getNamedVariable(name);
     }
 
-    public void startExpressionContext() {
-        combinatorContexts.peek().startExpressionContext();
-    }
-
-//    public CombinatorGroup getExpressionContext() {
-//        return combinatorContexts.peek().expressionContext;
-//    }
-
     public void enterLoop() {
         var preConditionGroup = new CombinatorGroup(null, new NetworkGroup("while pre condition out"));
         var postConditionGroup = new CombinatorGroup(null, new NetworkGroup("while post condition out"));
@@ -128,37 +110,37 @@ public class FunctionContext {
     }
 
     public void enterIfStatement() {
-        var vscope = new VariableScope(variables.peek());
-        variables.push(vscope);
-        conditionContexts.peek().setIfScope(vscope);
+        variables.push(conditionContexts.peek().getIfScope());
     }
 
     public void enterElseStatement() {
         variables.pop(); //The if scope
-        var vscope = new VariableScope(variables.peek());
-        variables.push(vscope);
-        conditionContexts.peek().setElseScope(vscope);
+        variables.push(conditionContexts.peek().getElseScope());
     }
 
     public void enterConditional() {
-        conditionContexts.push(new ConditionContext());
+        VariableScope ifScope = new VariableScope(getVariableScope());
+        VariableScope elseScope = new VariableScope(getVariableScope());
+
+        CombinatorGroup ifVarProvider = new CombinatorGroup(null, new NetworkGroup("if var supply"));
+        CombinatorGroup elseVarProvider = new CombinatorGroup(null, new NetworkGroup("else var supply"));
+
+        //Make all currently existing variables available to if and else scopes
+        for(var e : getVariableScope().getAllVariables().entrySet()) {
+            ifScope.createNamedVariable(e.getKey(), e.getValue().getType(), e.getValue().getSignal(), ifVarProvider).setDelay(0);
+            elseScope.createNamedVariable(e.getKey(), e.getValue().getType(), e.getValue().getSignal(), elseVarProvider).setDelay(0);
+        }
+
+        conditionContexts.push(new ConditionContext(ifScope, elseScope, ifVarProvider, elseVarProvider));
     }
 
-    public void leaveConditional() {
+    public ConditionContext leaveConditional() {
         variables.pop(); //the last if/else/elseif block
-        conditionContexts.pop();
+        return conditionContexts.pop();
     }
 
     public ConditionContext getConditionContext() {
         return conditionContexts.peek();
-    }
-
-    public void enterScope() {
-        combinatorContexts.push(new CombinatorContext());
-    }
-
-    public void leaveScope() {
-        combinatorContexts.pop();
     }
 
     public FactorioSignal getFreeSymbol() {
