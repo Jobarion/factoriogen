@@ -9,17 +9,17 @@ public class Variable extends Symbol {
     private final CombinatorGroup producer;
     private final VariableAccessor accessor;
     private final int id;
-    private VarType type;
+    private Type type;
     private int delay = -1;
 
-    public Variable(VarType type, int id, CombinatorGroup producer) {
+    public Variable(Type type, int id, CombinatorGroup producer) {
         this.type = type;
         this.id = id;
         this.producer = producer;
         this.accessor = new VariableAccessor(this);
     }
 
-    public Variable(VarType type, int id, FactorioSignal signal, CombinatorGroup producer) {
+    public Variable(Type type, int id, FactorioSignal signal, CombinatorGroup producer) {
         super(signal);
         this.type = type;
         this.id = id;
@@ -28,7 +28,7 @@ public class Variable extends Symbol {
     }
 
     @Override
-    public VarType getType() {
+    public Type getType() {
         return type;
     }
 

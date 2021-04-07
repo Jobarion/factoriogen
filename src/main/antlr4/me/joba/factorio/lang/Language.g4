@@ -1,8 +1,36 @@
 grammar Language;
 
-assignment: var=VarName '=' x=completeExpression;
+file: function+;
 
-completeExpression: expr;
+function: functionHeader block;
+functionHeader: 'function ' name=functionName '(' functionParams ')' '->' returnType=type;
+functionParams: functionParam (',' functionParam)*;
+functionParam: varName ':' type ('<' signalName '>')?;
+
+block: '{' statement+ '}';
+
+statement
+    : block
+    | assignment ';'
+    | ifExpr
+    | whileExpr
+    | returnStatement ';'
+    ;
+
+assignment: var=varName '=' x=expr;
+
+ifExpr: 'if' '(' ifCond=boolExpr ')' ifPart=ifStatement ('else' elsePart=elseStatement)?;
+elseStatement: statement;
+ifStatement: statement;
+
+whileExpr: 'while' '(' loopCond=boolExpr ')' loopStatement=loopBody;
+loopBody: statement;
+
+returnStatement: 'return' '(' returnValues ')';
+returnValues: expr (',' expr)*;
+
+functionCall: functionName '(' argumentList ')';
+argumentList: expr (',' expr)*;
 
 expr
     : '(' wrapped=expr ')'
@@ -12,57 +40,33 @@ expr
     | left=expr op=BAND right=expr
     | left=expr op=BOR right=expr
     | left=expr op=BXOR right=expr
-    | numberLit=IntLiteral
-    | var=VarName ('(' vecAccessor=StringLiteral ')')?
-    | 'sum(' sumExpr=expr ')'
-    | 'count(' countExpr=expr ')'
+    | numberLit=intLiteral
+    | call=functionCall
+    | var=varName
     | NETWORK_IN
     ;
-
-ifExpr: 'if' '(' ifCond=boolExpr ')' ifPart=ifStatement ('else' elsePart=elseStatement)?;
-elseStatement: statement;
-ifStatement: statement;
-
-whileExpr: 'while' '(' loopCond=boolExpr ')' loopStatement=loopBody;
-
-loopBody: statement;
-
-boolExprComponent
-    : expr
-    | 'any(' anyExpr=completeExpression ')'
-    | 'all(' allExpr=completeExpression ')';
 
 boolExpr
     : '(' boolExpr ')'
     | NOT negated=boolExpr
     | left=boolExpr op=(AND | OR | XOR) right=boolExpr
-    | leftComponent=boolExprComponent op=(LT | GT | LEQ | GEQ | EQ | NEQ) rightComponent=boolExprComponent;
+    | leftComponent=expr op=(LT | GT | LEQ | GEQ | EQ | NEQ) rightComponent=expr;
 
-block: '{' blockStatement+ '}';
-
-blockStatement: statement;
-
-function: 'function ' name=VarName '(' functionParams ')' block;
-
-functionParams: functionParam (',' functionParam)*;
-functionParam: name=VarName '=' signal=VarName;
-statement
-    : block
-    | assignment ';'
-    | ifExpr
-    | whileExpr
-    | returnStatement
+type
+    : singleType=TypeName
+    | '(' typeList ')'
     ;
+typeList: type (',' type)+;
 
-returnStatement: 'return(' returnValues ');';
-returnValues: completeExpression (',' completeExpression)*;
+intLiteral: '-'? NumberCharacter+;
+varName: NameCharacterFirst (NameCharacterFirst|NameCharacterRest|NumberCharacter)*;
+functionName: NameCharacterFirst (NameCharacterFirst|NameCharacterRest|NumberCharacter)*;
+signalName: (NameCharacterFirst|NameCharacterRest|NumberCharacter)+;
 
-
-
-VarName: [a-zA-Z][a-zA-Z0-9_]*;
-IntLiteral: '-'?[0-9]+;
-StringLiteral: '"'[-a-z]'"';
-ParameterSignalName: [a-z]+;
+NameCharacterFirst: [a-zA-Z];
+NameCharacterRest: [A-Z_];
+NumberCharacter: [0-9];
+TypeName: 'int'|'boolean';
 
 ADD: '+';
 SUB: '-';
@@ -90,4 +94,3 @@ NEQ: '!=';
 NETWORK_IN: 'IN';
 
 WS : [ \t\n\r]+ -> skip ;
-WS_OPT: (' ' | '\t')+;

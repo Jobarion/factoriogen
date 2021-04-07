@@ -5,14 +5,15 @@ import me.joba.factorio.NetworkGroup;
 import org.antlr.v4.runtime.ParserRuleContext;
 
 import java.util.Arrays;
+import java.util.Optional;
 
 public abstract class Combiner<RC extends ParserRuleContext, OP> {
 
     private final int requiredValues;
-    private final VarType inputType;
-    private final VarType outputType;
+    private final Type inputType;
+    private final Type outputType;
 
-    protected Combiner(int requiredValues, VarType inputType, VarType outputType) {
+    protected Combiner(int requiredValues, Type inputType, Type outputType) {
         this.requiredValues = requiredValues;
         this.inputType = inputType;
         this.outputType = outputType;
@@ -24,17 +25,20 @@ public abstract class Combiner<RC extends ParserRuleContext, OP> {
         boolean isConstant = true;
         for(int i = 0; i < requiredValues; i++) {
             var tmp = context.popTempVariable();
-            if(tmp.getType() != inputType) throw new RuntimeException(tmp + " is not of type " + inputType);
+            if(!tmp.getType().equals(inputType)) throw new RuntimeException(tmp + " is not of type " + inputType);
             symbols[symbols.length - 1 - i] = tmp;
             isConstant = isConstant && tmp instanceof Constant;
         }
         if(isConstant) {
             Constant[] consts = new Constant[symbols.length];
             System.arraycopy(symbols, 0, consts, 0, consts.length);
-            var computedConstant = computeConstExpr(consts, op);
-            log(context, "Collapsed constants " + Arrays.toString(symbols) + " (using " + op + ") = " + computedConstant);
-            context.pushTempVariable(computedConstant);
-            return;
+            var computedConstantOpt = computeConstExpr(consts, op);
+            if(computedConstantOpt.isPresent()) {
+                var computedConstant = computedConstantOpt.get();
+                log(context, "Collapsed constants " + Arrays.toString(symbols) + " (using " + op + ") = " + computedConstant);
+                context.pushTempVariable(computedConstant);
+                return;
+            }
         }
         int maxInputDelay = -1;
         for(Symbol s : symbols) {
@@ -43,7 +47,6 @@ public abstract class Combiner<RC extends ParserRuleContext, OP> {
                 s.bind(context.getFreeSymbol());
             }
         }
-//        maxInputDelay++;
 
         var outSymbol = context.getFreeSymbol();
         var outputContext = new CombinatorGroup(new NetworkGroup(), new NetworkGroup());
@@ -69,6 +72,6 @@ public abstract class Combiner<RC extends ParserRuleContext, OP> {
     }
 
     public abstract OP getOperation(RC ruleContext);
-    public abstract Constant computeConstExpr(Constant[] constants, OP operation);
+    public abstract Optional<Constant> computeConstExpr(Constant[] constants, OP operation);
     public abstract int generateCombinators(Symbol[] symbols, OP operation, FactorioSignal outSymbol, CombinatorGroup group);
 }

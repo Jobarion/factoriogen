@@ -8,48 +8,22 @@ import java.util.*;
 public class FunctionContext {
 
     public static final String CONTROL_FLOW_VAR_NAME = "$CONTROL_FLOW";
+    private static int functionIdCounter = 1;
 
     private int variableIdCounter = 0;
     private Set<FactorioSignal> freeBindings;
     private Stack<Symbol> tempVariables;
     private Stack<VariableScope> variables;
     private Stack<ConditionContext> conditionContexts;
-    private final CombinatorGroup functionHeader;
-    private final CombinatorGroup functionReturn;
+    private final int functionId;
+    private CombinatorGroup functionHeader;
+    private CombinatorGroup functionReturn;
+    private List<FunctionCall> registeredFunctionCalls;
+    private final FunctionSignature functionSignature;
 
-    public class ConditionContext {
-
-        private final VariableScope ifScope;
-        private final VariableScope elseScope;
-        private final CombinatorGroup ifProvider;
-        private final CombinatorGroup elseProvider;
-
-
-        public ConditionContext(VariableScope ifScope, VariableScope elseScope, CombinatorGroup ifProvider, CombinatorGroup elseProvider) {
-            this.ifScope = ifScope;
-            this.elseScope = elseScope;
-            this.ifProvider = ifProvider;
-            this.elseProvider = elseProvider;
-        }
-
-        public VariableScope getIfScope() {
-            return ifScope;
-        }
-        public VariableScope getElseScope() {
-            return elseScope;
-        }
-
-        public CombinatorGroup getIfProvider() {
-            return ifProvider;
-        }
-
-        public CombinatorGroup getElseProvider() {
-            return elseProvider;
-        }
-    }
-
-    public FunctionContext(CombinatorGroup functionHeader) {
-        this.functionHeader = functionHeader;
+    public FunctionContext(FunctionSignature functionSignature) {
+        this.functionSignature = functionSignature;
+        this.functionId = functionIdCounter++;
         tempVariables = new Stack<>();
         variables = new Stack<>();
         variables.push(new VariableScope(null));
@@ -57,8 +31,41 @@ public class FunctionContext {
         freeBindings.addAll(Arrays.asList(FactorioSignal.values()));
         freeBindings.removeIf(FactorioSignal::isReserved);
         conditionContexts = new Stack<>();
+        registeredFunctionCalls = new ArrayList<>();
+        bindParameterSignals();
+    }
+
+    private void bindParameterSignals() {
+        for(var param : functionSignature.getParameters()) {
+            if(param.getSignal() == null ) {
+                param.setSignal(getFreeSymbol());
+            }
+            else if(param.getSignal().isReserved()) {
+                throw new IllegalArgumentException("Signal " + param.getSignal() + " is reserved");
+            }
+        }
+    }
+
+    public void setFunctionHeader(CombinatorGroup functionHeader) {
+        if(this.functionHeader != null) throw new RuntimeException("Already set");
+        this.functionHeader = functionHeader;
         functionReturn = new CombinatorGroup(null, new NetworkGroup());
         functionHeader.getSubGroups().add(functionReturn);
+        for(var param : functionSignature.getParameters()) {
+            this.createNamedVariable(param.getName(), param.getType(), param.getSignal(), functionHeader).setDelay(0);
+        }
+    }
+
+    public FunctionSignature getSignature() {
+        return functionSignature;
+    }
+
+    public String getName() {
+        return functionSignature.getName();
+    }
+
+    public void registerFunctionCall(FunctionCall functionCall) {
+        this.registeredFunctionCalls.add(functionCall);
     }
 
     public Variable getControlFlowVariable() {
@@ -66,14 +73,14 @@ public class FunctionContext {
     }
 
     public Variable overwriteControlFlowVariable(CombinatorGroup producer) {
-        return createNamedVariable(CONTROL_FLOW_VAR_NAME, VarType.INT, Constants.CONTROL_FLOW_SIGNAL, producer);
+        return createNamedVariable(CONTROL_FLOW_VAR_NAME, PrimitiveType.INT, Constants.CONTROL_FLOW_SIGNAL, producer);
     }
 
     public void pushTempVariable(Symbol var) {
         tempVariables.push(var);
     }
 
-    public Variable createBoundTempVariable(VarType type, FactorioSignal signal, CombinatorGroup producer) {
+    public Variable createBoundTempVariable(Type type, FactorioSignal signal, CombinatorGroup producer) {
         var var = new Variable(type, variableIdCounter++, signal, producer);
         tempVariables.push(var);
         return var;
@@ -83,7 +90,7 @@ public class FunctionContext {
         return tempVariables.pop();
     }
 
-    public Variable createNamedVariable(String name, VarType type, FactorioSignal signal, CombinatorGroup producer) {
+    public Variable createNamedVariable(String name, Type type, FactorioSignal signal, CombinatorGroup producer) {
         return variables.peek().createNamedVariable(name, type, signal, producer);
     }
 
@@ -155,15 +162,42 @@ public class FunctionContext {
         }
     }
 
-//    public NetworkGroup getCurrentNetworkGroup() {
-//        return combinatorContexts.peek().internalExpressionGroup;
-//    }
-
     public CombinatorGroup getFunctionGroup() {
         return functionHeader;
     }
 
     public CombinatorGroup getFunctionReturnGroup() {
         return functionReturn;
+    }
+
+    public class ConditionContext {
+
+        private final VariableScope ifScope;
+        private final VariableScope elseScope;
+        private final CombinatorGroup ifProvider;
+        private final CombinatorGroup elseProvider;
+
+
+        public ConditionContext(VariableScope ifScope, VariableScope elseScope, CombinatorGroup ifProvider, CombinatorGroup elseProvider) {
+            this.ifScope = ifScope;
+            this.elseScope = elseScope;
+            this.ifProvider = ifProvider;
+            this.elseProvider = elseProvider;
+        }
+
+        public VariableScope getIfScope() {
+            return ifScope;
+        }
+        public VariableScope getElseScope() {
+            return elseScope;
+        }
+
+        public CombinatorGroup getIfProvider() {
+            return ifProvider;
+        }
+
+        public CombinatorGroup getElseProvider() {
+            return elseProvider;
+        }
     }
 }
