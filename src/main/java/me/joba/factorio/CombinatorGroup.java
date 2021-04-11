@@ -1,5 +1,6 @@
 package me.joba.factorio;
 
+import me.joba.factorio.game.combinators.CircuitNetworkEntity;
 import me.joba.factorio.lang.VariableAccessor;
 
 import java.util.ArrayList;
@@ -7,7 +8,7 @@ import java.util.List;
 
 public class CombinatorGroup {
 
-    private final List<ConnectedCombinator> combinators = new ArrayList<>();
+    private final List<CircuitNetworkEntity> combinators = new ArrayList<>();
     private final List<NetworkGroup> networks = new ArrayList<>();
     private final List<VariableAccessor> accessors = new ArrayList<>();
     private final NetworkGroup input, output;
@@ -29,7 +30,7 @@ public class CombinatorGroup {
         this.correspondingCode = correspondingCode;
     }
 
-    public List<ConnectedCombinator> getCombinators() {
+    public List<CircuitNetworkEntity> getCombinators() {
         return combinators;
     }
 

@@ -1,4 +1,4 @@
-package me.joba.factorio;
+package me.joba.factorio.game.combinators;
 
 @FunctionalInterface
 public interface IntBinaryPredicate {

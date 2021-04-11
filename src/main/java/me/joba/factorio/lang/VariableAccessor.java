@@ -1,9 +1,8 @@
 package me.joba.factorio.lang;
 
-import me.joba.factorio.ArithmeticCombinator;
 import me.joba.factorio.CombinatorGroup;
-import me.joba.factorio.ConnectedCombinator;
 import me.joba.factorio.NetworkGroup;
+import me.joba.factorio.game.combinators.ArithmeticCombinator;
 
 import java.util.*;
 import java.util.function.BiConsumer;
@@ -39,8 +38,7 @@ public class VariableAccessor {
 
     private void generateInaccurateAccessors() {
         for(var entry : accessedList.values()) {
-            var cmb = ArithmeticCombinator.copying(variable.getSignal());
-            var connected = new ConnectedCombinator(cmb);
+            var connected = ArithmeticCombinator.copying(variable.getSignal());
             connected.setGreenIn(variable.getProducer().getOutput());
             connected.setGreenOut(entry.networkGroup);
             entry.combinatorGroup.getCombinators().add(connected);
@@ -92,8 +90,7 @@ public class VariableAccessor {
                 if(ignored.contains(entry)) continue;
                 if(entry.delay == variable.getTickDelay()) continue;
                 if(entry.delay == variable.getTickDelay() + 1) {
-                    var cmb = ArithmeticCombinator.copying(variable.getSignal());
-                    var connected = new ConnectedCombinator(cmb);
+                    var connected = ArithmeticCombinator.copying(variable.getSignal());
                     connected.setGreenIn(output);
                     connected.setGreenOut(entry.networkGroup);
                     entry.combinatorGroup.getCombinators().add(connected);
@@ -104,8 +101,7 @@ public class VariableAccessor {
                 entry.delay--;
             }
             if(!done) {
-                var cmb = ArithmeticCombinator.copying(variable.getSignal());
-                var connected = new ConnectedCombinator(cmb);
+                var connected = ArithmeticCombinator.copying(variable.getSignal());
                 connected.setGreenIn(output);
                 output = new NetworkGroup();
                 connected.setGreenOut(output);

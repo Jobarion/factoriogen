@@ -1,17 +1,21 @@
 package me.joba.factorio;
 
+import me.joba.factorio.game.combinators.CircuitNetworkEntity;
+import me.joba.factorio.graph.MSTSolver;
 import me.joba.factorio.graph.Node;
 import me.joba.factorio.graph.SimulatedAnnealingSolver;
+import me.joba.factorio.graph.Tuple;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.stream.Collectors;
 import java.util.zip.Deflater;
 
 public class BlueprintWriter {
 
-    public static List<MSTSolver.Point> placeCombinators(List<ConnectedCombinator> combinators, Collection<NetworkGroup> networks) {
+    public static void placeCombinators(List<CircuitNetworkEntity> combinators, Collection<NetworkGroup> networks) {
         List<Node> nodes = new ArrayList<>();
 
         Map<Integer, Integer> entityIdNodeIdMap = new HashMap<>();
@@ -19,12 +23,15 @@ public class BlueprintWriter {
         for(var cc : combinators) {
             entityIdNodeIdMap.put(cc.getEntityId(), currentId++);
         }
-        Map<NetworkGroup, Set<ConnectedCombinator>> networkMap = new HashMap<>();
+        Map<NetworkGroup, Set<CircuitNetworkEntity>> networkMap = new HashMap<>();
         for(NetworkGroup ng : networks) {
-            Set<ConnectedCombinator> connected = new HashSet<>();
-            for(ConnectedCombinator cc : combinators) {
-                if(NetworkGroup.isEqual(cc.getGreenIn(), ng) || NetworkGroup.isEqual(cc.getGreenOut(), ng) || NetworkGroup.isEqual(cc.getRedIn(), ng) || NetworkGroup.isEqual(cc.getRedOut(), ng)) {
-                    connected.add(cc);
+            Set<CircuitNetworkEntity> connected = new HashSet<>();
+            for(CircuitNetworkEntity cc : combinators) {
+                for(var cp : cc.getConnectionPoints()) {
+                    for(var group : cp.getConnections().values()) {
+                        if(group == null) continue;
+                        if(NetworkGroup.isEqual(group, ng)) connected.add(cc);
+                    }
                 }
             }
             networkMap.put(ng, connected);
@@ -32,7 +39,10 @@ public class BlueprintWriter {
 
         for(var cc : combinators) {
             Set<Integer> connectedTo = new HashSet<>();
-            List<NetworkGroup> combinatorNetworks = Arrays.asList(cc.getGreenIn(), cc.getGreenOut(), cc.getRedIn(), cc.getRedOut());
+            List<NetworkGroup> combinatorNetworks = Arrays.stream(cc.getConnectionPoints())
+                    .flatMap(cp -> cp.getConnections().values().stream())
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toList());
             for(var network : combinatorNetworks) {
                 if(network == null) continue;
                 for(var neighbor : networkMap.get(network)) {
@@ -43,124 +53,28 @@ public class BlueprintWriter {
         }
 
         SimulatedAnnealingSolver.placeInitial(nodes);
-        SimulatedAnnealingSolver.simulatedAnnealing(nodes, 100_000_000);
-        List<MSTSolver.Point> points = new ArrayList<>();
-        for(Node node : nodes) {
-            points.add(new MSTSolver.Point(node.getX(), node.getY()));
+        SimulatedAnnealingSolver.simulatedAnnealing(nodes, 10_000_000);
+
+        Map<Integer, Node> nodeIdMap = nodes.stream()
+                .collect(Collectors.toMap(e -> e.getId(), e -> e));
+
+        for(CircuitNetworkEntity entity : combinators) {
+            var node = nodeIdMap.get(entityIdNodeIdMap.get(entity.getEntityId()));
+            entity.setX(node.getX());
+            entity.setY(node.getY());
+            entity.setOrientation(2);
         }
-        return points;
     }
 
-    public static String writeBlueprint(List<ConnectedCombinator> combinators, Collection<NetworkGroup> networks) {
-        List<MSTSolver.Point> calculatedPositions = placeCombinators(combinators, networks);
+    public static String writeBlueprint(List<CircuitNetworkEntity> combinators, Collection<NetworkGroup> networks) {
+        placeCombinators(combinators, networks);
         JSONArray entities = new JSONArray();
-        Map<Integer, JSONObject> connections = new HashMap<>();
-        Map<Integer, MSTSolver.Point> positions = new HashMap<>();
-        for(int i = 0; i < combinators.size(); i++) {
-            var combinator = combinators.get(i);
-            var position = calculatedPositions.get(i);
-            if(combinator.getName() != null) {
-                System.out.println("Placed '" + combinator.getName() + "' at x=" + position.getX() + " y=" + position.getY());
-            }
-            var json = combinator.getCombinator().createJson();
-            JSONObject pos = new JSONObject();
-            json.put("position", pos);
-            json.put("direction", 2);
-            json.put("entity_number", combinator.getEntityId());
-            pos.put("x", position.getX());
-            pos.put("y", position.getY());
-            positions.put(combinator.getEntityId(), position);
-            JSONObject connectionList = new JSONObject();
-            json.put("connections", connectionList);
-            connections.put(combinator.getEntityId(), connectionList);
+
+        var connections = buildConnectionObjects(MSTSolver.solveMst(combinators));
+        for(var entity : combinators) {
+            JSONObject json = entity.toJson();
+            json.put("connections", connections.get(entity.getEntityId()));
             entities.add(json);
-        }
-        Map<NetworkGroup, Set<ConnectedCombinator>> networkMap = new HashMap<>();
-        Set<NetworkGroup> handled = new HashSet<>();
-        for(NetworkGroup ng : networks) {
-            if(handled.contains(ng)) continue;
-            Set<ConnectedCombinator> connected = new HashSet<>();
-            List<MSTSolver.Node> nodes = new ArrayList<>();
-            for(ConnectedCombinator cc : combinators) {
-
-                var jsonConn = connections.get(cc.getEntityId());
-                var jsonObjIn = getOrElse(jsonConn, "1", new JSONObject());
-
-                var greenIn = getOrElse(jsonObjIn, "green", new JSONArray());
-                JSONArray greenOut;
-                var redIn = getOrElse(jsonObjIn, "red", new JSONArray());
-                JSONArray redOut;
-
-                jsonObjIn.put("green", greenIn);
-                jsonObjIn.put("red", redIn);
-                jsonConn.put("1", jsonObjIn);
-                if(cc.getCombinator().isOutputOnly()) {
-                    redOut = redIn;
-                    greenOut = greenIn;
-                }
-                else {
-                    var jsonObjOut = getOrElse(jsonConn, "2", new JSONObject());
-                    greenOut = getOrElse(jsonObjOut, "green", new JSONArray());
-                    redOut = getOrElse(jsonObjOut, "red", new JSONArray());
-                    jsonConn.put("2", jsonObjOut);
-                    jsonObjOut.put("green", greenOut);
-                    jsonObjOut.put("red", redOut);
-                }
-
-                if(NetworkGroup.isEqual(cc.getGreenIn(), ng)) {
-                    nodes.add(new MSTSolver.Node(positions.get(cc.getEntityId()), cc.getEntityId(), 1, !cc.getCombinator().isOutputOnly()) {
-                        @Override
-                        public void accept(MSTSolver.Node node) {
-                            JSONObject conObj = new JSONObject();
-                            conObj.put("entity_id", node.getEntityId());
-                            if(node.isWithCircuitId()) conObj.put("circuit_id", node.getCircuitId());
-                            greenIn.add(conObj);
-                        }
-                    });
-                }
-
-
-                if(NetworkGroup.isEqual(cc.getGreenOut(), ng)) {
-                    nodes.add(new MSTSolver.Node(positions.get(cc.getEntityId()), cc.getEntityId(), cc.getCombinator().isOutputOnly() ? 1 : 2, !cc.getCombinator().isOutputOnly()) {
-                        @Override
-                        public void accept(MSTSolver.Node node) {
-                            JSONObject conObj = new JSONObject();
-                            conObj.put("entity_id", node.getEntityId());
-                            if(node.isWithCircuitId()) conObj.put("circuit_id", node.getCircuitId());
-                            greenOut.add(conObj);
-                        }
-                    });
-                }
-
-
-                if(NetworkGroup.isEqual(cc.getRedIn(), ng)) {
-                    nodes.add(new MSTSolver.Node(positions.get(cc.getEntityId()), cc.getEntityId(), 1, !cc.getCombinator().isOutputOnly()) {
-                        @Override
-                        public void accept(MSTSolver.Node node) {
-                            JSONObject conObj = new JSONObject();
-                            conObj.put("entity_id", node.getEntityId());
-                            if(node.isWithCircuitId()) conObj.put("circuit_id", node.getCircuitId());
-                            redIn.add(conObj);
-                        }
-                    });
-                }
-
-
-                if(NetworkGroup.isEqual(cc.getRedOut(), ng)) {
-                    nodes.add(new MSTSolver.Node(positions.get(cc.getEntityId()), cc.getEntityId(), cc.getCombinator().isOutputOnly() ? 1 : 2, !cc.getCombinator().isOutputOnly()) {
-                        @Override
-                        public void accept(MSTSolver.Node node) {
-                            JSONObject conObj = new JSONObject();
-                            conObj.put("entity_id", node.getEntityId());
-                            if(node.isWithCircuitId()) conObj.put("circuit_id", node.getCircuitId());
-                            redOut.add(conObj);
-                        }
-                    });
-                }
-            }
-            MSTSolver.solveMst(nodes);
-            networkMap.put(ng, connected);
-            handled.addAll(NetworkGroup.getMerged(ng));
         }
 
         JSONObject blueprint = new JSONObject();
@@ -190,9 +104,56 @@ public class BlueprintWriter {
         return "0" + new String(base64Bytes);
     }
 
+    private static Map<Integer, JSONObject> buildConnectionObjects(List<Tuple<MSTSolver.Node, MSTSolver.Node>> connections) {
+        Map<Integer, JSONObject> connectionObjects = new HashMap<>();
+        for(var t : connections) {
+            var n1 = t.getLeft();
+            var n2 = t.getRight();
+            var json1 = connectionObjects.getOrDefault(n1.getEntity().getEntityId(), new JSONObject());
+            var json2 = connectionObjects.getOrDefault(n2.getEntity().getEntityId(), new JSONObject());
+            connectionObjects.put(n1.getEntity().getEntityId(), json1);
+            connectionObjects.put(n2.getEntity().getEntityId(), json2);
+
+            var connectionPoint1 = getOrDefault(json1, String.valueOf(n1.getCircuitId()), new JSONObject());
+            json1.put(String.valueOf(n1.getCircuitId()), connectionPoint1);
+
+            var color1 = getOrDefault(connectionPoint1, n1.getWireColor().name().toLowerCase(), new JSONArray());
+            connectionPoint1.put(n1.getWireColor().name().toLowerCase(), color1);
+
+            var connectionPoint2 = getOrDefault(json2, String.valueOf(n2.getCircuitId()), new JSONObject());
+            json2.put(String.valueOf(n2.getCircuitId()), connectionPoint2);
+            var color2 = getOrDefault(connectionPoint2, n2.getWireColor().name().toLowerCase(), new JSONArray());
+            connectionPoint2.put(n2.getWireColor().name().toLowerCase(), color2);
+
+            JSONObject entry1 = new JSONObject();
+            entry1.put("entity_id", n2.getEntity().getEntityId());
+            if(n2.getEntity().getConnectionPoints().length > 1) {
+                entry1.put("circuit_id", n2.getCircuitId());
+            }
+
+            JSONObject entry2 = new JSONObject();
+            entry2.put("entity_id", n1.getEntity().getEntityId());
+            if(n1.getEntity().getConnectionPoints().length > 1) {
+                entry2.put("circuit_id", n1.getCircuitId());
+            }
+
+            color1.add(entry1);
+            color2.add(entry2);
+        }
+        return connectionObjects;
+    }
+
     private static <T> T get(JSONObject obj, String key) {
         var x = obj.get(key);
         if(x == null) return (T)x;
+        if(x instanceof Long) {
+            return (T)(Object)((Long) x).intValue();
+        }
+        return (T)x;
+    }
+
+    private static <T> T getOrDefault(JSONObject obj, String key, T orElse) {
+        var x = obj.getOrDefault(key, orElse);
         if(x instanceof Long) {
             return (T)(Object)((Long) x).intValue();
         }

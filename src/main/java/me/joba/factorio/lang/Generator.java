@@ -1,12 +1,9 @@
 package me.joba.factorio.lang;
 
 import me.joba.factorio.*;
+import me.joba.factorio.game.combinators.*;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
-import org.antlr.v4.runtime.ParserRuleContext;
-import org.antlr.v4.runtime.tree.ErrorNode;
-import org.antlr.v4.runtime.tree.ParseTreeListener;
-import org.antlr.v4.runtime.tree.TerminalNode;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -30,7 +27,7 @@ public class Generator extends LanguageBaseListener {
             "}";
 
     private static final String COLLATZ =
-            "function collatz(currentVal=red, iterations=green) {\n" +
+            "function collatz(currentVal: int<red>, iterations: int<green>) -> int {\n" +
                     "  while(iterations != 0) {\n" +
                     "    iterations = iterations - 1;\n" +
                     "    if(currentVal % 2 == 0) {\n" +
@@ -89,7 +86,7 @@ public class Generator extends LanguageBaseListener {
             "  return(a, b, c);\n" +
             "}";
 
-    private static final String TEST = FUNCTION_CALL_SIMPLE;
+    private static final String TEST = PYTH_TRIPLE;
 
     private FunctionContext currentFunctionContext;
     private final Map<String, FunctionContext> definedFunctions;
@@ -104,8 +101,8 @@ public class Generator extends LanguageBaseListener {
         NetworkGroup in = new NetworkGroup();
         NetworkGroup out = new NetworkGroup();
         CombinatorGroup functionHeader = new CombinatorGroup(in, out);
-        var inputCombinator = new ConnectedCombinator(DeciderCombinator.withLeftRight(Accessor.signal(Constants.CONTROL_FLOW_SIGNAL), Accessor.constant(0), Writer.everything(false), DeciderCombinator.NEQ));
-        inputCombinator.setName("Input function");
+        var inputCombinator = DeciderCombinator.withLeftRight(Accessor.signal(Constants.CONTROL_FLOW_SIGNAL), Accessor.constant(0), Writer.everything(false), DeciderOperator.NEQ);
+        inputCombinator.setDescription("Input function");
         functionHeader.getCombinators().add(inputCombinator);
         inputCombinator.setGreenIn(in);
         inputCombinator.setGreenOut(out);
@@ -122,11 +119,11 @@ public class Generator extends LanguageBaseListener {
         NetworkGroup gateInput = new NetworkGroup();
         returnGroup.getNetworks().add(gateInput);
 
-        var outputGate = new ConnectedCombinator(DeciderCombinator.withLeftRight(Accessor.signal(Constants.CONTROL_FLOW_SIGNAL), Accessor.constant(0), Writer.everything(false), DeciderCombinator.NEQ));
+        var outputGate = DeciderCombinator.withLeftRight(Accessor.signal(Constants.CONTROL_FLOW_SIGNAL), Accessor.constant(0), Writer.everything(false), DeciderOperator.NEQ);
         returnGroup.getCombinators().add(outputGate);
         outputGate.setGreenOut(returnGroup.getOutput());
         outputGate.setGreenIn(gateInput);
-        outputGate.setName("Output " + ctx.getText());
+        outputGate.setDescription("Output " + ctx.getText());
 
         int maxDelay = currentFunctionContext.getControlFlowVariable().getTickDelay();
         List<Symbol> valuesToReturn = new ArrayList<>();
@@ -143,7 +140,7 @@ public class Generator extends LanguageBaseListener {
             log("Returning " + returnVal + " with delay " + returnVal.getTickDelay());
             if(returnVal instanceof Constant) {
                 if(((Constant) returnVal).getVal() == 0) continue;
-                ConnectedCombinator constant = new ConnectedCombinator(Combinator.constant(Map.of(returnVal.getSignal(), ((Constant) returnVal).getVal())));
+                ConstantCombinator constant = new ConstantCombinator(Map.of(returnVal.getSignal(), ((Constant) returnVal).getVal()));
                 constant.setGreenOut(gateInput);
                 returnGroup.getCombinators().add(constant);
             }
@@ -190,21 +187,21 @@ public class Generator extends LanguageBaseListener {
         whileGroup.getSubGroups().add(whileScope.getPreConditionProvider());
         whileGroup.getSubGroups().add(whileScope.getPostConditionProvider());
 
-        ConnectedCombinator inputGate = new ConnectedCombinator(DeciderCombinator.withLeftRight(Accessor.signal(Constants.CONTROL_FLOW_SIGNAL), Accessor.constant(0), Writer.everything(false), DeciderCombinator.NEQ));
+        var inputGate = DeciderCombinator.withLeftRight(Accessor.signal(Constants.CONTROL_FLOW_SIGNAL), Accessor.constant(0), Writer.everything(false), DeciderOperator.NEQ);
         whileGroup.getCombinators().add(inputGate);
 
         inputGate.setGreenIn(whileGroup.getInput());
 
-        ConnectedCombinator dedupInput = new ConnectedCombinator(DeciderCombinator.withLeftRight(Accessor.signal(Constants.TEMP_SIGNAL), Accessor.constant(0), Writer.everything(false), DeciderCombinator.EQ));
+        var dedupInput = DeciderCombinator.withLeftRight(Accessor.signal(Constants.TEMP_SIGNAL), Accessor.constant(0), Writer.everything(false), DeciderOperator.EQ);
         whileGroup.getCombinators().add(dedupInput);
 
-        ConnectedCombinator dedupStore = new ConnectedCombinator(DeciderCombinator.withAny(Accessor.constant(0), Writer.one(Constants.TEMP_SIGNAL), DeciderCombinator.NEQ));
+        var dedupStore = DeciderCombinator.withAny(Accessor.constant(0), Writer.one(Constants.TEMP_SIGNAL), DeciderOperator.NEQ);
         whileGroup.getCombinators().add(dedupStore);
 
-        ConnectedCombinator dedupReset = new ConnectedCombinator(DeciderCombinator.withLeftRight(Accessor.signal(Constants.CONTROL_FLOW_SIGNAL), Accessor.constant(0), Writer.fromInput(Constants.TEMP_SIGNAL), DeciderCombinator.NEQ));
+        var dedupReset = DeciderCombinator.withLeftRight(Accessor.signal(Constants.CONTROL_FLOW_SIGNAL), Accessor.constant(0), Writer.fromInput(Constants.TEMP_SIGNAL), DeciderOperator.NEQ);
         whileGroup.getCombinators().add(dedupReset);
 
-        ConnectedCombinator dedupConstants = new ConnectedCombinator(Combinator.constant(Map.of(Constants.TEMP_SIGNAL, -1)));
+        var dedupConstants = new ConstantCombinator(Map.of(Constants.TEMP_SIGNAL, -1));
         whileGroup.getCombinators().add(dedupConstants);
 
         NetworkGroup tmp = new NetworkGroup("dedup network");
@@ -229,10 +226,10 @@ public class Generator extends LanguageBaseListener {
         dedupStore.setRedIn(tmp);
         dedupInput.setRedOut(tmp);
 
-        ConnectedCombinator loopFeedbackGateInitial = new ConnectedCombinator(DeciderCombinator.withLeftRight(Accessor.signal(Constants.CONTROL_FLOW_SIGNAL), Accessor.constant(0), Writer.everything(false), DeciderCombinator.NEQ));
+        var loopFeedbackGateInitial = DeciderCombinator.withLeftRight(Accessor.signal(Constants.CONTROL_FLOW_SIGNAL), Accessor.constant(0), Writer.everything(false), DeciderOperator.NEQ);
         whileGroup.getCombinators().add(loopFeedbackGateInitial);
 
-        ConnectedCombinator loopFeedbackGateSubsequent = new ConnectedCombinator(DeciderCombinator.withLeftRight(Accessor.signal(Constants.CONTROL_FLOW_SIGNAL), Accessor.constant(0), Writer.everything(false), DeciderCombinator.NEQ));
+        var loopFeedbackGateSubsequent = DeciderCombinator.withLeftRight(Accessor.signal(Constants.CONTROL_FLOW_SIGNAL), Accessor.constant(0), Writer.everything(false), DeciderOperator.NEQ);
         whileGroup.getCombinators().add(loopFeedbackGateSubsequent);
 
         loopFeedbackGateInitial.setRedIn(tmp);
@@ -253,8 +250,8 @@ public class Generator extends LanguageBaseListener {
         NetworkGroup conditionSignal = new NetworkGroup("loop condition");
         whileGroup.getNetworks().add(conditionSignal);
 
-        var loopFeedback = new ConnectedCombinator(DeciderCombinator.withLeftRight(Accessor.signal(condition.getSignal()), Accessor.constant(1), Writer.everything(false), DeciderCombinator.EQ));
-        var loopExit = new ConnectedCombinator(DeciderCombinator.withLeftRight(Accessor.signal(condition.getSignal()), Accessor.constant(0), Writer.everything(false), DeciderCombinator.EQ));
+        var loopFeedback = DeciderCombinator.withLeftRight(Accessor.signal(condition.getSignal()), Accessor.constant(1), Writer.everything(false), DeciderOperator.EQ);
+        var loopExit = DeciderCombinator.withLeftRight(Accessor.signal(condition.getSignal()), Accessor.constant(0), Writer.everything(false), DeciderOperator.EQ);
         whileGroup.getCombinators().add(loopFeedback);
         whileGroup.getCombinators().add(loopExit);
 
@@ -271,14 +268,14 @@ public class Generator extends LanguageBaseListener {
         }
 
         if(condition instanceof Constant) {
-            ConnectedCombinator connected = new ConnectedCombinator(Combinator.constant(Map.of(condition.getSignal(), ((Constant) condition).getVal())));
+            ConstantCombinator connected = new ConstantCombinator(Map.of(condition.getSignal(), ((Constant) condition).getVal()));
             connected.setRedOut(conditionSignal);
             whileGroup.getCombinators().add(connected);
         }
         else {
             NetworkGroup inner = new NetworkGroup("condition inner");
             whileGroup.getNetworks().add(inner);
-            ConnectedCombinator connected = new ConnectedCombinator(ArithmeticCombinator.copying(condition.getSignal()));
+            ArithmeticCombinator connected = ArithmeticCombinator.copying(condition.getSignal());
             connected.setRedOut(conditionSignal);
             connected.setGreenIn(inner);
             whileGroup.getCombinators().add(connected);
@@ -288,10 +285,9 @@ public class Generator extends LanguageBaseListener {
         }
 
         var bufferDelayInput = loopDataPreCondition;
-        ConnectedCombinator bufferDelayConnected = null;
+        ArithmeticCombinator bufferDelayConnected = null;
         for(int i = condition.getTickDelay(); i >= 0; i--) {
-            var bufferDelayCmb = ArithmeticCombinator.withEach(Accessor.constant(0), ArithmeticCombinator.ADD);
-            bufferDelayConnected = new ConnectedCombinator(bufferDelayCmb);
+            bufferDelayConnected = ArithmeticCombinator.withEach(Accessor.constant(0), ArithmeticOperator.ADD);
             bufferDelayConnected.setGreenIn(bufferDelayInput);
             whileGroup.getCombinators().add(bufferDelayConnected);
             if(i > 0) {
@@ -347,8 +343,8 @@ public class Generator extends LanguageBaseListener {
         conditionGroup.getSubGroups().add(conditionContext.getIfProvider());
         conditionGroup.getSubGroups().add(conditionContext.getElseProvider());
 
-        var ifInput = new ConnectedCombinator(DeciderCombinator.withLeftRight(Accessor.signal(condition.getSignal()), Accessor.constant(1), Writer.everything(false), DeciderCombinator.EQ));
-        var elseInput = new ConnectedCombinator(DeciderCombinator.withLeftRight(Accessor.signal(condition.getSignal()), Accessor.constant(0), Writer.everything(false), DeciderCombinator.EQ));
+        var ifInput = DeciderCombinator.withLeftRight(Accessor.signal(condition.getSignal()), Accessor.constant(1), Writer.everything(false), DeciderOperator.EQ);
+        var elseInput = DeciderCombinator.withLeftRight(Accessor.signal(condition.getSignal()), Accessor.constant(0), Writer.everything(false), DeciderOperator.EQ);
         conditionGroup.getCombinators().add(ifInput);
         conditionGroup.getCombinators().add(elseInput);
 
@@ -379,8 +375,8 @@ public class Generator extends LanguageBaseListener {
         conditionOutputGroup.getNetworks().add(ifDataOut);
         conditionOutputGroup.getNetworks().add(elseDataOut);
 
-        ConnectedCombinator ifOutGate = new ConnectedCombinator(DeciderCombinator.withLeftRight(Accessor.signal(Constants.CONTROL_FLOW_SIGNAL), Accessor.constant(0), Writer.everything(false), DeciderCombinator.NEQ));
-        ConnectedCombinator elseOutGate = new ConnectedCombinator(DeciderCombinator.withLeftRight(Accessor.signal(Constants.CONTROL_FLOW_SIGNAL), Accessor.constant(0), Writer.everything(false), DeciderCombinator.NEQ));
+        DeciderCombinator ifOutGate = DeciderCombinator.withLeftRight(Accessor.signal(Constants.CONTROL_FLOW_SIGNAL), Accessor.constant(0), Writer.everything(false), DeciderOperator.NEQ);
+        DeciderCombinator elseOutGate = DeciderCombinator.withLeftRight(Accessor.signal(Constants.CONTROL_FLOW_SIGNAL), Accessor.constant(0), Writer.everything(false), DeciderOperator.NEQ);
         conditionOutputGroup.getCombinators().add(ifOutGate);
         conditionOutputGroup.getCombinators().add(elseOutGate);
 
@@ -419,14 +415,13 @@ public class Generator extends LanguageBaseListener {
         ifInput.setRedIn(conditionWire);
         elseInput.setRedIn(conditionWire);
 
-        ConnectedCombinator connected;
         if(condition instanceof Constant) {
-            connected = new ConnectedCombinator(Combinator.constant(Map.of(condition.getSignal(), ((Constant) condition).getVal())));
+            var connected = new ConstantCombinator(Map.of(condition.getSignal(), ((Constant) condition).getVal()));
             connected.setRedOut(conditionWire);
             conditionGroup.getCombinators().add(connected);
         }
         else {
-            connected = new ConnectedCombinator(ArithmeticCombinator.copying(condition.getSignal()));
+            var connected = ArithmeticCombinator.copying(condition.getSignal());
             NetworkGroup conditionWireGreen = new NetworkGroup("green -> red input wire");
             conditionGroup.getNetworks().add(conditionWireGreen);
             connected.setGreenIn(conditionWireGreen);
@@ -475,21 +470,21 @@ public class Generator extends LanguageBaseListener {
         currentFunctionContext.registerFunctionCall(functionCall);
 
         //Deduplication of outside signals
-        ConnectedCombinator inputGate = new ConnectedCombinator(DeciderCombinator.withLeftRight(Accessor.signal(Constants.CONTROL_FLOW_SIGNAL), Accessor.constant(0), Writer.everything(false), DeciderCombinator.NEQ));
+        var inputGate = DeciderCombinator.withLeftRight(Accessor.signal(Constants.CONTROL_FLOW_SIGNAL), Accessor.constant(0), Writer.everything(false), DeciderOperator.NEQ);
         functionCallInput.getCombinators().add(inputGate);
 
         inputGate.setGreenIn(functionCallInput.getInput());
 
-        ConnectedCombinator dedupInput = new ConnectedCombinator(DeciderCombinator.withLeftRight(Accessor.signal(Constants.TEMP_SIGNAL), Accessor.constant(0), Writer.everything(false), DeciderCombinator.EQ));
+        var dedupInput = DeciderCombinator.withLeftRight(Accessor.signal(Constants.TEMP_SIGNAL), Accessor.constant(0), Writer.everything(false), DeciderOperator.EQ);
         functionCallInput.getCombinators().add(dedupInput);
 
-        ConnectedCombinator dedupStore = new ConnectedCombinator(DeciderCombinator.withAny(Accessor.constant(0), Writer.one(Constants.TEMP_SIGNAL), DeciderCombinator.NEQ));
+        var dedupStore = DeciderCombinator.withAny(Accessor.constant(0), Writer.one(Constants.TEMP_SIGNAL), DeciderOperator.NEQ);
         functionCallInput.getCombinators().add(dedupStore);
 
-        ConnectedCombinator dedupReset = new ConnectedCombinator(DeciderCombinator.withLeftRight(Accessor.signal(Constants.CONTROL_FLOW_SIGNAL), Accessor.constant(0), Writer.fromInput(Constants.TEMP_SIGNAL), DeciderCombinator.NEQ));
+        var dedupReset = DeciderCombinator.withLeftRight(Accessor.signal(Constants.CONTROL_FLOW_SIGNAL), Accessor.constant(0), Writer.fromInput(Constants.TEMP_SIGNAL), DeciderOperator.NEQ);
         functionCallInput.getCombinators().add(dedupReset);
 
-        ConnectedCombinator dedupConstants = new ConnectedCombinator(Combinator.constant(Map.of(Constants.TEMP_SIGNAL, -1)));
+        var dedupConstants = new ConstantCombinator(Map.of(Constants.TEMP_SIGNAL, -1));
         functionCallInput.getCombinators().add(dedupConstants);
 
         NetworkGroup tmp = new NetworkGroup("dedup network");
@@ -506,9 +501,9 @@ public class Generator extends LanguageBaseListener {
         dedupReset.setGreenIn(tmp);
 
         //Forward signals, replacing control flow with predetermined value
-        ConnectedCombinator c1 = new ConnectedCombinator(ArithmeticCombinator.withLeftRight(Accessor.signal(Constants.CONTROL_FLOW_SIGNAL), Accessor.constant(-1), Constants.CONTROL_FLOW_SIGNAL, ArithmeticCombinator.MUL));
-        ConnectedCombinator c2 = new ConnectedCombinator(ArithmeticCombinator.copying());
-        ConnectedCombinator c3 = new ConnectedCombinator(DeciderCombinator.withLeftRight(Accessor.signal(Constants.CONTROL_FLOW_SIGNAL), Accessor.constant(0), Writer.one(Constants.CONTROL_FLOW_SIGNAL), DeciderCombinator.NEQ));
+        var c1 = ArithmeticCombinator.withLeftRight(Accessor.signal(Constants.CONTROL_FLOW_SIGNAL), Accessor.constant(-1), Constants.CONTROL_FLOW_SIGNAL, ArithmeticOperator.MUL);
+        var c2 = ArithmeticCombinator.copying();
+        var c3 = DeciderCombinator.withLeftRight(Accessor.signal(Constants.CONTROL_FLOW_SIGNAL), Accessor.constant(0), Writer.one(Constants.CONTROL_FLOW_SIGNAL), DeciderOperator.NEQ);
         functionCallInput.getCombinators().add(c1);
         functionCallInput.getCombinators().add(c2);
         functionCallInput.getCombinators().add(c3);
@@ -521,12 +516,12 @@ public class Generator extends LanguageBaseListener {
         c3.setRedIn(forwardIn);
         dedupInput.setRedOut(forwardIn);
 
-        ConnectedCombinator c4 = new ConnectedCombinator(ArithmeticCombinator.withLeftRight(Accessor.signal(Constants.CONTROL_FLOW_SIGNAL), Accessor.constant(-1), Constants.CONTROL_FLOW_SIGNAL, ArithmeticCombinator.MUL));
-        ConnectedCombinator c5 = new ConnectedCombinator(ArithmeticCombinator.copying());
+        var c4 = ArithmeticCombinator.withLeftRight(Accessor.signal(Constants.CONTROL_FLOW_SIGNAL), Accessor.constant(-1), Constants.CONTROL_FLOW_SIGNAL, ArithmeticOperator.MUL);
+        var c5 = ArithmeticCombinator.copying();
         //Accessor.constant(function call id)
         int functionCallId = functionCall.getFunctionCallId();
-        ConnectedCombinator c6 = new ConnectedCombinator(DeciderCombinator.withLeftRight(Accessor.signal(Constants.CONTROL_FLOW_SIGNAL), Accessor.constant(functionCallId), Writer.one(Constants.CONTROL_FLOW_SIGNAL), DeciderCombinator.NEQ));
-        ConnectedCombinator c7 = new ConnectedCombinator(Combinator.constant(Map.of(Constants.FUNCTION_IDENTIFIER, targetFunction.getSignature().getFunctionId())));
+        var c6 = DeciderCombinator.withLeftRight(Accessor.signal(Constants.CONTROL_FLOW_SIGNAL), Accessor.constant(functionCallId), Writer.one(Constants.CONTROL_FLOW_SIGNAL), DeciderOperator.NEQ);
+        var c7 = new ConstantCombinator(Map.of(Constants.FUNCTION_IDENTIFIER, targetFunction.getSignature().getFunctionId()));
 
         functionCallInput.getCombinators().add(c4);
         functionCallInput.getCombinators().add(c5);
@@ -554,7 +549,7 @@ public class Generator extends LanguageBaseListener {
         NetworkGroup stateStoreOut = new NetworkGroup();
         functionCallInput.getNetworks().add(stateStoreOut);
 
-        ConnectedCombinator preCallStateStore = new ConnectedCombinator(DeciderCombinator.withLeftRight(Accessor.signal(Constants.TEMP_SIGNAL), Accessor.constant(0), Writer.everything(false), DeciderCombinator.EQ));
+        var preCallStateStore = DeciderCombinator.withLeftRight(Accessor.signal(Constants.TEMP_SIGNAL), Accessor.constant(0), Writer.everything(false), DeciderOperator.EQ);
         functionCallInput.getCombinators().add(preCallStateStore);
 
         preCallStateStore.setRedIn(forwardIn);
@@ -562,14 +557,14 @@ public class Generator extends LanguageBaseListener {
         preCallStateStore.setGreenIn(stateStoreOut);
         preCallStateStore.setGreenOut(stateStoreOut);
 
-        ConnectedCombinator preCallStateOutputGate = new ConnectedCombinator(DeciderCombinator.withLeftRight(Accessor.signal(Constants.TEMP_SIGNAL), Accessor.constant(-1), Writer.everything(false), DeciderCombinator.EQ));
+        var preCallStateOutputGate = DeciderCombinator.withLeftRight(Accessor.signal(Constants.TEMP_SIGNAL), Accessor.constant(-1), Writer.everything(false), DeciderOperator.EQ);
         functionCallInput.getCombinators().add(preCallStateOutputGate);
 
         preCallStateOutputGate.setGreenIn(stateStoreOut);
         preCallStateOutputGate.setRedIn(forwardIn);
 
         //Function call data return
-        ConnectedCombinator returnGate = new ConnectedCombinator(DeciderCombinator.withLeftRight(Accessor.signal(Constants.CONTROL_FLOW_SIGNAL), Accessor.constant(functionCallId), Writer.everything(false), DeciderCombinator.NEQ));
+        var returnGate = DeciderCombinator.withLeftRight(Accessor.signal(Constants.CONTROL_FLOW_SIGNAL), Accessor.constant(functionCallId), Writer.everything(false), DeciderOperator.NEQ);
         functionCallReturn.getCombinators().add(returnGate);
         tmp = new NetworkGroup();
         functionCallReturn.getNetworks().add(tmp);
@@ -577,8 +572,8 @@ public class Generator extends LanguageBaseListener {
         dedupReset.setRedIn(tmp);
         returnGate.setRedOut(tmp);
 
-        ConnectedCombinator filter1 = new ConnectedCombinator(ArithmeticCombinator.withLeftRight(Accessor.signal(Constants.CONTROL_FLOW_SIGNAL), Accessor.constant(-1), Constants.CONTROL_FLOW_SIGNAL, ArithmeticCombinator.MUL));
-        ConnectedCombinator filter2 = new ConnectedCombinator(ArithmeticCombinator.copying());
+        var filter1 = ArithmeticCombinator.withLeftRight(Accessor.signal(Constants.CONTROL_FLOW_SIGNAL), Accessor.constant(-1), Constants.CONTROL_FLOW_SIGNAL, ArithmeticOperator.MUL);
+        var filter2 = ArithmeticCombinator.copying();
         functionCallReturn.getCombinators().add(filter1);
         functionCallReturn.getCombinators().add(filter2);
 
@@ -588,7 +583,7 @@ public class Generator extends LanguageBaseListener {
         filter2.setGreenIn(tmp);
         returnGate.setGreenOut(tmp);
 
-        ConnectedCombinator filter3 = new ConnectedCombinator(ArithmeticCombinator.copying());
+        var filter3 = ArithmeticCombinator.copying();
         functionCallReturn.getCombinators().add(filter3);
 
         tmp = new NetworkGroup();
@@ -597,7 +592,7 @@ public class Generator extends LanguageBaseListener {
         filter2.setGreenOut(tmp);
         filter3.setGreenIn(tmp);
 
-        ConnectedCombinator outputGate = new ConnectedCombinator(DeciderCombinator.withLeftRight(Accessor.signal(Constants.CONTROL_FLOW_SIGNAL), Accessor.constant(0), Writer.everything(false), DeciderCombinator.NEQ));
+        var outputGate = DeciderCombinator.withLeftRight(Accessor.signal(Constants.CONTROL_FLOW_SIGNAL), Accessor.constant(0), Writer.everything(false), DeciderOperator.NEQ);
         functionCallReturn.getCombinators().add(outputGate);
 
         tmp = new NetworkGroup();
@@ -606,7 +601,7 @@ public class Generator extends LanguageBaseListener {
         preCallStateOutputGate.setGreenOut(tmp);
         filter3.setGreenOut(tmp);
 
-        ConnectedCombinator c8 = new ConnectedCombinator(Combinator.constant(Map.of(Constants.TEMP_SIGNAL, 1)));
+        var c8 = new ConstantCombinator(Map.of(Constants.TEMP_SIGNAL, 1));
         functionCallReturn.getCombinators().add(c8);
         tmp = new NetworkGroup();
         functionCallReturn.getNetworks().add(tmp);
@@ -686,17 +681,14 @@ public class Generator extends LanguageBaseListener {
         CombinatorGroup group = new CombinatorGroup(new NetworkGroup(), new NetworkGroup());
         currentFunctionContext.getFunctionGroup().getSubGroups().add(group);
 
-        ConnectedCombinator connected;
         if(value instanceof Constant) {
-            Combinator cmb = Combinator.constant(Map.of(variableSymbol, ((Constant) value).getVal()));
-            connected = new ConnectedCombinator(cmb);
+            var connected = new ConstantCombinator(Map.of(variableSymbol, ((Constant) value).getVal()));
             connected.setGreenOut(group.getOutput());
             group.getCombinators().add(connected);
         }
         else {
             //TODO remove this and use the value directly (is this a good idea?)
-            Combinator cmb = ArithmeticCombinator.withLeftRight(Accessor.signal(value.getSignal()), Accessor.constant(0), variableSymbol, ArithmeticCombinator.ADD);
-            connected = new ConnectedCombinator(cmb);
+            var connected = ArithmeticCombinator.withLeftRight(Accessor.signal(value.getSignal()), Accessor.constant(0), variableSymbol, ArithmeticOperator.ADD);
             connected.setGreenOut(group.getOutput());
             connected.setGreenIn(group.getInput());
             group.getCombinators().add(connected);
@@ -711,23 +703,22 @@ public class Generator extends LanguageBaseListener {
         log("Creating named " + varName + " = " + named + ", with delay " + named.getTickDelay());
     }
 
-    private final Combiner<LanguageParser.ExprContext, ArithmeticOperation> EXPR_PARSER = new Combiner<>(2, PrimitiveType.INT, PrimitiveType.INT) {
+    private final Combiner<LanguageParser.ExprContext, ArithmeticOperator> EXPR_PARSER = new Combiner<>(2, PrimitiveType.INT, PrimitiveType.INT) {
 
         @Override
-        public ArithmeticOperation getOperation(LanguageParser.ExprContext ruleContext) {
-            return ArithmeticCombinator.getOperation(ruleContext.op.getText());
+        public ArithmeticOperator getOperation(LanguageParser.ExprContext ruleContext) {
+            return ArithmeticOperator.getOperator(ruleContext.op.getText());
         }
 
         @Override
-        public Optional<Constant> computeConstExpr(Constant[] constants, ArithmeticOperation operation) {
+        public Optional<Constant> computeConstExpr(Constant[] constants, ArithmeticOperator operation) {
             int result = operation.applyAsInt(constants[0].getVal(), constants[1].getVal());
             return Optional.of(new Constant(result, PrimitiveType.INT));
         }
 
         @Override
-        public int generateCombinators(Symbol[] symbols, ArithmeticOperation operation, FactorioSignal outSymbol, CombinatorGroup group) {
-            var cmb = ArithmeticCombinator.withLeftRight(symbols[0].toAccessor(currentFunctionContext),  symbols[1].toAccessor(currentFunctionContext), outSymbol, operation);
-            var connected = new ConnectedCombinator(cmb);
+        public int generateCombinators(Symbol[] symbols, ArithmeticOperator operation, FactorioSignal outSymbol, CombinatorGroup group) {
+            var connected = ArithmeticCombinator.withLeftRight(symbols[0].toAccessor(currentFunctionContext),  symbols[1].toAccessor(currentFunctionContext), outSymbol, operation);
             connected.setGreenIn(group.getInput());
             connected.setGreenOut(group.getOutput());
             group.getCombinators().add(connected);
@@ -735,29 +726,28 @@ public class Generator extends LanguageBaseListener {
         }
     };
 
-    private final Combiner<LanguageParser.BoolExprContext, DeciderOperation> BOOL_EXPR_COMPONENT_PARSER = new Combiner<>(2, PrimitiveType.INT, PrimitiveType.BOOLEAN) {
+    private final Combiner<LanguageParser.BoolExprContext, DeciderOperator> BOOL_EXPR_COMPONENT_PARSER = new Combiner<>(2, PrimitiveType.INT, PrimitiveType.BOOLEAN) {
 
         @Override
-        public DeciderOperation getOperation(LanguageParser.BoolExprContext ruleContext) {
-            return DeciderCombinator.getOperation(ruleContext.op.getText());
+        public DeciderOperator getOperation(LanguageParser.BoolExprContext ruleContext) {
+            return DeciderOperator.getOperator(ruleContext.op.getText());
         }
 
         @Override
-        public Optional<Constant> computeConstExpr(Constant[] constants, DeciderOperation operation) {
+        public Optional<Constant> computeConstExpr(Constant[] constants, DeciderOperator operation) {
             boolean result = operation.test(constants[0].getVal(), constants[1].getVal());
             return Optional.of(new Constant(result ? 1 : 0, PrimitiveType.BOOLEAN));
         }
 
         @Override
-        public int generateCombinators(Symbol[] symbols, DeciderOperation operation, FactorioSignal outSymbol, CombinatorGroup group) {
+        public int generateCombinators(Symbol[] symbols, DeciderOperator operation, FactorioSignal outSymbol, CombinatorGroup group) {
             if(symbols[0] instanceof Constant) {
                 var tmp = symbols[1];
                 symbols[1] = symbols[0];
                 symbols[0] = tmp;
-                operation = DeciderCombinator.getInvertedOperation(operation);
+                operation = operation.getInverted();
             }
-            var cmb = DeciderCombinator.withLeftRight(symbols[0].toAccessor(currentFunctionContext),  symbols[1].toAccessor(currentFunctionContext), Writer.one(outSymbol), operation);
-            var connected = new ConnectedCombinator(cmb);
+            var connected = DeciderCombinator.withLeftRight(symbols[0].toAccessor(currentFunctionContext),  symbols[1].toAccessor(currentFunctionContext), Writer.one(outSymbol), operation);
             connected.setGreenIn(group.getInput());
             connected.setGreenOut(group.getOutput());
             group.getCombinators().add(connected);
@@ -765,28 +755,27 @@ public class Generator extends LanguageBaseListener {
         }
     };
 
-    private final Combiner<LanguageParser.BoolExprContext, ArithmeticOperation> BOOL_EXPR_PARSER = new Combiner<>(2, PrimitiveType.BOOLEAN, PrimitiveType.BOOLEAN) {
+    private final Combiner<LanguageParser.BoolExprContext, ArithmeticOperator> BOOL_EXPR_PARSER = new Combiner<>(2, PrimitiveType.BOOLEAN, PrimitiveType.BOOLEAN) {
 
         @Override
-        public ArithmeticOperation getOperation(LanguageParser.BoolExprContext ruleContext) {
+        public ArithmeticOperator getOperation(LanguageParser.BoolExprContext ruleContext) {
             return switch(ruleContext.op.getText()) {
-                case "&&" -> ArithmeticCombinator.AND;
-                case "||" -> ArithmeticCombinator.OR;
-                case "^" -> ArithmeticCombinator.XOR;
+                case "&&" -> ArithmeticOperator.AND;
+                case "||" -> ArithmeticOperator.OR;
+                case "^" -> ArithmeticOperator.XOR;
                 default -> throw new UnsupportedOperationException("Unknown operation '" + ruleContext.op.getText() + "'");
             };
         }
 
         @Override
-        public Optional<Constant> computeConstExpr(Constant[] constants, ArithmeticOperation operation) {
+        public Optional<Constant> computeConstExpr(Constant[] constants, ArithmeticOperator operation) {
             int result = operation.applyAsInt(constants[0].getVal(), constants[1].getVal());
             return Optional.of(new Constant(result, PrimitiveType.BOOLEAN));
         }
 
         @Override
-        public int generateCombinators(Symbol[] symbols, ArithmeticOperation operation, FactorioSignal outSymbol, CombinatorGroup group) {
-            var cmb = ArithmeticCombinator.withLeftRight(symbols[0].toAccessor(currentFunctionContext),  symbols[1].toAccessor(currentFunctionContext), outSymbol, operation);
-            var connected = new ConnectedCombinator(cmb);
+        public int generateCombinators(Symbol[] symbols, ArithmeticOperator operation, FactorioSignal outSymbol, CombinatorGroup group) {
+            var connected = ArithmeticCombinator.withLeftRight(symbols[0].toAccessor(currentFunctionContext),  symbols[1].toAccessor(currentFunctionContext), outSymbol, operation);
             connected.setGreenIn(group.getInput());
             connected.setGreenOut(group.getOutput());
             group.getCombinators().add(connected);
@@ -808,8 +797,7 @@ public class Generator extends LanguageBaseListener {
 
         @Override
         public int generateCombinators(Symbol[] symbols, Void operation, FactorioSignal outSymbol, CombinatorGroup group) {
-            var cmb = DeciderCombinator.withLeftRight(symbols[0].toAccessor(currentFunctionContext), Accessor.constant(0), Writer.one(outSymbol), DeciderCombinator.EQ);
-            var connected = new ConnectedCombinator(cmb);
+            var connected = DeciderCombinator.withLeftRight(symbols[0].toAccessor(currentFunctionContext), Accessor.constant(0), Writer.one(outSymbol), DeciderOperator.EQ);
             connected.setGreenIn(group.getInput());
             connected.setGreenOut(group.getOutput());
             group.getCombinators().add(connected);

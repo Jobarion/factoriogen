@@ -4,7 +4,7 @@ import java.util.*;
 
 public class NetworkGroup {
 
-    private static Map<NetworkGroup, Set<NetworkGroup>> mergedMap = new HashMap<>();
+    private static Map<NetworkGroup, NetworkGroup> canonicalMap = new HashMap<>();
 
 
     private final String name;
@@ -22,24 +22,38 @@ public class NetworkGroup {
     }
 
     public static void merge(NetworkGroup... groups) {
-        Set<NetworkGroup> totalGroup = new HashSet<>();
-        for(var group : groups) {
-            if(group == null) throw new NullPointerException("Merging with the null group is illegal");
-            totalGroup.add(group);
-            totalGroup.addAll(mergedMap.getOrDefault(group, Collections.emptySet()));
+        Set<NetworkGroup> previousCanonicals = new HashSet<>();
+        for(int i = 0; i < groups.length; i++) {
+            var canonical = getCanonical(groups[i]);
+            if(canonical != groups[i]) {
+                previousCanonicals.add(canonical);
+            }
         }
-        for(var group : totalGroup) {
-            mergedMap.put(group, totalGroup);
+
+        NetworkGroup promotedCanonical = groups[0];
+
+        for(var e : new HashSet<>(canonicalMap.entrySet())) {
+            if(previousCanonicals.contains(e.getValue())) {
+                canonicalMap.put(e.getKey(), promotedCanonical);
+            }
+        }
+
+        for(NetworkGroup group : previousCanonicals) {
+            canonicalMap.put(group, promotedCanonical);
+        }
+
+        for(NetworkGroup group : groups) {
+            canonicalMap.put(group, promotedCanonical);
         }
     }
 
-    public static Set<NetworkGroup> getMerged(NetworkGroup g) {
-        return mergedMap.getOrDefault(g, Collections.emptySet());
+    public static NetworkGroup getCanonical(NetworkGroup ng) {
+        return canonicalMap.getOrDefault(ng, ng);
     }
 
-     public static boolean isEqual(NetworkGroup a, NetworkGroup b) {
+    public static boolean isEqual(NetworkGroup a, NetworkGroup b) {
         if(a == b) return true;
         if(a == null || b == null) return false;
-         return mergedMap.getOrDefault(a, Collections.emptySet()).contains(b);
-     }
+        return getCanonical(a) == getCanonical(b);
+    }
 }
