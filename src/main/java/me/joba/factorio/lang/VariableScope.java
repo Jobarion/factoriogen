@@ -36,7 +36,7 @@ public class VariableScope {
         return null;
     }
 
-    public Variable createNamedVariable(String name, Type type, FactorioSignal signal, CombinatorGroup producer) {
+    public Variable createNamedVariable(String name, Type type, FactorioSignal[] signal, CombinatorGroup producer) {
         var var = new Variable(type, variableIdCounter++, signal, producer);
         variables.put(name, var);
         return var;

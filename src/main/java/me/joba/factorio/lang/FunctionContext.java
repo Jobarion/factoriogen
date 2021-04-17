@@ -18,7 +18,6 @@ public class FunctionContext {
     private final int functionId;
     private CombinatorGroup functionHeader;
     private CombinatorGroup functionReturn;
-    private List<FunctionCall> registeredFunctionCalls;
     private final FunctionSignature functionSignature;
 
     public FunctionContext(FunctionSignature functionSignature) {
@@ -31,17 +30,23 @@ public class FunctionContext {
         freeBindings.addAll(Arrays.asList(FactorioSignal.values()));
         freeBindings.removeIf(FactorioSignal::isReserved);
         conditionContexts = new Stack<>();
-        registeredFunctionCalls = new ArrayList<>();
         bindParameterSignals();
     }
 
     private void bindParameterSignals() {
         for(var param : functionSignature.getParameters()) {
-            if(param.getSignal() == null ) {
-                param.setSignal(getFreeSymbol());
+            if(param.getSignal() != null) {
+                this.claimSymbol(param.getSignal());
             }
-            else if(param.getSignal().isReserved()) {
-                throw new IllegalArgumentException("Signal " + param.getSignal() + " is reserved");
+        }
+        for(var param : functionSignature.getParameters()) {
+            if(param.getSignal() == null) {
+                param.setSignal(getFreeSymbols(param.getType().getSize()));
+            }
+            else {
+                for(FactorioSignal signal : param.getSignal()) {
+                    if(signal.isReserved()) throw new IllegalArgumentException("Signal " + param.getSignal() + " is reserved");
+                }
             }
         }
     }
@@ -64,23 +69,19 @@ public class FunctionContext {
         return functionSignature.getName();
     }
 
-    public void registerFunctionCall(FunctionCall functionCall) {
-        this.registeredFunctionCalls.add(functionCall);
-    }
-
     public Variable getControlFlowVariable() {
         return getNamedVariable(CONTROL_FLOW_VAR_NAME);
     }
 
     public Variable overwriteControlFlowVariable(CombinatorGroup producer) {
-        return createNamedVariable(CONTROL_FLOW_VAR_NAME, PrimitiveType.INT, Constants.CONTROL_FLOW_SIGNAL, producer);
+        return createNamedVariable(CONTROL_FLOW_VAR_NAME, PrimitiveType.INT, new FactorioSignal[]{Constants.CONTROL_FLOW_SIGNAL}, producer);
     }
 
     public void pushTempVariable(Symbol var) {
         tempVariables.push(var);
     }
 
-    public Variable createBoundTempVariable(Type type, FactorioSignal signal, CombinatorGroup producer) {
+    public Variable createBoundTempVariable(Type type, FactorioSignal[] signal, CombinatorGroup producer) {
         var var = new Variable(type, variableIdCounter++, signal, producer);
         tempVariables.push(var);
         return var;
@@ -90,7 +91,7 @@ public class FunctionContext {
         return tempVariables.pop();
     }
 
-    public Variable createNamedVariable(String name, Type type, FactorioSignal signal, CombinatorGroup producer) {
+    public Variable createNamedVariable(String name, Type type, FactorioSignal[] signal, CombinatorGroup producer) {
         return variables.peek().createNamedVariable(name, type, signal, producer);
     }
 
@@ -156,9 +157,22 @@ public class FunctionContext {
         return signal;
     }
 
-    public void claimSymbol(FactorioSignal signal) {
-        if(!freeBindings.remove(signal)) {
-            throw new IllegalArgumentException("Attempted to claim unavailable symbol " + signal);
+    public FactorioSignal[] getFreeSymbols(int count) {
+        FactorioSignal[] signals = new FactorioSignal[count];
+        var iter = freeBindings.iterator();
+        for(int i = 0; i < count; i++) {
+            signals[i] = iter.next();
+            iter.remove();
+        }
+        return signals;
+    }
+
+
+    public void claimSymbol(FactorioSignal... signals) {
+        for(FactorioSignal signal : signals) {
+            if(!freeBindings.remove(signal)) {
+                throw new IllegalArgumentException("Attempted to claim unavailable symbol " + signal);
+            }
         }
     }
 

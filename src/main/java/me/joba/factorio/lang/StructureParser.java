@@ -23,10 +23,22 @@ public class StructureParser extends LanguageBaseListener {
             if(param.signalName() != null) {
                 signal = FactorioSignal.valueOf("SIGNAL_" + param.signalName().getText().toUpperCase().replace('-', '_'));
             }
-            paramTypes[i] = new FunctionParameter(param.varName().getText(), type, signal);
+            paramTypes[i] = new FunctionParameter(param.varName().getText(), type, signal == null ? null : new FactorioSignal[]{signal});
         }
-        FunctionSignature signature = new FunctionSignature(name, paramTypes, returnType);
+        FunctionSignature signature = new FunctionSignature(name, paramTypes, returnType, getFunctionReturnSignals(returnType));
         FunctionContext context = new FunctionContext(signature);
         functions.put(name, context);
+    }
+
+    private static FactorioSignal[] getFunctionReturnSignals(Type type) {
+        var returnSignals = new FactorioSignal[type.getSize()];
+        var allSignals = FactorioSignal.values();
+        int cursor = 0;
+        for(int i = 0; i < returnSignals.length; i++) {
+            FactorioSignal signal;
+            while((signal = allSignals[cursor++]).isReserved());
+            returnSignals[i] = signal;
+        }
+        return returnSignals;
     }
 }

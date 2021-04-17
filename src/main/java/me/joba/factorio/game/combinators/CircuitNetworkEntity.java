@@ -4,10 +4,12 @@ import me.joba.factorio.NetworkGroup;
 import me.joba.factorio.game.ConnectionPoint;
 import me.joba.factorio.game.Entity;
 import me.joba.factorio.game.WireColor;
+import org.json.simple.JSONObject;
 
 public class CircuitNetworkEntity extends Entity {
 
     private final ConnectionPoint[] connectionPoints;
+    private JSONObject connectionData;
 
     public CircuitNetworkEntity(String name, int connectionPoints) {
         super(name);
@@ -27,5 +29,17 @@ public class CircuitNetworkEntity extends Entity {
 
     public void setNetwork(int connectionPoint, WireColor color, NetworkGroup group) {
         connectionPoints[connectionPoint].getConnections().put(color, group);
+    }
+
+    public void setConnectionData(JSONObject connectionData) {
+        this.connectionData = connectionData;
+    }
+
+    @Override
+    protected void extendJson(JSONObject json) {
+        super.extendJson(json);
+        if(connectionData != null) {
+            json.put("connections", connectionData);
+        }
     }
 }

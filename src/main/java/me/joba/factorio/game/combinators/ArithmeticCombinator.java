@@ -15,6 +15,7 @@ public class ArithmeticCombinator extends IOCircuitNetworkEntity {
 
     @Override
     protected void extendJson(JSONObject json) {
+        super.extendJson(json);
         json.put("control_behavior", controlBehavior);
     }
 
@@ -24,6 +25,10 @@ public class ArithmeticCombinator extends IOCircuitNetworkEntity {
 
     public static ArithmeticCombinator copying(FactorioSignal signal) {
         return withLeftRight(Accessor.signal(signal), Accessor.constant(0), signal, ArithmeticOperator.ADD);
+    }
+
+    public static ArithmeticCombinator remapping(FactorioSignal in, FactorioSignal out) {
+        return withLeftRight(Accessor.signal(in), Accessor.constant(0), out, ArithmeticOperator.ADD);
     }
 
     public static ArithmeticCombinator withLeftRight(Accessor left, Accessor right, FactorioSignal outSignal, ArithmeticOperator operator) {

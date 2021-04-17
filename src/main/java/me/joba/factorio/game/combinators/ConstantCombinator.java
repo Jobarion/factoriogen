@@ -35,6 +35,7 @@ public class ConstantCombinator extends CircuitNetworkEntity {
 
     @Override
     protected void extendJson(JSONObject json) {
+        super.extendJson(json);
         JSONObject controlBehavior = new JSONObject();
         int index = 1;
         JSONArray filters = new JSONArray();

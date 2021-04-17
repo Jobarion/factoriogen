@@ -4,21 +4,25 @@ import me.joba.factorio.Accessor;
 
 public abstract class Symbol {
 
-    private FactorioSignal signal;
+    private FactorioSignal[] signal;
+    private final Type type;
 
-    public Symbol() {
-
+    public Symbol(Type type) {
+        this.type = type;
     }
 
-    public Symbol(FactorioSignal signal) {
-        this.signal = signal;
+    public Symbol(Type type, FactorioSignal... signal) {
+        this.type = type;
+        bind(signal);
     }
 
-    public void bind(FactorioSignal factorioSignal) {
+    public void bind(FactorioSignal... factorioSignal) {
+        if(signal != null) throw new RuntimeException("Variable already bound");
+        if(type.getSize() != factorioSignal.length) throw new IllegalArgumentException("Cannot bind type " + type + " with size " + type.getSize() + " to " + factorioSignal.length + " signals.");
         this.signal = factorioSignal;
     }
 
-    public FactorioSignal getSignal() {
+    public FactorioSignal[] getSignal() {
         return signal;
     }
 
@@ -26,7 +30,10 @@ public abstract class Symbol {
         return signal != null;
     }
 
-    public abstract Accessor toAccessor(FunctionContext context);
-    public abstract Type getType();
+    public Type getType() {
+        return type;
+    }
+
+    public abstract Accessor[] toAccessor(FunctionContext context);
     public abstract int getTickDelay();
 }

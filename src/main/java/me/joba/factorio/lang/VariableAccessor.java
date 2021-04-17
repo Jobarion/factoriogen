@@ -10,8 +10,6 @@ import java.util.function.Consumer;
 
 public class VariableAccessor {
 
-    private static final boolean ACCURATE_TIMING = true;
-
     private final Map<NetworkGroup, AccessibleVariable> accessedList;
     private final Variable variable;
     private boolean generated = false;
@@ -27,37 +25,26 @@ public class VariableAccessor {
         if(accessedList.isEmpty()) return;
         var connectionNetwork = new NetworkGroup();
         variable.getProducer().getNetworks().add(connectionNetwork);
-
-        if(ACCURATE_TIMING) {
-            generateAccurateAccessors();
-        }
-        else {
-            generateInaccurateAccessors();
-        }
-    }
-
-    private void generateInaccurateAccessors() {
-        for(var entry : accessedList.values()) {
-            var connected = ArithmeticCombinator.copying(variable.getSignal());
-            connected.setGreenIn(variable.getProducer().getOutput());
-            connected.setGreenOut(entry.networkGroup);
-            entry.combinatorGroup.getCombinators().add(connected);
-        }
+        generateAccurateAccessors();
     }
 
     private void generateAccurateAccessors() {
 
         Set<AccessibleVariable> ignored = new HashSet<>();
+        boolean allIgnored = true;
         for(var accessing : accessedList.values()) {
             if(accessing.delay == variable.getTickDelay()) {
                 ignored.add(accessing);
                 NetworkGroup.merge(accessing.networkGroup, variable.getProducer().getOutput());
             }
+            else {
+                allIgnored = false;
+            }
         }
 
         System.out.println("Generated " + ignored.size() + " accessors via direct access.");
 
-        if(ignored.size() == accessedList.size()) return;
+        if(allIgnored) return;
 
         int minDelay = Integer.MAX_VALUE;
         int maxDelay = Integer.MIN_VALUE;
@@ -77,10 +64,6 @@ public class VariableAccessor {
 
         System.out.println("Delay timing difference " + minDelay + " " + maxDelay);
 
-        //TODO: Transform an accessor chain like (1 and 2 are the signals that are passed on, * means every signal)
-        // 1 -> 1 -> 1 -> 1 -> 1, and 2 -> 2 -> 2 to * -> * -> * -> * -> 1
-        //                                                  -> 2
-
         NetworkGroup output = variable.getProducer().getOutput();
 
         boolean done = false;
@@ -90,7 +73,7 @@ public class VariableAccessor {
                 if(ignored.contains(entry)) continue;
                 if(entry.delay == variable.getTickDelay()) continue;
                 if(entry.delay == variable.getTickDelay() + 1) {
-                    var connected = ArithmeticCombinator.copying(variable.getSignal());
+                    var connected = ArithmeticCombinator.copying(variable.getSignal()[0]);
                     connected.setGreenIn(output);
                     connected.setGreenOut(entry.networkGroup);
                     entry.combinatorGroup.getCombinators().add(connected);
@@ -101,7 +84,7 @@ public class VariableAccessor {
                 entry.delay--;
             }
             if(!done) {
-                var connected = ArithmeticCombinator.copying(variable.getSignal());
+                var connected = ArithmeticCombinator.copying(variable.getSignal()[0]);
                 connected.setGreenIn(output);
                 output = new NetworkGroup();
                 connected.setGreenOut(output);
@@ -153,12 +136,12 @@ public class VariableAccessor {
             if (this == o) return true;
             if (o == null || getClass() != o.getClass()) return false;
             AccessibleVariable that = (AccessibleVariable) o;
-            return combinatorGroup.equals(that.combinatorGroup);
+            return networkGroup.equals(that.networkGroup);
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(combinatorGroup);
+            return Objects.hash(networkGroup);
         }
     }
 }

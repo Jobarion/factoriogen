@@ -16,6 +16,7 @@ public class DeciderCombinator extends IOCircuitNetworkEntity {
 
     @Override
     protected void extendJson(JSONObject json) {
+        super.extendJson(json);
         json.put("control_behavior", controlBehavior);
     }
 

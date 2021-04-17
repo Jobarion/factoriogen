@@ -1,22 +1,17 @@
-package me.joba.factorio;
+package me.joba.factorio.graph;
 
+import me.joba.factorio.NetworkGroup;
 import me.joba.factorio.game.EntityBlock;
 import me.joba.factorio.game.combinators.CircuitNetworkEntity;
-import me.joba.factorio.graph.MSTSolver;
-import me.joba.factorio.graph.Node;
-import me.joba.factorio.graph.SimulatedAnnealingSolver;
-import me.joba.factorio.graph.Tuple;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
-import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.stream.Collectors;
-import java.util.zip.Deflater;
 
-public class BlueprintWriter {
+public class FunctionPlacer {
 
-    public static void placeCombinators(List<CircuitNetworkEntity> combinators, Collection<NetworkGroup> networks) {
+    private static void placeCombinators(List<CircuitNetworkEntity> combinators, Collection<NetworkGroup> networks) {
         List<Node> nodes = new ArrayList<>();
 
         Map<Integer, Integer> entityIdNodeIdMap = new HashMap<>();
@@ -67,38 +62,15 @@ public class BlueprintWriter {
         }
     }
 
-    public static String writeBlueprint(EntityBlock block) {
-        JSONArray entities = new JSONArray();
+    public static EntityBlock placeFunction(List<CircuitNetworkEntity> combinators, List<NetworkGroup> networks) {
+        placeCombinators(combinators, networks);
+        var connections = buildConnectionObjects(MSTSolver.solveMst(combinators));
 
-        for(var entity : block.getEntities()) {
-            entities.add(entity.toJson());
+        for(var entity : combinators) {
+            entity.setConnectionData(connections.get(entity.getEntityId()));
         }
 
-        JSONObject blueprint = new JSONObject();
-        blueprint.put("icons", new JSONArray());
-        blueprint.put("entities", entities);
-        blueprint.put("item", "blueprint");
-        blueprint.put("version", 281474976710656L);
-        JSONObject root = new JSONObject();
-        root.put("blueprint", blueprint);
-        String outString = root.toJSONString();
-        System.out.println(outString);
-        Deflater deflater = new Deflater(9);
-        deflater.setInput(outString.getBytes(StandardCharsets.UTF_8));
-        deflater.finish();
-        byte[] total = new byte[0];
-        byte[] buf = new byte[1024];
-        while(!deflater.finished()) {
-            int written = deflater.deflate(buf);
-            byte[] tmp = new byte[total.length + written];
-            System.arraycopy(total, 0, tmp, 0, total.length);
-            System.arraycopy(buf, 0, tmp, total.length, written);
-            total = tmp;
-        }
-        deflater.end();
-        byte[] base64Bytes = Base64.getEncoder().encode(total);
-
-        return "0" + new String(base64Bytes);
+        return new EntityBlock(combinators);
     }
 
     private static Map<Integer, JSONObject> buildConnectionObjects(List<Tuple<MSTSolver.Node, MSTSolver.Node>> connections) {

@@ -26,8 +26,7 @@ ifStatement: statement;
 whileExpr: 'while' '(' loopCond=boolExpr ')' loopStatement=loopBody;
 loopBody: statement;
 
-returnStatement: 'return' '(' returnValues ')';
-returnValues: expr (',' expr)*;
+returnStatement: 'return ' expr;
 
 functionCall: functionName '(' argumentList ')';
 argumentList: expr (',' expr)*;

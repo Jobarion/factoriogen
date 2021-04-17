@@ -48,7 +48,7 @@ public abstract class Combiner<RC extends ParserRuleContext, OP> {
             }
         }
 
-        var outSymbol = context.getFreeSymbol();
+        var outSymbol = context.getFreeSymbols(outputType.getSize());
         var outputContext = new CombinatorGroup(new NetworkGroup(), new NetworkGroup());
         context.getFunctionGroup().getSubGroups().add(outputContext);
         var bound = context.createBoundTempVariable(outputType, outSymbol, outputContext);
@@ -73,5 +73,5 @@ public abstract class Combiner<RC extends ParserRuleContext, OP> {
 
     public abstract OP getOperation(RC ruleContext);
     public abstract Optional<Constant> computeConstExpr(Constant[] constants, OP operation);
-    public abstract int generateCombinators(Symbol[] symbols, OP operation, FactorioSignal outSymbol, CombinatorGroup group);
+    public abstract int generateCombinators(Symbol[] symbols, OP operation, FactorioSignal[] outSymbol, CombinatorGroup group);
 }

@@ -8,5 +8,4 @@ public class Constants {
     public static FactorioSignal TEMP_SIGNAL = FactorioSignal.SIGNAL_DOT;
     public static FactorioSignal FUNCTION_IDENTIFIER = FactorioSignal.SIGNAL_INFO; //We could probably use TEMP_SIGNAL
 
-
 }
