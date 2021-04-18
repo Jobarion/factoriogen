@@ -1,77 +1,27 @@
 package me.joba.factorio;
 
 import me.joba.factorio.game.EntityBlock;
-import me.joba.factorio.game.combinators.CircuitNetworkEntity;
 import me.joba.factorio.graph.MSTSolver;
-import me.joba.factorio.graph.Node;
-import me.joba.factorio.graph.SimulatedAnnealingSolver;
 import me.joba.factorio.graph.Tuple;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
 import java.nio.charset.StandardCharsets;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.Base64;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.zip.Deflater;
 
 public class BlueprintWriter {
 
-    public static void placeCombinators(List<CircuitNetworkEntity> combinators, Collection<NetworkGroup> networks) {
-        List<Node> nodes = new ArrayList<>();
-
-        Map<Integer, Integer> entityIdNodeIdMap = new HashMap<>();
-        int currentId = 0;
-        for(var cc : combinators) {
-            entityIdNodeIdMap.put(cc.getEntityId(), currentId++);
-        }
-        Map<NetworkGroup, Set<CircuitNetworkEntity>> networkMap = new HashMap<>();
-        for(NetworkGroup ng : networks) {
-            Set<CircuitNetworkEntity> connected = new HashSet<>();
-            for(CircuitNetworkEntity cc : combinators) {
-                for(var cp : cc.getConnectionPoints()) {
-                    for(var group : cp.getConnections().values()) {
-                        if(group == null) continue;
-                        if(NetworkGroup.isEqual(group, ng)) connected.add(cc);
-                    }
-                }
-            }
-            networkMap.put(ng, connected);
-        }
-
-        for(var cc : combinators) {
-            Set<Integer> connectedTo = new HashSet<>();
-            List<NetworkGroup> combinatorNetworks = Arrays.stream(cc.getConnectionPoints())
-                    .flatMap(cp -> cp.getConnections().values().stream())
-                    .filter(Objects::nonNull)
-                    .collect(Collectors.toList());
-            for(var network : combinatorNetworks) {
-                if(network == null) continue;
-                for(var neighbor : networkMap.get(network)) {
-                    connectedTo.add(entityIdNodeIdMap.get(neighbor.getEntityId()));
-                }
-            }
-            nodes.add(new Node(entityIdNodeIdMap.get(cc.getEntityId()), connectedTo));
-        }
-
-        SimulatedAnnealingSolver.placeInitial(nodes);
-        SimulatedAnnealingSolver.simulatedAnnealing(nodes, 10_000_000);
-
-        Map<Integer, Node> nodeIdMap = nodes.stream()
-                .collect(Collectors.toMap(e -> e.getId(), e -> e));
-
-        for(CircuitNetworkEntity entity : combinators) {
-            var node = nodeIdMap.get(entityIdNodeIdMap.get(entity.getEntityId()));
-            entity.setX(node.getX());
-            entity.setY(node.getY());
-            entity.setOrientation(2);
-        }
-    }
-
-    public static String writeBlueprint(EntityBlock block) {
+    public static String writeBlueprint(List<EntityBlock> blocks) {
         JSONArray entities = new JSONArray();
 
-        for(var entity : block.getEntities()) {
-            entities.add(entity.toJson());
+        for(var block : blocks) {
+            for(var entity : block.getEntities()) {
+                entities.add(entity.toJson());
+            }
         }
 
         JSONObject blueprint = new JSONObject();

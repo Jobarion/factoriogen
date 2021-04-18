@@ -10,12 +10,21 @@ public abstract class Entity {
 
     private final String name;
     private final int entityId;
-    private int x, y, orientation;
+    private int x = -1, y = -1, orientation;
     private String description;
+    private boolean fixedLocation = false;
 
     public Entity(String name) {
         this.name = name;
         this.entityId = entityIdCounter.getAndIncrement();
+    }
+
+    public boolean isFixedLocation() {
+        return fixedLocation;
+    }
+
+    public void setFixedLocation(boolean fixedLocation) {
+        this.fixedLocation = fixedLocation;
     }
 
     public String getName() {

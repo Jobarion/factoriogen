@@ -41,6 +41,10 @@ public class SimulatedAnnealingSolver {
             int bId = RANDOM.nextInt(nodes.size());
             Node a = nodes.get(aId);
             Node b = nodes.get(bId);
+            if(a.isFixedLocation() || b.isFixedLocation()) {
+                maxSteps--;
+                continue;
+            }
             double afterSwap = energyAfterSwap(nodes, currentEnergy, a, b);
             double transitionProbability = getTransitionProbability(currentEnergy, afterSwap, temperature);
             if(RANDOM.nextDouble() < transitionProbability) {
@@ -108,22 +112,6 @@ public class SimulatedAnnealingSolver {
             }
         }
         return matrix;
-    }
-
-    public static void placeInitial(List<Node> nodes) {
-        double sqrt = Math.ceil(Math.sqrt((double)nodes.size() / 2));
-        int shortEdgeLength = (int)Math.ceil(sqrt);
-        int x = 0;
-        int y = 0;
-        for(Node node : nodes) {
-            node.setX(x * 2);
-            node.setY(y);
-            x++;
-            if(x > shortEdgeLength) {
-                x = 0;
-                y++;
-            }
-        }
     }
 
     private static void printStats(List<Node> nodes) {

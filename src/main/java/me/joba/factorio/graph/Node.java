@@ -5,15 +5,32 @@ import java.util.Set;
 
 public class Node {
 
-    private int x, y;
+    private int x, y, orientation;
     private final int id;
     private final Set<Integer> neighbors;
+    private boolean fixedLocation = false;
 
     public Node(int id, Set<Integer> neighbors) {
         this.id = id;
         this.x = x;
         this.y = y;
         this.neighbors = neighbors;
+    }
+
+    public boolean isFixedLocation() {
+        return fixedLocation;
+    }
+
+    public void setFixedLocation(boolean fixedLocation) {
+        this.fixedLocation = fixedLocation;
+    }
+
+    public int getOrientation() {
+        return orientation;
+    }
+
+    public void setOrientation(int orientation) {
+        this.orientation = orientation;
     }
 
     public int getX() {

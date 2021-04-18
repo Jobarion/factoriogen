@@ -2,7 +2,7 @@ package me.joba.factorio.lang;
 
 import me.joba.factorio.*;
 import me.joba.factorio.game.EntityBlock;
-import me.joba.factorio.game.combinators.*;
+import me.joba.factorio.game.entities.*;
 import me.joba.factorio.graph.FunctionPlacer;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
@@ -13,7 +13,7 @@ import java.util.stream.Collectors;
 public class Generator extends LanguageBaseListener {
 
     private static final String SIMPLE_FUNCTION_ADD =
-            "function mul(a: int<red>, b: int<green>) -> int {\n" +
+            "function main(a: int<red>, b: int<green>) -> int {\n" +
                     "sum = add(a, b);\n" +
                     "return sum;\n" +
             "}\n" +
@@ -22,7 +22,7 @@ public class Generator extends LanguageBaseListener {
             "}";
 
     private static final String FUNCTION_CALL_LOOP =
-            "function mul(a: int<red>, b: int<green>) -> int {\n" +
+            "function main(a: int<red>, b: int<green>) -> int {\n" +
                     "if(a < 0) {a = 0 - a;}\n" +
                     "sum = 0;\n" +
                     "while(a > 0) {\n" +
@@ -33,6 +33,38 @@ public class Generator extends LanguageBaseListener {
             "}\n" +
             "function add(a: int<red>, b: int) -> int {\n" +
                     "return a + b;\n" +
+            "}";
+
+    private static final String FUNCTION_FUCKING_COMPLEX =
+            "function main(start: int<red>, end: int<green>, iterations: int<i>) -> int {\n" +
+            "  max = -1;\n" +
+            "  while(start <= end) {\n" +
+            "    max = max(collatz(start, iterations), max);\n" +
+            "    start = start + 1;\n" +
+            "  }\n" +
+            "  return max;\n" +
+            "}\n" +
+            "\n" +
+            "function collatz(currentVal: int, iterations: int) -> int {\n" +
+            "  max = currentVal;\n" +
+            "  while(iterations != 0) {\n" +
+            "    iterations = iterations - 1;\n" +
+            "    if(currentVal % 2 == 0) {\n" +
+            "      currentVal = currentVal / 2;\n" +
+            "    }\n" +
+            "    else {\n" +
+            "      currentVal = currentVal * 3 + 1;\n" +
+            "    }\n" +
+            "    max = max(currentVal, max);\n" +
+            "  }\n" +
+            "  return max;\n" +
+            "}\n" +
+            "\n" +
+            "function max(a: int, b: int) -> int {\n" +
+            "  if(a < b) {\n" +
+            "    a = b;\n" +
+            "  }\n" +
+            "  return a;\n" +
             "}";
 
     private static final String COLLATZ =
@@ -92,10 +124,10 @@ public class Generator extends LanguageBaseListener {
             "      }\n" +
             "    }\n" +
             "  }\n" +
-            "  return(a, b, c);\n" +
+            "  return a;\n" +
             "}";
 
-    private static final String TEST = FUNCTION_CALL_LOOP;
+    private static final String TEST = FUNCTION_FUCKING_COMPLEX;
 
     private FunctionContext currentFunctionContext;
     private final Map<String, FunctionContext> definedFunctions;
@@ -114,15 +146,24 @@ public class Generator extends LanguageBaseListener {
 
     @Override
     public void exitFunctionHeader(LanguageParser.FunctionHeaderContext ctx) {
-        NetworkGroup in = new NetworkGroup();
+        currentFunctionContext = definedFunctions.get(ctx.functionName().getText());
         NetworkGroup out = new NetworkGroup();
-        CombinatorGroup functionHeader = new CombinatorGroup(in, out);
-        var inputCombinator = DeciderCombinator.withLeftRight(Accessor.signal(Constants.CONTROL_FLOW_SIGNAL), Accessor.constant(0), Writer.everything(false), DeciderOperator.NEQ);
+        CombinatorGroup functionHeader = new CombinatorGroup(currentFunctionContext.getFunctionCallOutputGroup(), out);
+        DeciderCombinator inputCombinator;
+        if(currentFunctionContext.getSignature().getName().equals("main")) {
+            inputCombinator = DeciderCombinator.withLeftRight(Accessor.signal(Constants.CONTROL_FLOW_SIGNAL), Accessor.constant(0), Writer.everything(false), DeciderOperator.NEQ);
+            inputCombinator.setFixedLocation(true);
+            inputCombinator.setX(0);
+            inputCombinator.setY(0);
+            inputCombinator.setOrientation(2);
+        }
+        else {
+            inputCombinator = DeciderCombinator.withLeftRight(Accessor.signal(Constants.FUNCTION_IDENTIFIER), Accessor.constant(currentFunctionContext.getSignature().getFunctionId()), Writer.everything(false), DeciderOperator.EQ);
+            inputCombinator.setGreenIn(functionHeader.getInput());
+        }
         inputCombinator.setDescription("Input function");
         functionHeader.getCombinators().add(inputCombinator);
-        inputCombinator.setGreenIn(in);
         inputCombinator.setGreenOut(out);
-        currentFunctionContext = definedFunctions.get(ctx.functionName().getText());
         currentFunctionContext.setFunctionHeader(functionHeader);
         currentFunctionContext.overwriteControlFlowVariable(functionHeader).setDelay(0);
         log("Defining function " + currentFunctionContext.getSignature());
@@ -139,10 +180,17 @@ public class Generator extends LanguageBaseListener {
 
         var returnGroup = currentFunctionContext.getFunctionReturnGroup();
 
-
         var outputGate = DeciderCombinator.withLeftRight(Accessor.signal(Constants.CONTROL_FLOW_SIGNAL), Accessor.constant(0), Writer.everything(false), DeciderOperator.NEQ);
         returnGroup.getCombinators().add(outputGate);
-        outputGate.setGreenOut(returnGroup.getOutput());
+        if(!currentFunctionContext.getSignature().getName().equals("main")) {
+            outputGate.setRedOut(returnGroup.getOutput());
+        }
+        else {
+            outputGate.setFixedLocation(true);
+            outputGate.setX(0);
+            outputGate.setY(1);
+            outputGate.setOrientation(6);
+        }
         outputGate.setDescription("Output " + ctx.getText());
 
         NetworkGroup gateInput = new NetworkGroup();
@@ -599,12 +647,10 @@ public class Generator extends LanguageBaseListener {
 
         int functionCallId = currentFunctionCallId++;
         var c6 = ArithmeticCombinator.withLeftRight(Accessor.signal(Constants.CONTROL_FLOW_SIGNAL), Accessor.constant(functionCallId), Constants.CONTROL_FLOW_SIGNAL, ArithmeticOperator.MUL);
-        var c7 = new ConstantCombinator(Map.of(Constants.FUNCTION_IDENTIFIER, targetFunction.getSignature().getFunctionId()));
 
         functionCallInput.getCombinators().add(c4);
         functionCallInput.getCombinators().add(c5);
         functionCallInput.getCombinators().add(c6);
-        functionCallInput.getCombinators().add(c7);
 
         NetworkGroup forwardInternal = new NetworkGroup();
         functionCallInput.getNetworks().add(forwardInternal);
@@ -616,14 +662,12 @@ public class Generator extends LanguageBaseListener {
         c4.setRedIn(forwardInternal);
         c5.setRedIn(forwardInternal);
         c6.setRedIn(forwardInternal);
-        c7.setRedOut(forwardInternal);
 
-        c4.setGreenOut(functionCallInput.getOutput());
-        c5.setGreenOut(functionCallInput.getOutput());
-        c6.setGreenOut(functionCallInput.getOutput());
+        c4.setGreenOut(currentFunctionContext.getFunctionCallOutputGroup());
+        c5.setGreenOut(currentFunctionContext.getFunctionCallOutputGroup());
+        c6.setGreenOut(currentFunctionContext.getFunctionCallOutputGroup());
 
         //Store previous state, forward when function call was completed
-
         NetworkGroup stateStoreOut = new NetworkGroup();
         functionCallInput.getNetworks().add(stateStoreOut);
 
@@ -645,9 +689,11 @@ public class Generator extends LanguageBaseListener {
         preCallStateOutputGate.setGreenIn(stateStoreOut);
         preCallStateOutputGate.setRedIn(storeIn);
 
-        //Function call data return
+        //Function call data return. We might be able to ditch this one
         var returnGate = DeciderCombinator.withLeftRight(Accessor.signal(Constants.CONTROL_FLOW_SIGNAL), Accessor.constant(functionCallId), Writer.everything(false), DeciderOperator.EQ);
         functionCallReturn.getCombinators().add(returnGate);
+        returnGate.setRedIn(currentFunctionContext.getFunctionCallReturnGroup());
+
         tmp = new NetworkGroup();
         functionCallReturn.getNetworks().add(tmp);
 
@@ -695,6 +741,11 @@ public class Generator extends LanguageBaseListener {
         functionCallInput.getNetworks().add(argumentsIn);
 
         inputGateFunctionArguments.setGreenIn(argumentsIn);
+
+        var functionCallIdCombinator = new ConstantCombinator(Map.of(Constants.FUNCTION_IDENTIFIER, targetFunction.getSignature().getFunctionId()));
+        functionCallInput.getCombinators().add(functionCallIdCombinator);
+        functionCallIdCombinator.setGreenOut(argumentsIn);
+
         var accessorTmp = currentFunctionContext.getControlFlowVariable().createVariableAccessor();
         functionCallInput.getAccessors().add(accessorTmp);
         accessorTmp.access(totalDelay).accept(argumentsIn, functionCallInput);
@@ -774,10 +825,6 @@ public class Generator extends LanguageBaseListener {
         }
     }
 
-    /*
-        Get the expression components from the stack, and either calculate the result (if constant) or produce
-        combinators to calculate the result. Put result back on stack.
-     */
     @Override
     public void exitExpr(LanguageParser.ExprContext ctx) {
         if(ctx.left != null) {
@@ -794,11 +841,6 @@ public class Generator extends LanguageBaseListener {
         }
     }
 
-    /*
-                Assignments either create a new named variable, or override an existing one with a new provider group (and delay)
-                Provider group = a group of combinators with a defined output NetworkGroup that produce a certain variable.
-                Anyone who wants that variable can get it out of the provider group.
-             */
     @Override
     public void exitAssignment(LanguageParser.AssignmentContext ctx) {
         var value = currentFunctionContext.popTempVariable();
@@ -969,7 +1011,21 @@ public class Generator extends LanguageBaseListener {
 
         List<EntityBlock> entityBlocks = new ArrayList<>();
 
-        for(var function : generator.definedFunctions.values()) {
+        var functions = new ArrayList<>(generator.definedFunctions.values());
+        boolean mainFound = false;
+        for(int i = 0; i < functions.size(); i++) {
+            if(functions.get(i).getSignature().getName().equals("main")) {
+                var tmp = functions.get(i);
+                functions.set(i, functions.get(0));
+                functions.set(0, tmp);
+                mainFound = true;
+                break;
+            }
+        }
+        if(!mainFound) {
+            System.out.println("Warning: No main method defined");
+        }
+        for(var function : functions) {
             System.out.println("Generating function " + function.getSignature());
             Set<CombinatorGroup> generatedGroups = new HashSet<>();
             Queue<CombinatorGroup> toExpand = new LinkedList<>();
@@ -999,12 +1055,16 @@ public class Generator extends LanguageBaseListener {
                     .flatMap(Collection::stream)
                     .collect(Collectors.toList());
 
-            entityBlocks.add(FunctionPlacer.placeFunction(combinators, networks));
+            entityBlocks.add(FunctionPlacer.placeFunction(combinators, networks, function.getFunctionCallOutputGroup(), function.getFunctionCallReturnGroup()));
         }
 
+        int currentX = 0;
         for(var block : entityBlocks) {
-            System.out.println(BlueprintWriter.writeBlueprint(block));
+            block.applyOffset(currentX, 0);
+            currentX += block.getMaxX() - block.getMinX() + 3;
         }
-
+        var poles = FunctionPlacer.generateFunctionConnectors(entityBlocks);
+        entityBlocks.add(poles);
+        System.out.println(BlueprintWriter.writeBlueprint(entityBlocks));
     }
 }

@@ -1,4 +1,4 @@
-package me.joba.factorio.game.combinators;
+package me.joba.factorio.game.entities;
 
 import java.util.function.IntBinaryOperator;
 

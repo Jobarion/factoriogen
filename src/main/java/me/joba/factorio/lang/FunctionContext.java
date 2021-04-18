@@ -3,26 +3,28 @@ package me.joba.factorio.lang;
 import me.joba.factorio.CombinatorGroup;
 import me.joba.factorio.NetworkGroup;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.Stack;
 
 public class FunctionContext {
 
     public static final String CONTROL_FLOW_VAR_NAME = "$CONTROL_FLOW";
-    private static int functionIdCounter = 1;
 
     private int variableIdCounter = 0;
     private Set<FactorioSignal> freeBindings;
     private Stack<Symbol> tempVariables;
     private Stack<VariableScope> variables;
     private Stack<ConditionContext> conditionContexts;
-    private final int functionId;
     private CombinatorGroup functionHeader;
     private CombinatorGroup functionReturn;
     private final FunctionSignature functionSignature;
+    private final NetworkGroup functionCallOutput;
+    private final NetworkGroup functionCallReturn;
 
     public FunctionContext(FunctionSignature functionSignature) {
         this.functionSignature = functionSignature;
-        this.functionId = functionIdCounter++;
         tempVariables = new Stack<>();
         variables = new Stack<>();
         variables.push(new VariableScope(null));
@@ -30,6 +32,10 @@ public class FunctionContext {
         freeBindings.addAll(Arrays.asList(FactorioSignal.values()));
         freeBindings.removeIf(FactorioSignal::isReserved);
         conditionContexts = new Stack<>();
+
+        functionCallOutput = new NetworkGroup("Function call out of group " + functionSignature);
+        functionCallReturn = new NetworkGroup("Function call return of group " + functionSignature);
+
         bindParameterSignals();
     }
 
@@ -54,11 +60,21 @@ public class FunctionContext {
     public void setFunctionHeader(CombinatorGroup functionHeader) {
         if(this.functionHeader != null) throw new RuntimeException("Already set");
         this.functionHeader = functionHeader;
-        functionReturn = new CombinatorGroup(null, new NetworkGroup());
+        this.functionHeader.getNetworks().add(functionCallOutput);
+        this.functionHeader.getNetworks().add(functionCallReturn);
+        functionReturn = new CombinatorGroup(null, functionCallReturn);
         functionHeader.getSubGroups().add(functionReturn);
         for(var param : functionSignature.getParameters()) {
             this.createNamedVariable(param.getName(), param.getType(), param.getSignal(), functionHeader).setDelay(0);
         }
+    }
+
+    public NetworkGroup getFunctionCallOutputGroup() {
+        return functionCallOutput;
+    }
+
+    public NetworkGroup getFunctionCallReturnGroup() {
+        return functionCallReturn;
     }
 
     public FunctionSignature getSignature() {

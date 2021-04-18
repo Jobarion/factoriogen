@@ -1,12 +1,10 @@
 package me.joba.factorio.graph;
 
 import me.joba.factorio.NetworkGroup;
-import me.joba.factorio.game.Entity;
 import me.joba.factorio.game.WireColor;
-import me.joba.factorio.game.combinators.CircuitNetworkEntity;
+import me.joba.factorio.game.entities.CircuitNetworkEntity;
 
 import java.util.*;
-import java.util.function.Consumer;
 
 public class MSTSolver {
 

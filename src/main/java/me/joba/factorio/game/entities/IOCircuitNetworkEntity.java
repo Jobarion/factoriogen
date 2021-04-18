@@ -1,8 +1,7 @@
-package me.joba.factorio.game.combinators;
+package me.joba.factorio.game.entities;
 
 import me.joba.factorio.NetworkGroup;
 import me.joba.factorio.game.WireColor;
-import me.joba.factorio.game.combinators.CircuitNetworkEntity;
 
 public class IOCircuitNetworkEntity extends CircuitNetworkEntity {
 

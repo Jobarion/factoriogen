@@ -29,7 +29,7 @@ public enum FactorioSignal {
     SIGNAL_O("O"),
     SIGNAL_P("P"),
     SIGNAL_Q("Q"),
-    SIGNAL_R("R"),
+    SIGNAL_R("R", true),
     SIGNAL_S("S"),
     SIGNAL_T("T"),
     SIGNAL_U("U"),

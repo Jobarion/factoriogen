@@ -1,6 +1,6 @@
 package me.joba.factorio;
 
-import me.joba.factorio.game.combinators.CircuitNetworkEntity;
+import me.joba.factorio.game.entities.CircuitNetworkEntity;
 import me.joba.factorio.lang.VariableAccessor;
 
 import java.util.ArrayList;

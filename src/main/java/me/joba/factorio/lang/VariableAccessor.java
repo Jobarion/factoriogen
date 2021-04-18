@@ -2,7 +2,7 @@ package me.joba.factorio.lang;
 
 import me.joba.factorio.CombinatorGroup;
 import me.joba.factorio.NetworkGroup;
-import me.joba.factorio.game.combinators.ArithmeticCombinator;
+import me.joba.factorio.game.entities.ArithmeticCombinator;
 
 import java.util.*;
 import java.util.function.BiConsumer;
@@ -42,8 +42,6 @@ public class VariableAccessor {
             }
         }
 
-        System.out.println("Generated " + ignored.size() + " accessors via direct access.");
-
         if(allIgnored) return;
 
         int minDelay = Integer.MAX_VALUE;
@@ -58,11 +56,6 @@ public class VariableAccessor {
         if(minDelay < variable.getTickDelay()) {
             throw new RuntimeException("Unsupported requested access time of " + variable + " with delay " + minDelay + " (has " + variable.getTickDelay() + ")");
         }
-
-        int sharedAccessorChain = minDelay - variable.getTickDelay() - 1;
-        System.out.println("Shared accessors: " + sharedAccessorChain);
-
-        System.out.println("Delay timing difference " + minDelay + " " + maxDelay);
 
         NetworkGroup output = variable.getProducer().getOutput();
 

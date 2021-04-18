@@ -1,4 +1,4 @@
-package me.joba.factorio.game.combinators;
+package me.joba.factorio.game.entities;
 
 public enum DeciderOperator implements IntBinaryPredicate {
     GT(">", ">", (a, b) -> a > b),
