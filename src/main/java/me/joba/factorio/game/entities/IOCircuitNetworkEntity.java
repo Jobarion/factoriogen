@@ -6,7 +6,7 @@ import me.joba.factorio.game.WireColor;
 public class IOCircuitNetworkEntity extends CircuitNetworkEntity {
 
     public IOCircuitNetworkEntity(String name) {
-        super(name, 2);
+        super(name, 2, 11.2);
     }
 
     //Temporary to make transition easier

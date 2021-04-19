@@ -10,13 +10,19 @@ public class CircuitNetworkEntity extends Entity {
 
     private final ConnectionPoint[] connectionPoints;
     private JSONObject connectionData;
+    private final double maxWireDistance;
 
-    public CircuitNetworkEntity(String name, int connectionPoints) {
+    public CircuitNetworkEntity(String name, int connectionPoints, double maxWireDistance) {
         super(name);
+        this.maxWireDistance = maxWireDistance;
         this.connectionPoints = new ConnectionPoint[connectionPoints];
         for(int i = 0; i < connectionPoints; i++) {
             this.connectionPoints[i] = new ConnectionPoint(i + 1);
         }
+    }
+
+    public double getMaxWireDistance() {
+        return maxWireDistance;
     }
 
     public ConnectionPoint[] getConnectionPoints() {

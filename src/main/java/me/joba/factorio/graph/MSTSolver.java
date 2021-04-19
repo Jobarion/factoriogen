@@ -20,7 +20,7 @@ public class MSTSolver {
                         if(v == null) {
                             v = new ArrayList<>();
                         }
-                        v.add(new Node(entity, cp.getId(), e.getKey()));
+                        v.add(new Node(entity, cp.getId(), e.getKey(), entity.getMaxWireDistance() * entity.getMaxWireDistance()));
                         return v;
                     });
                 }
@@ -48,7 +48,9 @@ public class MSTSolver {
             for(Node connectedNode : connected) {
                 for(Node node : entities) {
                     if(connected.contains(node)) continue;
-                    if(closestConnected == null || closestConnected.distanceSquared(closestUnconnected) > connectedNode.distanceSquared(node)) {
+                    var distance = connectedNode.distanceSquared(node);
+                    if(distance > node.maxWireLengthSquared || distance > connectedNode.maxWireLengthSquared) continue;
+                    if(closestConnected == null || closestConnected.distanceSquared(closestUnconnected) > distance) {
                         closestConnected = connectedNode;
                         closestUnconnected = node;
                     }
@@ -65,11 +67,13 @@ public class MSTSolver {
         private final CircuitNetworkEntity entity;
         private final int circuitId;
         private final WireColor wireColor;
+        private final double maxWireLengthSquared;
 
-        public Node(CircuitNetworkEntity entity, int circuitId, WireColor wireColor) {
+        public Node(CircuitNetworkEntity entity, int circuitId, WireColor wireColor, double maxWireLengthSquared) {
             this.entity = entity;
             this.circuitId = circuitId;
             this.wireColor = wireColor;
+            this.maxWireLengthSquared = maxWireLengthSquared;
         }
 
         public CircuitNetworkEntity getEntity() {

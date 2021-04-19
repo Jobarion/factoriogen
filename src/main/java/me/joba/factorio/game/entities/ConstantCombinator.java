@@ -13,7 +13,7 @@ public class ConstantCombinator extends CircuitNetworkEntity {
     private final Map<FactorioSignal, Integer> signals;
 
     public ConstantCombinator(Map<FactorioSignal, Integer> signals) {
-        super("constant-combinator", 1);
+        super("constant-combinator", 1, 10.3);
         this.signals = signals;
     }
 
