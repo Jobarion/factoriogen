@@ -203,42 +203,6 @@ public class FunctionPlacer {
         }
     }
 
-    public static void main(String[] args) {
-//        for(int x = 15; x < 40; x++) {
-//            var c1 = new ConstantCombinator(Collections.emptyMap());
-//            c1.setX(0);
-//            c1.setY(0);
-//            var c2 = new ConstantCombinator(Collections.emptyMap());
-//            c2.setX(x);
-//            c2.setY(17);
-//
-//            List<CircuitNetworkEntity> entities = new ArrayList<>();
-//            entities.add(c1);
-//            entities.add(c2);
-//
-//            entities.addAll(generateSubstations(entities, null, null));
-//
-//            var block = new EntityBlock(entities);
-//            System.out.println(x + ": " + BlueprintWriter.writeBlueprint(Arrays.asList(block)));
-//        }
-
-        var c1 = new ConstantCombinator(Collections.emptyMap());
-        c1.setX(0);
-        c1.setY(0);
-        var c2 = new ConstantCombinator(Collections.emptyMap());
-        c2.setX(1);
-        c2.setY(1);
-
-        List<CircuitNetworkEntity> entities = new ArrayList<>();
-        entities.add(c1);
-        entities.add(c2);
-
-        entities.addAll(generateSubstations(entities, null, null));
-
-        var block = new EntityBlock(entities);
-        System.out.println(25 + ": " + BlueprintWriter.writeBlueprint(Arrays.asList(block)));
-    }
-
     private static List<CircuitNetworkEntity> generateSubstations(List<CircuitNetworkEntity> combinators, NetworkGroup functionCallOutGroup, NetworkGroup functionCallReturnGroup) {
         final int xOffset = 8;
         final int yOffset = 9;
@@ -287,50 +251,6 @@ public class FunctionPlacer {
         }
         return substations;
     }
-
-//    private static List<CircuitNetworkEntity> generateSubstations(List<CircuitNetworkEntity> combinators, NetworkGroup functionCallOutGroup, NetworkGroup functionCallReturnGroup) {
-//        int maxX = Integer.MIN_VALUE;
-//        int maxY = Integer.MIN_VALUE;
-//        for(var cne : combinators) {
-//            maxX = Math.max(maxX, cne.getX());
-//            maxY = Math.max(maxY, cne.getY());
-//        }
-//        maxX += 17;
-//        maxY += 17;
-//
-//        List<CircuitNetworkEntity> substations = new ArrayList<>();
-//        for(int x = 8; x <= maxX; x += 18) {
-//            for(int y = 9; y <= maxY; y += 18) {
-//                var substation = new Substation(x, y);
-//                substations.add(substation);
-//            }
-//        }
-////        //The edge
-////        if(maxX % 18 < 8) {
-////            int x = maxX + 2;
-////            for(int y = 9; y < maxY; y += 18) {
-////                var substation = new Substation(x, y);
-////                substations.add(substation);
-////            }
-////        }
-////        if(maxY % 18 < 9) {
-////            int y = maxY + 2;
-////            for(int x = 8; x < maxX; x += 18) {
-////                var substation = new Substation(x, y);
-////                substations.add(substation);
-////            }
-////        }
-////        if(maxX % 18 < 8 && maxY % 18 < 9) {
-////            var substation = new Substation(maxX + 2, maxY + 2);
-////            substations.add(substation);
-////        }
-//        for(var s : substations) {
-//            var conn = s.getConnectionPoints()[0].getConnections();
-//            conn.put(WireColor.GREEN, functionCallOutGroup);
-//            conn.put(WireColor.RED, functionCallReturnGroup);
-//        }
-//        return substations;
-//    }
 
     private static <T> T get(JSONObject obj, String key) {
         var x = obj.get(key);
