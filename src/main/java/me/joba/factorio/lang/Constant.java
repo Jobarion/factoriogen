@@ -1,6 +1,8 @@
 package me.joba.factorio.lang;
 
 import me.joba.factorio.Accessor;
+import me.joba.factorio.lang.types.PrimitiveType;
+import me.joba.factorio.lang.types.Type;
 
 import java.util.Arrays;
 
@@ -28,7 +30,7 @@ public class Constant extends Symbol {
     }
 
     @Override
-    public Accessor[] toAccessor(FunctionContext context) {
+    public Accessor[] toAccessor() {
         var accessors = new Accessor[getType().getSize()];
         for(int i = 0; i < accessors.length; i++) {
             accessors[i] = Accessor.constant(val[i]);

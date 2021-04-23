@@ -1,6 +1,8 @@
 package me.joba.factorio.lang;
 
 import me.joba.factorio.Accessor;
+import me.joba.factorio.lang.types.TupleType;
+import me.joba.factorio.lang.types.Type;
 
 public abstract class Symbol {
 
@@ -34,6 +36,6 @@ public abstract class Symbol {
         return type;
     }
 
-    public abstract Accessor[] toAccessor(FunctionContext context);
+    public abstract Accessor[] toAccessor();
     public abstract int getTickDelay();
 }

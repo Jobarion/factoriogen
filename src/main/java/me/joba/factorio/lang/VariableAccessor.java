@@ -66,7 +66,13 @@ public class VariableAccessor {
                 if(ignored.contains(entry)) continue;
                 if(entry.delay == variable.getTickDelay()) continue;
                 if(entry.delay == variable.getTickDelay() + 1) {
-                    var connected = ArithmeticCombinator.copying(variable.getSignal()[0]);
+                    ArithmeticCombinator connected;
+                    if(variable.getType().getSize() == 1) {
+                        connected = ArithmeticCombinator.copying(variable.getSignal()[0]);
+                    }
+                    else {
+                        connected = ArithmeticCombinator.copying(); //Potentially _very_ illegal, idk
+                    }
                     connected.setGreenIn(output);
                     connected.setGreenOut(entry.networkGroup);
                     entry.combinatorGroup.getCombinators().add(connected);
@@ -77,7 +83,13 @@ public class VariableAccessor {
                 entry.delay--;
             }
             if(!done) {
-                var connected = ArithmeticCombinator.copying(variable.getSignal()[0]);
+                ArithmeticCombinator connected;
+                if(variable.getType().getSize() == 1) {
+                    connected = ArithmeticCombinator.copying(variable.getSignal()[0]);
+                }
+                else {
+                    connected = ArithmeticCombinator.copying(); //Potentially _very_ illegal, idk
+                }
                 connected.setGreenIn(output);
                 output = new NetworkGroup();
                 connected.setGreenOut(output);

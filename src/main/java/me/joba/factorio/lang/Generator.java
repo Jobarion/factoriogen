@@ -4,6 +4,13 @@ import me.joba.factorio.*;
 import me.joba.factorio.game.EntityBlock;
 import me.joba.factorio.game.entities.*;
 import me.joba.factorio.graph.FunctionPlacer;
+import me.joba.factorio.lang.expr.BooleanExpressionResolver;
+import me.joba.factorio.lang.expr.BooleanNotExpressionResolver;
+import me.joba.factorio.lang.expr.ComparisonExpressionResolver;
+import me.joba.factorio.lang.expr.IntExpressionResolver;
+import me.joba.factorio.lang.types.PrimitiveType;
+import me.joba.factorio.lang.types.TupleType;
+import me.joba.factorio.lang.types.Type;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 
@@ -12,14 +19,23 @@ import java.util.stream.Collectors;
 
 public class Generator extends LanguageBaseListener {
 
+
+    private static final String SIMPLE_TUPLE = """
+            function main(a: int<red>, b: int<green>) -> int {
+                t = (a, b);
+                u = (t.0 * a, t.1 * b, t);
+                return u.0 * u.1 + u.2.0 + u.2.1;
+            }
+            """;
+
     private static final String SIMPLE_FUNCTION_ADD =
             "function main(a: int<red>, b: int<green>) -> int {\n" +
                     "sum = add(a, b);\n" +
                     "return sum;\n" +
-            "}\n" +
-            "function add(a: int<red>, b: int) -> int {\n" +
+                    "}\n" +
+                    "function add(a: int<red>, b: int) -> int {\n" +
                     "return a + b;\n" +
-            "}";
+                    "}";
 
     private static final String FUNCTION_CALL_LOOP =
             "function main(a: int<red>, b: int<green>) -> int {\n" +
@@ -127,13 +143,17 @@ public class Generator extends LanguageBaseListener {
             "  return a;\n" +
             "}";
 
-    private static final String TEST = FUNCTION_FUCKING_COMPLEX;
+    private static final String TEST = SIMPLE_TUPLE;
+
+    private static final ExpressionResolver<LanguageParser.ExprContext, ArithmeticOperator> EXPR_PARSER = new IntExpressionResolver();
+    private static final ExpressionResolver<LanguageParser.BoolExprContext, DeciderOperator> BOOL_EXPR_COMPONENT_PARSER = new ComparisonExpressionResolver();
+    private static final ExpressionResolver<LanguageParser.BoolExprContext, ArithmeticOperator> BOOL_EXPR_PARSER = new BooleanExpressionResolver();
+    private static final ExpressionResolver<LanguageParser.BoolExprContext, Void> NOT_EXPR_PARSER = new BooleanNotExpressionResolver();
 
     private FunctionContext currentFunctionContext;
     private final Map<String, FunctionContext> definedFunctions;
     private int currentFunctionCallId = 1;
     private int indentationLevel = 0;
-
 
     public Generator(Map<String, FunctionContext> definedFunctions) {
         this.definedFunctions = definedFunctions;
@@ -827,7 +847,95 @@ public class Generator extends LanguageBaseListener {
 
     @Override
     public void exitExpr(LanguageParser.ExprContext ctx) {
-        if(ctx.left != null) {
+        if(ctx.tuple != null) {
+            var tupleVar = currentFunctionContext.popTempVariable();
+            if(!(tupleVar.getType() instanceof TupleType tupleType)) {
+                throw new UnsupportedOperationException("Expected tuple type, found " + tupleVar.getType());
+            }
+            var propId = Integer.parseInt(ctx.propertyId.getText());
+            if(tupleType.getSubtypes().length <= propId || propId < 0) {
+                throw new IllegalArgumentException("Tried to access property " + propId + " of tuple with properties " + tupleType);
+            }
+            var subtype = tupleType.getSubtypes()[propId];
+            int offset = 0;
+            for(int i = 0; i < propId; i++) {
+                offset += tupleType.getSubtypes()[i].getSize();
+            }
+            if(tupleVar instanceof Constant c) {
+                log("Accessing tuple " + tupleVar + " value " + propId);
+                int[] constVal = new int[subtype.getSize()];
+                System.arraycopy(c.getVal(), offset, constVal, 0, subtype.getSize());
+                currentFunctionContext.pushTempVariable(new Constant(subtype, constVal));
+            }
+            else {
+                if(!tupleVar.isBound()) {
+                    tupleVar.bind(currentFunctionContext.getFreeSymbols(tupleVar.getType().getSize()));
+                }
+                var oldSignals = new FactorioSignal[subtype.getSize()];
+                System.arraycopy(tupleVar.getSignal(), offset, oldSignals, 0, oldSignals.length);
+                var newSignals = currentFunctionContext.getFreeSymbols(subtype.getSize());
+                log("Accessing tuple " + tupleVar + " value " + propId + " -> " + Arrays.toString(newSignals));
+                CombinatorGroup group = new CombinatorGroup(((Variable)tupleVar).getProducer().getOutput(), new NetworkGroup());
+                currentFunctionContext.getFunctionGroup().getSubGroups().add(group);
+                for(int i = 0; i < oldSignals.length; i++) {
+                    ArithmeticCombinator ac = ArithmeticCombinator.remapping(oldSignals[i], newSignals[i]);
+                    group.getCombinators().add(ac);
+                    ac.setGreenIn(group.getInput());
+                    ac.setGreenOut(group.getOutput());
+                }
+                currentFunctionContext.createBoundTempVariable(subtype, newSignals, group).setDelay(tupleVar.getTickDelay() + 1);
+            }
+        }
+        else if(ctx.tupleValues != null) {
+            int delay = 0;
+            Symbol[] symbols = new Symbol[ctx.tupleValues.expr().size()];
+            Type[] types = new Type[symbols.length];
+            for(int i = symbols.length - 1; i >= 0; i--) {
+                var symbol = currentFunctionContext.popTempVariable();
+                if(!symbol.isBound()) {
+                    symbol.bind(currentFunctionContext.getFreeSymbols(symbol.getType().getSize()));
+                }
+                symbols[i] = symbol;
+                types[i] = symbol.getType();
+                delay = Math.max(delay, symbols[i].getTickDelay());
+            }
+            Type tupleType = new TupleType(types);
+            //Do we really need new symbols here? Issue:
+            // a = x
+            // b = (a, x)
+            // c = b.0 * a //b.0 and a need to have a different symbol in this case, but not _always_
+
+            CombinatorGroup group = new CombinatorGroup(new NetworkGroup(), new NetworkGroup());
+            currentFunctionContext.getFunctionGroup().getSubGroups().add(group);
+            int offset = 0;
+            FactorioSignal[] remappedSignals = currentFunctionContext.getFreeSymbols(tupleType.getSize());
+            for(Symbol symbol : symbols) {
+                if(symbol instanceof Constant) {
+                    int[] vals = ((Constant) symbol).getVal();
+                    Map<FactorioSignal, Integer> constants = new HashMap<>();
+                    for(int j = 0; j < vals.length; j++) {
+                        constants.put(remappedSignals[offset++], vals[j]);
+                    }
+                    ConstantCombinator cc = new ConstantCombinator(constants);
+                    group.getCombinators().add(cc);
+                    cc.setGreenOut(group.getOutput());
+                }
+                else {
+                    var accessor = ((Variable)symbol).createVariableAccessor();
+                    group.getAccessors().add(accessor);
+                    accessor.access(delay).accept(group);
+                    for(FactorioSignal signal : symbol.getSignal()) {
+                        ArithmeticCombinator ac = ArithmeticCombinator.remapping(signal, remappedSignals[offset++]);
+                        group.getCombinators().add(ac);
+                        ac.setGreenIn(group.getInput());
+                        ac.setGreenOut(group.getOutput());
+                    }
+                }
+            }
+            log("Combining " + Arrays.toString(symbols) + " into tuple, delay: " + delay);
+            currentFunctionContext.createBoundTempVariable(tupleType, remappedSignals, group).setDelay(delay);
+        }
+        else if(ctx.left != null) {
             EXPR_PARSER.parse(currentFunctionContext, ctx);
         }
         else if(ctx.numberLit != null) {
@@ -887,108 +995,6 @@ public class Generator extends LanguageBaseListener {
         }
         log("Creating named " + varName + " = " + named + ", with delay " + named.getTickDelay());
     }
-
-    private final Combiner<LanguageParser.ExprContext, ArithmeticOperator> EXPR_PARSER = new Combiner<>(2, PrimitiveType.INT, PrimitiveType.INT) {
-
-        @Override
-        public ArithmeticOperator getOperation(LanguageParser.ExprContext ruleContext) {
-            return ArithmeticOperator.getOperator(ruleContext.op.getText());
-        }
-
-        @Override
-        public Optional<Constant> computeConstExpr(Constant[] constants, ArithmeticOperator operation) {
-            int result = operation.applyAsInt(constants[0].getVal()[0], constants[1].getVal()[0]);
-            return Optional.of(new Constant(PrimitiveType.INT, result));
-        }
-
-        @Override
-        public int generateCombinators(Symbol[] symbols, ArithmeticOperator operation, FactorioSignal[] outSymbol, CombinatorGroup group) {
-            var connected = ArithmeticCombinator.withLeftRight(symbols[0].toAccessor(currentFunctionContext)[0],  symbols[1].toAccessor(currentFunctionContext)[0], outSymbol[0], operation);
-            connected.setGreenIn(group.getInput());
-            connected.setGreenOut(group.getOutput());
-            group.getCombinators().add(connected);
-            return 1;
-        }
-    };
-
-    private final Combiner<LanguageParser.BoolExprContext, DeciderOperator> BOOL_EXPR_COMPONENT_PARSER = new Combiner<>(2, PrimitiveType.INT, PrimitiveType.BOOLEAN) {
-
-        @Override
-        public DeciderOperator getOperation(LanguageParser.BoolExprContext ruleContext) {
-            return DeciderOperator.getOperator(ruleContext.op.getText());
-        }
-
-        @Override
-        public Optional<Constant> computeConstExpr(Constant[] constants, DeciderOperator operation) {
-            boolean result = operation.test(constants[0].getVal()[0], constants[1].getVal()[0]);
-            return Optional.of(new Constant(PrimitiveType.BOOLEAN, result ? 1 : 0));
-        }
-
-        @Override
-        public int generateCombinators(Symbol[] symbols, DeciderOperator operation, FactorioSignal[] outSymbol, CombinatorGroup group) {
-            if(symbols[0] instanceof Constant) {
-                var tmp = symbols[1];
-                symbols[1] = symbols[0];
-                symbols[0] = tmp;
-                operation = operation.getInverted();
-            }
-            var connected = DeciderCombinator.withLeftRight(symbols[0].toAccessor(currentFunctionContext)[0],  symbols[1].toAccessor(currentFunctionContext)[0], Writer.one(outSymbol[0]), operation);
-            connected.setGreenIn(group.getInput());
-            connected.setGreenOut(group.getOutput());
-            group.getCombinators().add(connected);
-            return 1;
-        }
-    };
-
-    private final Combiner<LanguageParser.BoolExprContext, ArithmeticOperator> BOOL_EXPR_PARSER = new Combiner<>(2, PrimitiveType.BOOLEAN, PrimitiveType.BOOLEAN) {
-
-        @Override
-        public ArithmeticOperator getOperation(LanguageParser.BoolExprContext ruleContext) {
-            return switch(ruleContext.op.getText()) {
-                case "&&" -> ArithmeticOperator.AND;
-                case "||" -> ArithmeticOperator.OR;
-                case "^" -> ArithmeticOperator.XOR;
-                default -> throw new UnsupportedOperationException("Unknown operation '" + ruleContext.op.getText() + "'");
-            };
-        }
-
-        @Override
-        public Optional<Constant> computeConstExpr(Constant[] constants, ArithmeticOperator operation) {
-            int result = operation.applyAsInt(constants[0].getVal()[0], constants[1].getVal()[0]);
-            return Optional.of(new Constant(PrimitiveType.BOOLEAN, result));
-        }
-
-        @Override
-        public int generateCombinators(Symbol[] symbols, ArithmeticOperator operation, FactorioSignal[] outSymbol, CombinatorGroup group) {
-            var connected = ArithmeticCombinator.withLeftRight(symbols[0].toAccessor(currentFunctionContext)[0],  symbols[1].toAccessor(currentFunctionContext)[0], outSymbol[0], operation);
-            connected.setGreenIn(group.getInput());
-            connected.setGreenOut(group.getOutput());
-            group.getCombinators().add(connected);
-            return 1;
-        }
-    };
-
-    private final Combiner<LanguageParser.BoolExprContext, Void> NOT_EXPR_PARSER = new Combiner<>(1, PrimitiveType.BOOLEAN, PrimitiveType.BOOLEAN) {
-
-        @Override
-        public Void getOperation(LanguageParser.BoolExprContext ruleContext) {
-            return null;
-        }
-
-        @Override
-        public Optional<Constant> computeConstExpr(Constant[] constants, Void operation) {
-            return Optional.of(new Constant(PrimitiveType.BOOLEAN, constants[0].getVal()[0] == 0 ? 1 : 0));
-        }
-
-        @Override
-        public int generateCombinators(Symbol[] symbols, Void operation, FactorioSignal[] outSymbol, CombinatorGroup group) {
-            var connected = DeciderCombinator.withLeftRight(symbols[0].toAccessor(currentFunctionContext)[0], Accessor.constant(0), Writer.one(outSymbol[0]), DeciderOperator.EQ);
-            connected.setGreenIn(group.getInput());
-            connected.setGreenOut(group.getOutput());
-            group.getCombinators().add(connected);
-            return 1;
-        }
-    };
 
     private void log(String msg) {
         System.out.println("\t".repeat(currentFunctionContext.getDepth() + indentationLevel) + msg);

@@ -33,6 +33,8 @@ argumentList: expr (',' expr)*;
 
 expr
     : '(' wrapped=expr ')'
+    | '(' tupleValues=exprList ')'
+    | tuple=expr (op=ACCESS) propertyId=intLiteral
     | left=expr (op=MUL | op=DIV | op=MOD) right=expr
     | left=expr (op=ADD | op=SUB) right=expr
     | left=expr (op=LSH | op=RSH) right=expr
@@ -42,8 +44,9 @@ expr
     | numberLit=intLiteral
     | call=functionCall
     | var=varName
-    | NETWORK_IN
     ;
+
+exprList: expr (',' expr)+;
 
 boolExpr
     : '(' boolExpr ')'
@@ -77,6 +80,7 @@ RSH: '<<';
 BAND: '&';
 BOR: '|';
 BXOR: '^';
+ACCESS: '.';
 
 AND: '&&';
 OR: '||';
@@ -89,7 +93,5 @@ LEQ: '<=';
 GEQ: '>=';
 EQ: '==';
 NEQ: '!=';
-
-NETWORK_IN: 'IN';
 
 WS : [ \t\n\r]+ -> skip ;

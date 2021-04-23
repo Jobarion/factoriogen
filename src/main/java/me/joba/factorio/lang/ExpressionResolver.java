@@ -2,30 +2,29 @@ package me.joba.factorio.lang;
 
 import me.joba.factorio.CombinatorGroup;
 import me.joba.factorio.NetworkGroup;
+import me.joba.factorio.lang.types.Type;
 import org.antlr.v4.runtime.ParserRuleContext;
 
 import java.util.Arrays;
 import java.util.Optional;
 
-public abstract class Combiner<RC extends ParserRuleContext, OP> {
+public abstract class ExpressionResolver<RC extends ParserRuleContext, OP> {
 
-    private final int requiredValues;
-    private final Type inputType;
+    private final Type[] inputTypes;
     private final Type outputType;
 
-    protected Combiner(int requiredValues, Type inputType, Type outputType) {
-        this.requiredValues = requiredValues;
-        this.inputType = inputType;
+    protected ExpressionResolver(Type outputType, Type... inputTypes) {
+        this.inputTypes = inputTypes;
         this.outputType = outputType;
     }
 
     public void parse(FunctionContext context, RC ruleContext) {
         var op = getOperation(ruleContext);
-        Symbol[] symbols = new Symbol[requiredValues];
+        Symbol[] symbols = new Symbol[inputTypes.length];
         boolean isConstant = true;
-        for(int i = 0; i < requiredValues; i++) {
+        for(int i = 0; i < inputTypes.length; i++) {
             var tmp = context.popTempVariable();
-            if(!tmp.getType().equals(inputType)) throw new RuntimeException(tmp + " is not of type " + inputType);
+            if(!tmp.getType().equals(inputTypes[i])) throw new RuntimeException(tmp + " is not of type " + inputTypes[i]);
             symbols[symbols.length - 1 - i] = tmp;
             isConstant = isConstant && tmp instanceof Constant;
         }

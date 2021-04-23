@@ -3,6 +3,7 @@ package me.joba.factorio.lang;
 
 import me.joba.factorio.Accessor;
 import me.joba.factorio.CombinatorGroup;
+import me.joba.factorio.lang.types.Type;
 
 import java.util.Arrays;
 
@@ -37,7 +38,7 @@ public class Variable extends Symbol {
     }
 
     @Override
-    public Accessor[] toAccessor(FunctionContext context) {
+    public Accessor[] toAccessor() {
         if(getSignal() == null) throw new UnsupportedOperationException("Variable not bound");
         var accessors = new Accessor[getType().getSize()];
         var signals = getSignal();
@@ -57,7 +58,6 @@ public class Variable extends Symbol {
     public void setDelay(int delay) {
         this.delay = delay;
     }
-
 
     public CombinatorGroup getProducer() {
         return producer;

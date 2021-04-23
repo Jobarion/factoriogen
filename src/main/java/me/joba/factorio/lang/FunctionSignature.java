@@ -1,5 +1,7 @@
 package me.joba.factorio.lang;
 
+import me.joba.factorio.lang.types.Type;
+
 import java.util.Arrays;
 import java.util.StringJoiner;
 

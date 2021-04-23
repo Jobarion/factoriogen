@@ -1,4 +1,4 @@
-package me.joba.factorio.lang;
+package me.joba.factorio.lang.types;
 
 public enum PrimitiveType implements Type {
     INT(1),

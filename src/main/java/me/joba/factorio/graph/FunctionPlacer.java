@@ -23,7 +23,6 @@ public class FunctionPlacer {
     private static final int SUBSTATION_SPACING_X = 14;
     private static final int SUBSTATION_SPACING_Y = 18;
 
-
     private static void placeCombinators(List<CircuitNetworkEntity> combinators, Collection<NetworkGroup> networks) {
         List<Node> nodes = new ArrayList<>();
 
@@ -208,21 +207,6 @@ public class FunctionPlacer {
         }
     }
 
-    public static void main(String[] args) {
-        List<CircuitNetworkEntity> entities = new ArrayList<>();
-        for(int x = 0; x < 30; x++) {
-            for(int y = 0; y < 30; y++) {
-                var cc = new ConstantCombinator(Map.of());
-                cc.setX(x);
-                cc.setY(y);
-                entities.add(cc);
-            }
-        }
-        FunctionPlacer.placeCombinators(entities, Collections.emptyList());
-        entities.addAll(generateSubstations(entities, null, null));
-        System.out.println(BlueprintWriter.writeBlueprint(Arrays.asList(new EntityBlock(entities))));
-    }
-
     private static List<CircuitNetworkEntity> generateSubstations(List<CircuitNetworkEntity> combinators, NetworkGroup functionCallOutGroup, NetworkGroup functionCallReturnGroup) {
 
         int maxX = Integer.MIN_VALUE;
@@ -268,15 +252,6 @@ public class FunctionPlacer {
             conn.put(WireColor.RED, functionCallReturnGroup);
         }
         return substations;
-    }
-
-    private static <T> T get(JSONObject obj, String key) {
-        var x = obj.get(key);
-        if(x == null) return (T)x;
-        if(x instanceof Long) {
-            return (T)(Object)((Long) x).intValue();
-        }
-        return (T)x;
     }
 
     private static <T> T getOrDefault(JSONObject obj, String key, T orElse) {

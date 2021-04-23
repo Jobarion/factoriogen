@@ -1,6 +1,7 @@
 package me.joba.factorio.lang;
 
 import me.joba.factorio.CombinatorGroup;
+import me.joba.factorio.lang.types.Type;
 
 import java.util.HashMap;
 import java.util.Map;
