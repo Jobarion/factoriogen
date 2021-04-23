@@ -9,7 +9,6 @@ import me.joba.factorio.game.entities.CircuitNetworkEntity;
 import me.joba.factorio.game.entities.ConstantCombinator;
 import me.joba.factorio.game.entities.LargePowerPole;
 import me.joba.factorio.game.entities.Substation;
-import me.joba.factorio.lang.Constant;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
@@ -18,6 +17,12 @@ import java.util.function.ToIntFunction;
 import java.util.stream.Collectors;
 
 public class FunctionPlacer {
+
+    private static final int SUBSTATION_OFFSET_X = 6;
+    private static final int SUBSTATION_OFFSET_Y = 9;
+    private static final int SUBSTATION_SPACING_X = 14;
+    private static final int SUBSTATION_SPACING_Y = 18;
+
 
     private static void placeCombinators(List<CircuitNetworkEntity> combinators, Collection<NetworkGroup> networks) {
         List<Node> nodes = new ArrayList<>();
@@ -187,7 +192,7 @@ public class FunctionPlacer {
                 i--;
                 continue;
             }
-            else if((x * 2) % 18 == 8 && (y / 2) % 9 == 4) {//This magic condition makes space for substations
+            else if((x * 2) % SUBSTATION_SPACING_X == SUBSTATION_OFFSET_X && (y % SUBSTATION_SPACING_Y) / 2 == SUBSTATION_OFFSET_Y / 2) {//This magic condition makes space for substations
                 x++;
                 i--;
                 continue;
@@ -203,9 +208,22 @@ public class FunctionPlacer {
         }
     }
 
+    public static void main(String[] args) {
+        List<CircuitNetworkEntity> entities = new ArrayList<>();
+        for(int x = 0; x < 30; x++) {
+            for(int y = 0; y < 30; y++) {
+                var cc = new ConstantCombinator(Map.of());
+                cc.setX(x);
+                cc.setY(y);
+                entities.add(cc);
+            }
+        }
+        FunctionPlacer.placeCombinators(entities, Collections.emptyList());
+        entities.addAll(generateSubstations(entities, null, null));
+        System.out.println(BlueprintWriter.writeBlueprint(Arrays.asList(new EntityBlock(entities))));
+    }
+
     private static List<CircuitNetworkEntity> generateSubstations(List<CircuitNetworkEntity> combinators, NetworkGroup functionCallOutGroup, NetworkGroup functionCallReturnGroup) {
-        final int xOffset = 8;
-        final int yOffset = 9;
 
         int maxX = Integer.MIN_VALUE;
         int maxY = Integer.MIN_VALUE;
@@ -215,19 +233,19 @@ public class FunctionPlacer {
         }
 
         List<CircuitNetworkEntity> substations = new ArrayList<>();
-        for(int x = xOffset; x <= maxX + 1; x += 18) {
-            for(int y = yOffset; y <= maxY + 1; y += 18) {
+        for(int x = SUBSTATION_OFFSET_X; x <= maxX + 1; x += SUBSTATION_SPACING_X) {
+            for(int y = SUBSTATION_OFFSET_Y; y <= maxY + 1; y += SUBSTATION_SPACING_Y) {
                 var substation = new Substation(x, y);
                 substations.add(substation);
             }
         }
 
-        boolean placeXEdge = (maxX - xOffset + 1) % 18 > xOffset || maxX < xOffset;
-        boolean placeYEdge = (maxY - yOffset + 1) % 18 > yOffset || maxY < yOffset;
+        boolean placeXEdge = (maxX - SUBSTATION_OFFSET_X + 1) % SUBSTATION_SPACING_X > SUBSTATION_OFFSET_X || maxX < SUBSTATION_OFFSET_X;
+        boolean placeYEdge = (maxY - SUBSTATION_OFFSET_Y + 1) % SUBSTATION_SPACING_Y > SUBSTATION_OFFSET_Y || maxY < SUBSTATION_OFFSET_Y;
 
         if(placeXEdge) {
             int x = maxX + 2;
-            for(int y = yOffset; y <= maxY; y += 18) {
+            for(int y = SUBSTATION_OFFSET_Y; y <= maxY; y += SUBSTATION_SPACING_Y) {
                 var substation = new Substation(x, y);
                 substations.add(substation);
             }
@@ -235,7 +253,7 @@ public class FunctionPlacer {
 
         if(placeYEdge) {
             int y = maxY + 2;
-            for(int x = xOffset; x <= maxX; x += 18) {
+            for(int x = SUBSTATION_OFFSET_X; x <= maxX; x += SUBSTATION_SPACING_X) {
                 var substation = new Substation(x, y);
                 substations.add(substation);
             }
