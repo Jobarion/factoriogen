@@ -33,17 +33,14 @@ public class StructureParser extends LanguageBaseListener {
     }
 
     private static FactorioSignal[] getFunctionReturnSignals(Type type) {
-        //Fix later
-        if(type.getSize() != 1) throw new RuntimeException("Unsupported return type");
-        return new FactorioSignal[]{FactorioSignal.SIGNAL_R};
-//        var returnSignals = new FactorioSignal[type.getSize()];
-//        var allSignals = FactorioSignal.values();
-//        int cursor = 0;
-//        for(int i = 0; i < returnSignals.length; i++) {
-//            FactorioSignal signal;
-//            while((signal = allSignals[cursor++]).isReserved());
-//            returnSignals[i] = signal;
-//        }
-//        return returnSignals;
+        var returnSignals = new FactorioSignal[type.getSize()];
+        var allSignals = FactorioSignal.values();
+        int cursor = 0;
+        for(int i = 0; i < returnSignals.length; i++) {
+            FactorioSignal signal;
+            while((signal = allSignals[cursor++]).isReserved());
+            returnSignals[i] = signal;
+        }
+        return returnSignals;
     }
 }

@@ -19,12 +19,11 @@ import java.util.stream.Collectors;
 
 public class Generator extends LanguageBaseListener {
 
-
     private static final String SIMPLE_TUPLE = """
-            function main(a: int<red>, b: int<green>) -> int {
+            function main(a: int<red>, b: int<green>) -> (int, int, int) {
                 t = (a, b);
                 u = (t.0 * a, t.1 * b, t);
-                return u.0 * u.1 + u.2.0 + u.2.1;
+                return (1, a, u.0 * u.1 + u.2.0 + u.2.1);
             }
             """;
 
@@ -909,6 +908,7 @@ public class Generator extends LanguageBaseListener {
             currentFunctionContext.getFunctionGroup().getSubGroups().add(group);
             int offset = 0;
             FactorioSignal[] remappedSignals = currentFunctionContext.getFreeSymbols(tupleType.getSize());
+            int tupleCreationDelay = 0;
             for(Symbol symbol : symbols) {
                 if(symbol instanceof Constant) {
                     int[] vals = ((Constant) symbol).getVal();
@@ -921,6 +921,7 @@ public class Generator extends LanguageBaseListener {
                     cc.setGreenOut(group.getOutput());
                 }
                 else {
+                    tupleCreationDelay = 1;
                     var accessor = ((Variable)symbol).createVariableAccessor();
                     group.getAccessors().add(accessor);
                     accessor.access(delay).accept(group);
@@ -932,8 +933,8 @@ public class Generator extends LanguageBaseListener {
                     }
                 }
             }
-            log("Combining " + Arrays.toString(symbols) + " into tuple, delay: " + delay);
-            currentFunctionContext.createBoundTempVariable(tupleType, remappedSignals, group).setDelay(delay);
+            log("Combining " + Arrays.toString(symbols) + " into tuple, delay: " + (delay + tupleCreationDelay));
+            currentFunctionContext.createBoundTempVariable(tupleType, remappedSignals, group).setDelay(delay + tupleCreationDelay);
         }
         else if(ctx.left != null) {
             EXPR_PARSER.parse(currentFunctionContext, ctx);
