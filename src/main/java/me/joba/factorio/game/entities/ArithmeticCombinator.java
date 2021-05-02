@@ -20,15 +20,15 @@ public class ArithmeticCombinator extends IOCircuitNetworkEntity {
     }
 
     public static ArithmeticCombinator copying() {
-        return withEach(Accessor.constant(0), ArithmeticOperator.ADD);
+        return withEach(Accessor.constant(0), ArithmeticOperator.OR);
     }
 
     public static ArithmeticCombinator copying(FactorioSignal signal) {
-        return withLeftRight(Accessor.signal(signal), Accessor.constant(0), signal, ArithmeticOperator.ADD);
+        return withLeftRight(Accessor.signal(signal), Accessor.constant(0), signal, ArithmeticOperator.OR);
     }
 
     public static ArithmeticCombinator remapping(FactorioSignal in, FactorioSignal out) {
-        return withLeftRight(Accessor.signal(in), Accessor.constant(0), out, ArithmeticOperator.ADD);
+        return withLeftRight(Accessor.signal(in), Accessor.constant(0), out, ArithmeticOperator.OR);
     }
 
     public static ArithmeticCombinator withLeftRight(Accessor left, Accessor right, FactorioSignal outSignal, ArithmeticOperator operator) {
