@@ -33,6 +33,7 @@ public class SimulatedAnnealingSolver {
         var matrix = getDistanceMatrix(nodes);
         double currentEnergy = calculateEnergy(matrix);
 
+        System.out.println("Simulated annealing start");
         printStats(nodes);
 
         for(int i = 0; i < maxSteps; i++) {
@@ -59,6 +60,7 @@ public class SimulatedAnnealingSolver {
         }
 
         printStats(nodes);
+        System.out.println("Simulated annealing end");
     }
 
     private static double getTransitionProbability(double oldEnergy, double newEnergy, double temperature) {

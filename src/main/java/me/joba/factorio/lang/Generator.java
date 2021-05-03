@@ -18,38 +18,38 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public class Generator extends LanguageBaseListener {
-
-    private static final String SIMPLE_TUPLE = """
-            function main(a: int<red>, b: int<green>) -> (int, int, int) {
-                t = (a, b);
-                u = (t.0 * a, t.1 * b, t);
-                return (1, a, u.0 * u.1 + u.2.0 + u.2.1);
-            }
-            """;
-
-    private static final String SIMPLE_FUNCTION_ADD =
-            "function main(a: int<red>, b: int<green>) -> int {\n" +
-                    "sum = add(a, b);\n" +
-                    "return sum;\n" +
-                    "}\n" +
-                    "function add(a: int<red>, b: int) -> int {\n" +
-                    "return a + b;\n" +
-                    "}";
-
-    private static final String FUNCTION_CALL_LOOP =
-            "function main(a: int<red>, b: int<green>) -> int {\n" +
-                    "if(a < 0) {a = 0 - a;}\n" +
-                    "sum = 0;\n" +
-                    "while(a > 0) {\n" +
-                    "  sum = add(sum, b);\n" +
-                    "  a = a - 1;\n" +
-                    "}\n" +
-                    "return sum;\n" +
-            "}\n" +
-            "function add(a: int<red>, b: int) -> int {\n" +
-                    "return a + b;\n" +
-            "}";
-
+//
+//    private static final String SIMPLE_TUPLE = """
+//            function main(a: int<red>, b: int<green>) -> (int, int, int) {
+//                t = (a, b);
+//                u = (t.0 * a, t.1 * b, t);
+//                return (1, a, u.0 * u.1 + u.2.0 + u.2.1);
+//            }
+//            """;
+//
+//    private static final String SIMPLE_FUNCTION_ADD =
+//            "function main(a: int<red>, b: int<green>) -> int {\n" +
+//                    "sum = add(a, b);\n" +
+//                    "return sum;\n" +
+//                    "}\n" +
+//                    "function add(a: int<red>, b: int) -> int {\n" +
+//                    "return a + b;\n" +
+//                    "}";
+//
+//    private static final String FUNCTION_CALL_LOOP =
+//            "function main(a: int<red>, b: int<green>) -> int {\n" +
+//                    "if(a < 0) {a = 0 - a;}\n" +
+//                    "sum = 0;\n" +
+//                    "while(a > 0) {\n" +
+//                    "  sum = add(sum, b);\n" +
+//                    "  a = a - 1;\n" +
+//                    "}\n" +
+//                    "return sum;\n" +
+//            "}\n" +
+//            "function add(a: int<red>, b: int) -> int {\n" +
+//                    "return a + b;\n" +
+//            "}";
+//
     private static final String FUNCTION_FUCKING_COMPLEX =
             "function main(start: int<red>, end: int<green>, iterations: int<i>) -> int {\n" +
             "  max = -1;\n" +
@@ -81,68 +81,68 @@ public class Generator extends LanguageBaseListener {
             "  }\n" +
             "  return a;\n" +
             "}";
+//
+//    private static final String COLLATZ =
+//            "function collatz(currentVal: int<red>, iterations: int<green>) -> int {\n" +
+//                    "  while(iterations != 0) {\n" +
+//                    "    iterations = iterations - 1;\n" +
+//                    "    if(currentVal % 2 == 0) {\n" +
+//                    "      currentVal = currentVal / 2;\n" +
+//                    "    }\n" +
+//                    "    else {\n" +
+//                    "      currentVal = currentVal * 3 + 1;\n" +
+//                    "    }\n" +
+//                    "  }\n" +
+//                    "  return(currentVal);\n" +
+//                    "}";
+//
+//    private static final String WHILE_OUTSIDE_VAR =
+//            "function simple(a=red) {\n" +
+//                    "  b = a * a;\n" +
+//                    "  while(a > 10) {\n" +
+//                    "    a = a / 2;\n" +
+//                    "  }\n" +
+//                    "  return(a, b);\n" +
+//                    "}";
+//
+//    private static final String FUNCTION_NESTED_WHILE =
+//            "function nested(a=red) {\n" +
+//            "  while(a > 8) {\n" +
+//            "    while(a > 10) {\n" +
+//            "      a = a / 2;\n" +
+//            "    }\n" +
+//            "    a = a - 1;\n" +
+//            "  }\n" +
+//            "  return(a);\n" +
+//            "}";
+//
+//    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
+//    private static final String PYTH_TRIPLE =
+//            "function nested(max: int) -> int {\n" +
+//            "  a = 0;\n" +
+//            "  b = 0;\n" +
+//            "  c = 0;\n" +
+//            "  if(max >= 5) {\n" +
+//            "  terminate = 0;\n" +
+//            "    while(terminate == 0 && a <= max) {\n" +
+//            "      b = a;\n" +
+//            "      a = a + 1;\n" +
+//            "      while(terminate == 0 && b <= max) {\n" +
+//            "        c = b;\n" +
+//            "        b = b + 1;\n" +
+//            "        while(terminate == 0 && c <= max) {\n" +
+//            "          c = c + 1;\n" +
+//            "          if(a * a + b * b == c * c) {\n" +
+//            "            terminate = 1;\n" +
+//            "          }\n" +
+//            "        }\n" +
+//            "      }\n" +
+//            "    }\n" +
+//            "  }\n" +
+//            "  return a;\n" +
+//            "}";
 
-    private static final String COLLATZ =
-            "function collatz(currentVal: int<red>, iterations: int<green>) -> int {\n" +
-                    "  while(iterations != 0) {\n" +
-                    "    iterations = iterations - 1;\n" +
-                    "    if(currentVal % 2 == 0) {\n" +
-                    "      currentVal = currentVal / 2;\n" +
-                    "    }\n" +
-                    "    else {\n" +
-                    "      currentVal = currentVal * 3 + 1;\n" +
-                    "    }\n" +
-                    "  }\n" +
-                    "  return(currentVal);\n" +
-                    "}";
-
-    private static final String WHILE_OUTSIDE_VAR =
-            "function simple(a=red) {\n" +
-                    "  b = a * a;\n" +
-                    "  while(a > 10) {\n" +
-                    "    a = a / 2;\n" +
-                    "  }\n" +
-                    "  return(a, b);\n" +
-                    "}";
-
-    private static final String FUNCTION_NESTED_WHILE =
-            "function nested(a=red) {\n" +
-            "  while(a > 8) {\n" +
-            "    while(a > 10) {\n" +
-            "      a = a / 2;\n" +
-            "    }\n" +
-            "    a = a - 1;\n" +
-            "  }\n" +
-            "  return(a);\n" +
-            "}";
-
-    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
-    private static final String PYTH_TRIPLE =
-            "function nested(max: int) -> int {\n" +
-            "  a = 0;\n" +
-            "  b = 0;\n" +
-            "  c = 0;\n" +
-            "  if(max >= 5) {\n" +
-            "  terminate = 0;\n" +
-            "    while(terminate == 0 && a <= max) {\n" +
-            "      b = a;\n" +
-            "      a = a + 1;\n" +
-            "      while(terminate == 0 && b <= max) {\n" +
-            "        c = b;\n" +
-            "        b = b + 1;\n" +
-            "        while(terminate == 0 && c <= max) {\n" +
-            "          c = c + 1;\n" +
-            "          if(a * a + b * b == c * c) {\n" +
-            "            terminate = 1;\n" +
-            "          }\n" +
-            "        }\n" +
-            "      }\n" +
-            "    }\n" +
-            "  }\n" +
-            "  return a;\n" +
-            "}";
-
-    private static final String TEST = SIMPLE_TUPLE;
+    private static final String TEST = FUNCTION_FUCKING_COMPLEX;
 
     private static final ExpressionResolver<LanguageParser.ExprContext, ArithmeticOperator> EXPR_PARSER = new IntExpressionResolver();
     private static final ExpressionResolver<LanguageParser.BoolExprContext, DeciderOperator> BOOL_EXPR_COMPONENT_PARSER = new ComparisonExpressionResolver();
@@ -848,9 +848,10 @@ public class Generator extends LanguageBaseListener {
     public void exitExpr(LanguageParser.ExprContext ctx) {
         if(ctx.tuple != null) {
             var tupleVar = currentFunctionContext.popTempVariable();
-            if(!(tupleVar.getType() instanceof TupleType tupleType)) {
+            if(!(tupleVar.getType() instanceof TupleType)) {
                 throw new UnsupportedOperationException("Expected tuple type, found " + tupleVar.getType());
             }
+            var tupleType = (TupleType)tupleVar.getType();
             var propId = Integer.parseInt(ctx.propertyId.getText());
             if(tupleType.getSubtypes().length <= propId || propId < 0) {
                 throw new IllegalArgumentException("Tried to access property " + propId + " of tuple with properties " + tupleType);
@@ -860,10 +861,10 @@ public class Generator extends LanguageBaseListener {
             for(int i = 0; i < propId; i++) {
                 offset += tupleType.getSubtypes()[i].getSize();
             }
-            if(tupleVar instanceof Constant c) {
+            if(tupleVar instanceof Constant) {
                 log("Accessing tuple " + tupleVar + " value " + propId);
                 int[] constVal = new int[subtype.getSize()];
-                System.arraycopy(c.getVal(), offset, constVal, 0, subtype.getSize());
+                System.arraycopy(((Constant)tupleVar).getVal(), offset, constVal, 0, subtype.getSize());
                 currentFunctionContext.pushTempVariable(new Constant(subtype, constVal));
             }
             else {
@@ -1001,15 +1002,15 @@ public class Generator extends LanguageBaseListener {
         System.out.println("\t".repeat(currentFunctionContext.getDepth() + indentationLevel) + msg);
     }
 
-    public static void main(String[] args) {
-        LanguageParser parser = new LanguageParser(new CommonTokenStream(new LanguageLexer(CharStreams.fromString(TEST))));
+    public static String generateBlueprint(String code) {
+        LanguageParser parser = new LanguageParser(new CommonTokenStream(new LanguageLexer(CharStreams.fromString(code))));
 
         var structureParser = new StructureParser();
         parser.addParseListener(structureParser);
 
         parser.file();
 
-        parser = new LanguageParser(new CommonTokenStream(new LanguageLexer(CharStreams.fromString(TEST))));
+        parser = new LanguageParser(new CommonTokenStream(new LanguageLexer(CharStreams.fromString(code))));
 
         var generator = new Generator(structureParser.getFunctions());
 
@@ -1072,6 +1073,10 @@ public class Generator extends LanguageBaseListener {
         }
         var poles = FunctionPlacer.generateFunctionConnectors(entityBlocks);
         entityBlocks.add(poles);
-        System.out.println(BlueprintWriter.writeBlueprint(entityBlocks));
+        return BlueprintWriter.writeBlueprint(entityBlocks);
+    }
+
+    public static void main(String[] args) {
+        generateBlueprint(TEST);
     }
 }

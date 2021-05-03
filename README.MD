@@ -12,6 +12,8 @@ An expression is either
 - A mathematical expression (e.g. `a + (b / -4)`). Supported operators: `+`,`-`,`*`,`/`,`%`,`<<`,`>>`,`|`,`&`,`^`
 - A boolean expression (e.g. `a && !(b || c)`). Supported operators: `&&`, `||`, `^`, `!`
 - A function call (e.g. `max(a, b)`)
+- An n-tuple of sub-expressions (e.g. `(1, a == b, a * b)` would be a 3-tuple with the type `(int, boolean, int)`). Nested tuples are permitted.
+- A tuple access (e.g. assuming `a` holds a 2-tuple of type `(int, int)`, `a.0` and `a.1` can be used to access the values stored in the tuple).
 
 For a more formal definition, please take a look at the [grammar](src/main/antlr4/me/joba/factorio/lang/Language.g4).
 
@@ -72,10 +74,19 @@ In this example function header `function add(a: int<red>, b: int) -> int`
 
 Functions must not call each other recursively (Function calls are a directed acyclic graph). The compiler will not prevent recursive calls, but if a recursive call is performed, stuff will break.
 
+The function body is a block of code with a final `return` statement.
+
+#### Return statement
+The return statement must the last statement in a function. Right now that's not enforced, but having multiple return statements, or returning in a `while` loop _will_ break things.
+
 ### Types
 The only supported types right now are:
 - `int` a 32 bit integer, the same type that factorio uses for signals.
 - `boolean` either true or false. 
+- n-tuple. Tuples are a typed, fixed-size, ordered list of elements. E.g. `(int, boolean, (int, int))` is a tuple with 3 values. First, an `int`, second a `boolean`, third another `(int, int)`. 
 
 ## ToDo
-- Support more types: structs/tuples, arrays
+- Array support
+- Various optimizations
+- Add named tuple types
+- Better error messages

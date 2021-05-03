@@ -4,9 +4,9 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>me.joba.factorio</groupId>
-    <artifactId>FactorioSimulator</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <groupId>me.joba</groupId>
+    <artifactId>factorio-combinator-compiler</artifactId>
+    <version>0.9</version>
 
     <properties>
         <maven.compiler.source>14</maven.compiler.source>
@@ -14,6 +14,7 @@
     </properties>
 
     <build>
+        <finalName>FCC-${version}</finalName>
         <plugins>
             <plugin>
                 <groupId>org.antlr</groupId>
@@ -40,8 +41,39 @@
                 <configuration>
                     <source>14</source>
                     <target>14</target>
-                    <compilerArgs>--enable-preview</compilerArgs>
                 </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <mainClass>me.joba.factorio.Main</mainClass>
+                            <packageName>me.joba.factorio</packageName>
+                        </manifest>
+                        <manifestEntries>
+                            <mode>development</mode>
+                            <url>${pom.url}</url>
+                        </manifestEntries>
+                    </archive>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>2.3</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <shadedClassifierName>shaded</shadedClassifierName>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>

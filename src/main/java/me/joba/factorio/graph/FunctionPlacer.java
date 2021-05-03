@@ -1,12 +1,10 @@
 package me.joba.factorio.graph;
 
-import me.joba.factorio.BlueprintWriter;
 import me.joba.factorio.NetworkGroup;
 import me.joba.factorio.game.Entity;
 import me.joba.factorio.game.EntityBlock;
 import me.joba.factorio.game.WireColor;
 import me.joba.factorio.game.entities.CircuitNetworkEntity;
-import me.joba.factorio.game.entities.ConstantCombinator;
 import me.joba.factorio.game.entities.LargePowerPole;
 import me.joba.factorio.game.entities.Substation;
 import org.json.simple.JSONArray;
