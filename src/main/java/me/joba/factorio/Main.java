@@ -17,4 +17,6 @@ public class Main {
                 .toString();
         System.out.println(Generator.generateBlueprint(code));
     }
+
+
 }

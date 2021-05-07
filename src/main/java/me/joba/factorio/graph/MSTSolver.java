@@ -56,6 +56,7 @@ public class MSTSolver {
                     }
                 }
             }
+            if(closestConnected == null || closestUnconnected == null) break;//Temporary
             connected.add(closestUnconnected);
             if(closestConnected.wireColor != closestUnconnected.wireColor) throw new IllegalArgumentException("Network group with multiple wire colors: " + closestConnected.wireColor + ", " + closestUnconnected.wireColor);
             connections.add(new Tuple<>(closestConnected, closestUnconnected));

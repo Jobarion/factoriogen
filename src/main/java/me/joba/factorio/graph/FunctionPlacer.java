@@ -80,8 +80,14 @@ public class FunctionPlacer {
     }
 
     public static EntityBlock placeFunction(List<CircuitNetworkEntity> combinators, List<NetworkGroup> networks, NetworkGroup functionCallOutGroup, NetworkGroup functionCallReturnGroup) {
-        placeCombinators(combinators, networks);
-        combinators.addAll(generateSubstations(combinators, functionCallOutGroup, functionCallReturnGroup));
+        return placeFunction(combinators, networks, functionCallOutGroup, functionCallReturnGroup, false);
+    }
+
+    public static EntityBlock placeFunction(List<CircuitNetworkEntity> combinators, List<NetworkGroup> networks, NetworkGroup functionCallOutGroup, NetworkGroup functionCallReturnGroup, boolean prePlaced) {
+        if(!prePlaced) {
+            placeCombinators(combinators, networks);
+            combinators.addAll(generateSubstations(combinators, functionCallOutGroup, functionCallReturnGroup));
+        }
         var connections = buildConnectionObjects(MSTSolver.solveMst(combinators));
 
         for(var entity : combinators) {

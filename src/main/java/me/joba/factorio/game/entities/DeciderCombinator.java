@@ -37,7 +37,7 @@ public class DeciderCombinator extends IOCircuitNetworkEntity {
         return new DeciderCombinator(cbehavior);
     }
 
-    public static DeciderCombinator withEach(Accessor right, int outId, boolean one, DeciderOperator operator) {
+    public static DeciderCombinator withEach(Accessor right, FactorioSignal outSignal, boolean one, DeciderOperator operator) {
         JSONObject cbehavior = new JSONObject();
         JSONObject conds = new JSONObject();
         cbehavior.put("decider_conditions", conds);
@@ -54,7 +54,7 @@ public class DeciderCombinator extends IOCircuitNetworkEntity {
         conds.put("comparator", operator.getBlueprintCode());
         JSONObject out = new JSONObject();
         out.put("type", "virtual");
-        out.put("name", FactorioSignal.values()[outId].getFactorioName());
+        out.put("name", outSignal.getFactorioName());
         conds.put("output_signal", out);
         conds.put("copy_count_from_input", !one);
         return new DeciderCombinator(cbehavior);

@@ -1,19 +1,62 @@
 package me.joba.factorio;
 
 import me.joba.factorio.game.EntityBlock;
+import me.joba.factorio.game.entities.ArithmeticCombinator;
+import me.joba.factorio.game.entities.ConstantCombinator;
+import me.joba.factorio.graph.FunctionPlacer;
 import me.joba.factorio.graph.MSTSolver;
 import me.joba.factorio.graph.Tuple;
+import me.joba.factorio.lang.FactorioSignal;
+import me.joba.factorio.lang.Memory;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
 import java.nio.charset.StandardCharsets;
-import java.util.Base64;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 import java.util.zip.Deflater;
 
 public class BlueprintWriter {
+
+    public static void main(String[] args) {
+//        var e1 = ArithmeticCombinator.copying();
+//        var e2 = ArithmeticCombinator.copying(FactorioSignal.SIGNAL_C);
+//        e1.setPosition(1, 7, 2);
+//        e1.setFixedLocation(true);
+//
+//        e2.setPosition(3, 7, 6);
+//        e2.setFixedLocation(true);
+//
+//        EntityBlock eb = new EntityBlock(Arrays.asList(e1, e2));
+//        System.out.println(writeBlueprint(Arrays.asList(eb)));
+        var cg = Memory.generateMemoryController(16, new FactorioSignal[]{FactorioSignal.SIGNAL_A, FactorioSignal.SIGNAL_B, FactorioSignal.SIGNAL_C, FactorioSignal.SIGNAL_D}, new NetworkGroup(), new NetworkGroup(), new NetworkGroup());
+
+        Set<CombinatorGroup> generatedGroups = new HashSet<>();
+        Queue<CombinatorGroup> toExpand = new LinkedList<>();
+        toExpand.add(cg);
+        while(!toExpand.isEmpty()) {
+            var group = toExpand.poll();
+            generatedGroups.add(group);
+            toExpand.addAll(group.getSubGroups());
+        }
+
+        var combinators = generatedGroups.stream()
+                .map(CombinatorGroup::getCombinators)
+                .flatMap(Collection::stream)
+                .collect(Collectors.toList());
+
+        var networks = generatedGroups.stream()
+                .peek(x -> {
+                    if(x.getNetworks().contains(null)) {
+                        System.out.println(x);
+                    }
+                })
+                .map(CombinatorGroup::getNetworks)
+                .flatMap(Collection::stream)
+                .collect(Collectors.toList());
+
+        System.out.println(writeBlueprint(Arrays.asList(FunctionPlacer.placeFunction(combinators, networks, new NetworkGroup(), new NetworkGroup(), true))));
+    }
 
     public static String writeBlueprint(List<EntityBlock> blocks) {
         JSONArray entities = new JSONArray();

@@ -59,6 +59,16 @@ public abstract class Entity {
         this.y = y;
     }
 
+    public void setPosition(int x, int y) {
+        setPosition(x, y, this.orientation);
+    }
+
+    public void setPosition(int x, int y, int orientation) {
+        setX(x);
+        setY(y);
+        setOrientation(orientation);
+    }
+
     public int getOrientation() {
         return orientation;
     }
