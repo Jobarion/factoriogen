@@ -29,7 +29,7 @@ public class BlueprintWriter {
 //
 //        EntityBlock eb = new EntityBlock(Arrays.asList(e1, e2));
 //        System.out.println(writeBlueprint(Arrays.asList(eb)));
-        var cg = Memory.generateMemoryController(16, new FactorioSignal[]{FactorioSignal.SIGNAL_A, FactorioSignal.SIGNAL_B, FactorioSignal.SIGNAL_C, FactorioSignal.SIGNAL_D}, new NetworkGroup(), new NetworkGroup(), new NetworkGroup());
+        var cg = Memory.generateMemoryController(1024, new NetworkGroup(), new NetworkGroup(), new NetworkGroup());
 
         Set<CombinatorGroup> generatedGroups = new HashSet<>();
         Queue<CombinatorGroup> toExpand = new LinkedList<>();
