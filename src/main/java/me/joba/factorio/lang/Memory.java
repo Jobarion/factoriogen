@@ -6,10 +6,7 @@ import me.joba.factorio.NetworkGroup;
 import me.joba.factorio.Writer;
 import me.joba.factorio.game.entities.*;
 
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.Map;
-import java.util.Queue;
+import java.util.*;
 
 public class Memory {
 
@@ -18,9 +15,6 @@ public class Memory {
 
     private static final int MEMORY_CELL_X_OFFSET = 0;
     private static final int MEMORY_CELL_Y_OFFSET = 8;
-
-    private static final int COST_PER_CELL = 4;
-    private static final int COST_PER_SIGNAL = 2;//actually 2.05 but whatever
 
 
     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
@@ -52,6 +46,9 @@ public class Memory {
 
         for(int i = 0; i < cellCount; i++) {
             group.getSubGroups().add(generateMemoryCell(i + 1, memoryBankWriteCellIn, memoryBankWriteDataIn, memoryBankReadIn, memoryBankReadOut));
+        }
+        for(int i = 16; i < Math.max(cellCount, signals.length); i+=8) {
+            group.getCombinators().add(new Substation(MEMORY_CELL_X_OFFSET + 8, MEMORY_CELL_Y_OFFSET + i));
         }
         group.getSubGroups().add(generateWrite(signals, writeIn, memoryBankReadIn, memoryBankReadOut, memoryBankWriteCellIn, memoryBankWriteDataIn));
 
@@ -334,9 +331,9 @@ public class Memory {
         for(int i = 0; i < signals.length; i++) {
             var signal = signals[i];
             var inCmb = DeciderCombinator.withLeftRight(Accessor.signal(signal), Accessor.constant(0), Writer.fromInput(WRITE_VALUE_SIGNAL), DeciderOperator.NEQ);
-            inCmb.setPosition(MEMORY_CELL_X_OFFSET + 9, MEMORY_CELL_Y_OFFSET + i, 2);
+            inCmb.setPosition(MEMORY_CELL_X_OFFSET + 10, MEMORY_CELL_Y_OFFSET + i, 2);
             var outCmb = ArithmeticCombinator.withLeftRight(Accessor.signal(signal), Accessor.signal(WRITE_VALUE_SIGNAL), signal, ArithmeticOperator.MUL);
-            outCmb.setPosition(MEMORY_CELL_X_OFFSET + 11, MEMORY_CELL_Y_OFFSET + i, 2);
+            outCmb.setPosition(MEMORY_CELL_X_OFFSET + 12, MEMORY_CELL_Y_OFFSET + i, 2);
             group.getCombinators().add(inCmb);
             group.getCombinators().add(outCmb);
 
@@ -365,7 +362,12 @@ public class Memory {
                 values.put(signals[id], id + 1);
             }
             var cmb = new ConstantCombinator(values);
-            cmb.setPosition(7,8 + i);
+            if(i <= 30) {
+                cmb.setPosition(MEMORY_CELL_X_OFFSET + 7 + i / 15,MEMORY_CELL_Y_OFFSET + (i % 15));
+            }
+            else {
+                cmb.setPosition(MEMORY_CELL_X_OFFSET + 13, MEMORY_CELL_Y_OFFSET + i - 30);
+            }
             group.getCombinators().add(cmb);
             cmb.setGreenOut(constantNetwork);
         }
