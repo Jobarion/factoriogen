@@ -106,6 +106,12 @@ public class Memory {
             c7.setGreenOut(tmp);
         }
 
+        NetworkGroup writeSignalSelectorIn = new NetworkGroup();
+        NetworkGroup writeSignalSelectorOut = new NetworkGroup();
+
+        group.getNetworks().add(writeSignalSelectorIn);
+        group.getNetworks().add(writeSignalSelectorOut);
+
         //Weird delay circuits incoming
         var cmb = ArithmeticCombinator.copying();
         cmb.setPosition(3, 0, 4);
@@ -113,28 +119,44 @@ public class Memory {
         cmb.setGreenIn(tmp);
 
         cmb.setGreenOut(memoryBankReadOut);
+
+        cmb = ArithmeticCombinator.withLeftRight(Accessor.signal(ADDRESS_SIGNAL), Accessor.constant(signals.length), ADDRESS_SIGNAL, ArithmeticOperator.MOD);
+        group.getCombinators().add(cmb);
+        cmb.setPosition(1, 0, 4);
+        cmb.setGreenIn(memoryBankReadOut);
+
+        tmp = new NetworkGroup();
+        group.getNetworks().add(tmp);
+        cmb.setRedOut(tmp);
+
+        cmb = ArithmeticCombinator.withLeftRight(Accessor.signal(ADDRESS_SIGNAL), Accessor.constant(1), ADDRESS_SIGNAL, ArithmeticOperator.ADD);
+        group.getCombinators().add(cmb);
+        cmb.setPosition(0, 0, 4);
+        cmb.setRedIn(tmp);
+        cmb.setRedOut(writeSignalSelectorIn);
+
         //Write signal branch
         cmb = ArithmeticCombinator.copying(ADDRESS_SIGNAL);
         cmb.setPosition(0, 2, 4);
         group.getCombinators().add(cmb);
         cmb.setGreenIn(memoryBankReadOut);
 
-        NetworkGroup writeSignalSelectorIn = new NetworkGroup();
-        NetworkGroup writeSignalSelectorOut = new NetworkGroup();
-        group.getNetworks().add(writeSignalSelectorIn);
-        group.getNetworks().add(writeSignalSelectorOut);
-
-        cmb.setRedOut(writeSignalSelectorIn);
-
-        group.getSubGroups().add(generateWriteSignalSelector(signals, writeSignalSelectorIn, writeSignalSelectorOut));
 
         tmp = new NetworkGroup();
         group.getNetworks().add(tmp);
 
+        cmb.setRedOut(tmp);
+
+        group.getSubGroups().add(generateWriteSignalSelector(signals, writeSignalSelectorIn, writeSignalSelectorOut));
+
         cmb = ArithmeticCombinator.copying(ADDRESS_SIGNAL);
         cmb.setPosition(1, 2, 4);
         group.getCombinators().add(cmb);
-        cmb.setRedIn(writeSignalSelectorIn);
+        cmb.setRedIn(tmp);
+
+        tmp = new NetworkGroup();
+        group.getNetworks().add(tmp);
+
         cmb.setRedOut(tmp);
 
         cmb = ArithmeticCombinator.copying(WRITE_VALUE_SIGNAL);
@@ -217,21 +239,13 @@ public class Memory {
 
             var c9 = ArithmeticCombinator.copying();
             c9.setPosition(1, 7, 2);
-            var c10 = ArithmeticCombinator.copying();
-            c10.setPosition(3, 7, 2);
             group.getCombinators().add(c9);
-            group.getCombinators().add(c10);
 
             c9.setRedIn(writeSignalSelectorOut);
 
             tmp = new NetworkGroup();
             group.getNetworks().add(tmp);
             c9.setRedOut(tmp);
-            c10.setRedIn(tmp);
-
-            tmp = new NetworkGroup();
-            group.getNetworks().add(tmp);
-            c10.setRedOut(tmp);
             c7.setRedIn(tmp);
         }
 
@@ -282,16 +296,17 @@ public class Memory {
         c4.setRedOut(tmp);
         c5.setRedIn(tmp);
 
+
+        tmp = new NetworkGroup();
+        group.getNetworks().add(tmp);
+
         var writeReadDecoderDataIn = new NetworkGroup();
         group.getNetworks().add(writeReadDecoderDataIn);
-        c5.setRedOut(writeReadDecoderDataIn);
-        c6.setRedIn(writeReadDecoderDataIn);
+        c5.setRedOut(tmp);
+        c6.setRedIn(tmp);
 
-        var writeReadDecoderDataOut = new NetworkGroup();
-        group.getNetworks().add(writeReadDecoderDataOut);
-        c6.setRedOut(writeReadDecoderDataOut);
-        c7.setRedIn(writeReadDecoderDataOut);
-
+        c6.setRedOut(writeReadDecoderDataIn);
+        c7.setRedIn(writeReadDecoderDataIn);
         c7.setRedOut(out);
 
         var internal = new NetworkGroup();
@@ -317,7 +332,7 @@ public class Memory {
             inCmb.setGreenOut(tmp);
             outCmb.setGreenIn(tmp);
             outCmb.setRedIn(writeReadDecoderDataIn);
-            outCmb.setRedOut(writeReadDecoderDataOut);
+            outCmb.setRedOut(out);
         }
 
         return group;
