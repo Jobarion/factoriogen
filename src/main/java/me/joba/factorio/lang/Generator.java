@@ -18,7 +18,15 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public class Generator extends LanguageBaseListener {
-//
+
+    private static final String CONSTANT_DELAY_TEST = """
+            function main(a: int<red>, b: int<green>) -> int {
+                x = test(a);
+                x = test(b);
+                return x;
+            }
+            """;
+
 //    private static final String SIMPLE_TUPLE = """
 //            function main(a: int<red>, b: int<green>) -> (int, int, int) {
 //                t = (a, b);
@@ -145,7 +153,7 @@ public class Generator extends LanguageBaseListener {
     //TODO: Arrays.
     //0eNrtnFlu8zYQx+9CoC+tUoiLNqN9SHuAAn3wSxEYss0kBGzJ0BLUCHSAHqQX60lKWfliWxs5lGWrcV8CeNGY5C/D+c9wpHe03OR8l4goQ7N3JFZxlKLZH+8oFS9RuCnfy/Y7jmZIZHyLLBSF2/LVmq/EmicPq3i7FFGYxQkqLCSiNf8TzXBhKQ2EichetzwTq3YbpHiyEI8ykQlejejwYr+I8u2SJ/JH+sZioV2cykvjqBxAOaTgR8dCezR7cG35I2uR8FX1MbOQnHSWxJvFkr+Gb0JeLq/5MLqQn60PhtLy3WeRpNmiMbU3kWS5fOdzSNU3Hh7LCZVLmoXl+jrli+0uTA5jnKGf5AVxnu1ygEn+xpN99iqil8r2bi+HmEfZ4jmJtwsRSWNoliU5L6qfjqp5HkaPyz8vCefR6YKKtVxt+V2RrHKRHV4eAJ58HBRP0hrpvJzWL38qihMT35AREDJiTwBZMFlkuLnmfYiYHiJq6FWOfzNEuIbon7/+niokooDk6EFihn50Q0jOhCERGCRXD5KjCHV9zuRqcTraHYaKh6vXcj1TXppZHKHZktCOS2SHUaAfTIgdbINw0DqO81jkwfY9rwm3jZYLpXXiVXdNi/XT8mG0fD1a3gDfYlel9diK6gGfs/regNUjEJQDI+H0c8W2Hil/gF/dKykXRspVkMJ6pILjsPOlnP1hwk1HIh9w6CCtej5Equn25T+dmTolxYhSZx1n52LHromdn6ejR+1OrZPwdePbzT3D0rOL+4N2J2Bsqmz/B9zt7T2AXW3AChfW9WBYCeBzt5Ggz4MBuV7qcgnYtIfxc7hJgZCBqgrr0gFm/04XHfd22b8JHfuiHqhQxDgAwgs04TGwKPaA/MaVWuxcaX13BaWFFSqXAItsmPbvkkRTi2HHVOjYxd0V3triWlPmdMQ1QmHFH8z6CWNXk7BrqnSuSdiZLmGsTZgBCTuaBD0jKcP8G0oZcoFgiUeWMrUd0xkqdfrtddL1zegGN6RLL0CXXJau4lwRA4u5mCi0lW6eGRgJ3SZd9+v4LlzoqsSOPUw8EYW9LrjENoPr3xDu2K4Lhxso4LpDs5h+e51wsWmWo+28X6+grBKthABhKlJcQjRhEmOY/pVhTuzUDZqY6iaexLT/g/nFf6uP6vGiHQQKB6PusByks6HKtBPkqriCyeFSKBfqAXFptoQQxyyp8G6YVIxdXzVIKjxFNIPS8/qjGSWadF0z3endUHeOfbYBd01g0tBMCmrwdHdScEvJMfQ5xdcrl7eU3Ajw4ILoLj24R6Qs/lUrr7kxjkviAhJwXBIUa5IIjEmwK5OYj0ViDiPhw2LRUKVBbc02bhtMkt4Ryfb9KgCy0NQFFBuzuIf9rZ2FD2SheQcKhVccnBv5Ra3iAPOnoRUmk7ZtG37yAkFat8d0t0JqjPxu3Y/iYVthV3mJGvSofMpsNo02+0sUcE3cC3gQqttTS+H3qbhTQ1LzkN9+N0DyCzRCKdquKQPen9cJyDUtyTpj1vh+vXyZaJyOWAo8Yya6UsIzrb1ekwuZLhe3PzViuLd1uSUHtnSL8x1AfWOdTu/7NIrZQLmgOD8MuggFxlKOXJnQfDTtMB8IRxmINNssmG0M487dhSq6mCi0vKforaC+5m3lx0LFtyXS1Oa00VvRIQWfxSbjSccTRhRnFvmHzuh9yIgiLNZsEJCN+YkN+mmDloFHpIty1tVh1kBx0ormWLdIt+FG/tttpP1EOtwu3vA+jf6BxjjPqNy/nGL5+JbZyeNiLCR1QVrlxT5mXkA86nkOtllR/AsB4ynE
     
-    private static final String TEST = FUNCTION_FUCKING_COMPLEX;
+    private static final String TEST = CONSTANT_DELAY_TEST;
 
     private static final ExpressionResolver<LanguageParser.ExprContext, ArithmeticOperator> EXPR_PARSER = new IntExpressionResolver();
     private static final ExpressionResolver<LanguageParser.BoolExprContext, DeciderOperator> BOOL_EXPR_COMPONENT_PARSER = new ComparisonExpressionResolver();
@@ -460,6 +468,7 @@ public class Generator extends LanguageBaseListener {
             var rebound = currentFunctionContext.createNamedVariable(defined.getKey(), v.getType(), v.getSignal(), whileGroup);
             rebound.setDelay(0);
         }
+        currentFunctionContext.clearFunctionCallSlotReservations();
     }
 
     //This is a general implementation that can handle loops inside if statements.
@@ -592,241 +601,320 @@ public class Generator extends LanguageBaseListener {
             outsideDelay = Math.max(outsideDelay, variable.getTickDelay());
         }
 
-        int totalDelay = Math.max(outsideDelay, argumentDelay);
+        if(!targetFunction.getSignature().isConstantDelay()) {
 
-        CombinatorGroup functionCallInput = new CombinatorGroup(new NetworkGroup(), new NetworkGroup());
-        currentFunctionContext.getFunctionGroup().getSubGroups().add(functionCallInput);
+            int totalDelay = Math.max(outsideDelay, argumentDelay);
 
-        CombinatorGroup functionCallReturn = new CombinatorGroup(new NetworkGroup(), new NetworkGroup("Function call out (" + targetFunction.getSignature() + ")"));
-        functionCallInput.getSubGroups().add(functionCallReturn);
+            CombinatorGroup functionCallInput = new CombinatorGroup(new NetworkGroup(), new NetworkGroup());
+            currentFunctionContext.getFunctionGroup().getSubGroups().add(functionCallInput);
 
-        //Deduplication of outside signals
-        var inputGateFunctionArguments = DeciderCombinator.withLeftRight(Accessor.signal(Constants.CONTROL_FLOW_SIGNAL), Accessor.constant(0), Writer.everything(false), DeciderOperator.NEQ);
-        functionCallInput.getCombinators().add(inputGateFunctionArguments);
+            CombinatorGroup functionCallReturn = new CombinatorGroup(new NetworkGroup(), new NetworkGroup("Function call out (" + targetFunction.getSignature() + ")"));
+            functionCallInput.getSubGroups().add(functionCallReturn);
 
-        var inputGateVariableScope = DeciderCombinator.withLeftRight(Accessor.signal(Constants.CONTROL_FLOW_SIGNAL), Accessor.constant(0), Writer.everything(false), DeciderOperator.NEQ);
-        functionCallInput.getCombinators().add(inputGateVariableScope);
+            //Deduplication of outside signals
+            var inputGateFunctionArguments = DeciderCombinator.withLeftRight(Accessor.signal(Constants.CONTROL_FLOW_SIGNAL), Accessor.constant(0), Writer.everything(false), DeciderOperator.NEQ);
+            functionCallInput.getCombinators().add(inputGateFunctionArguments);
 
-        inputGateVariableScope.setGreenIn(functionCallInput.getInput());
+            var inputGateVariableScope = DeciderCombinator.withLeftRight(Accessor.signal(Constants.CONTROL_FLOW_SIGNAL), Accessor.constant(0), Writer.everything(false), DeciderOperator.NEQ);
+            functionCallInput.getCombinators().add(inputGateVariableScope);
 
-        var dedupInputFunctionArguments = DeciderCombinator.withLeftRight(Accessor.signal(Constants.TEMP_SIGNAL), Accessor.constant(0), Writer.everything(false), DeciderOperator.EQ);
-        functionCallInput.getCombinators().add(dedupInputFunctionArguments);
+            inputGateVariableScope.setGreenIn(functionCallInput.getInput());
 
-        var dedupInputVariableScope = DeciderCombinator.withLeftRight(Accessor.signal(Constants.TEMP_SIGNAL), Accessor.constant(0), Writer.everything(false), DeciderOperator.EQ);
-        functionCallInput.getCombinators().add(dedupInputVariableScope);
+            var dedupInputFunctionArguments = DeciderCombinator.withLeftRight(Accessor.signal(Constants.TEMP_SIGNAL), Accessor.constant(0), Writer.everything(false), DeciderOperator.EQ);
+            functionCallInput.getCombinators().add(dedupInputFunctionArguments);
 
-        var dedupStore = DeciderCombinator.withAny(Accessor.constant(0), Writer.one(Constants.TEMP_SIGNAL), DeciderOperator.NEQ);
-        functionCallInput.getCombinators().add(dedupStore);
+            var dedupInputVariableScope = DeciderCombinator.withLeftRight(Accessor.signal(Constants.TEMP_SIGNAL), Accessor.constant(0), Writer.everything(false), DeciderOperator.EQ);
+            functionCallInput.getCombinators().add(dedupInputVariableScope);
 
-        var dedupReset = DeciderCombinator.withLeftRight(Accessor.signal(Constants.CONTROL_FLOW_SIGNAL), Accessor.constant(0), Writer.fromInput(Constants.TEMP_SIGNAL), DeciderOperator.NEQ);
-        functionCallInput.getCombinators().add(dedupReset);
+            var dedupStore = DeciderCombinator.withAny(Accessor.constant(0), Writer.one(Constants.TEMP_SIGNAL), DeciderOperator.NEQ);
+            functionCallInput.getCombinators().add(dedupStore);
 
-        var dedupConstants = new ConstantCombinator(Map.of(Constants.TEMP_SIGNAL, -1));
-        functionCallInput.getCombinators().add(dedupConstants);
+            var dedupReset = DeciderCombinator.withLeftRight(Accessor.signal(Constants.CONTROL_FLOW_SIGNAL), Accessor.constant(0), Writer.fromInput(Constants.TEMP_SIGNAL), DeciderOperator.NEQ);
+            functionCallInput.getCombinators().add(dedupReset);
 
-        NetworkGroup tmp = new NetworkGroup("dedup network");
-        functionCallInput.getNetworks().add(tmp);
-        dedupInputVariableScope.setGreenIn(tmp);
-        dedupInputFunctionArguments.setGreenIn(tmp);
-        dedupStore.setGreenIn(tmp);
-        dedupStore.setGreenOut(tmp);
-        dedupReset.setGreenOut(tmp);
+            var dedupConstants = new ConstantCombinator(Map.of(Constants.TEMP_SIGNAL, -1));
+            functionCallInput.getCombinators().add(dedupConstants);
 
-        tmp = new NetworkGroup("arguments input forward");
-        functionCallInput.getNetworks().add(tmp);
-        inputGateFunctionArguments.setRedOut(tmp);
-        dedupInputFunctionArguments.setRedIn(tmp);
+            NetworkGroup tmp = new NetworkGroup("dedup network");
+            functionCallInput.getNetworks().add(tmp);
+            dedupInputVariableScope.setGreenIn(tmp);
+            dedupInputFunctionArguments.setGreenIn(tmp);
+            dedupStore.setGreenIn(tmp);
+            dedupStore.setGreenOut(tmp);
+            dedupReset.setGreenOut(tmp);
 
-        tmp = new NetworkGroup("state input forward");
-        functionCallInput.getNetworks().add(tmp);
-        inputGateVariableScope.setRedOut(tmp);
-        dedupInputVariableScope.setRedIn(tmp);
-        dedupStore.setRedIn(tmp);
+            tmp = new NetworkGroup("arguments input forward");
+            functionCallInput.getNetworks().add(tmp);
+            inputGateFunctionArguments.setRedOut(tmp);
+            dedupInputFunctionArguments.setRedIn(tmp);
 
-        tmp = new NetworkGroup("dedup reset constant");
-        functionCallInput.getNetworks().add(tmp);
-        dedupConstants.setGreenOut(tmp);
-        dedupReset.setGreenIn(tmp);
+            tmp = new NetworkGroup("state input forward");
+            functionCallInput.getNetworks().add(tmp);
+            inputGateVariableScope.setRedOut(tmp);
+            dedupInputVariableScope.setRedIn(tmp);
+            dedupStore.setRedIn(tmp);
 
-        //Forward signals, replacing control flow with predetermined value
-        var c1 = ArithmeticCombinator.withLeftRight(Accessor.signal(Constants.CONTROL_FLOW_SIGNAL), Accessor.constant(-1), Constants.CONTROL_FLOW_SIGNAL, ArithmeticOperator.MUL);
-        var c2 = ArithmeticCombinator.copying();
-        var c3 = DeciderCombinator.withLeftRight(Accessor.signal(Constants.CONTROL_FLOW_SIGNAL), Accessor.constant(0), Writer.one(Constants.CONTROL_FLOW_SIGNAL), DeciderOperator.NEQ);
-        functionCallInput.getCombinators().add(c1);
-        functionCallInput.getCombinators().add(c2);
-        functionCallInput.getCombinators().add(c3);
+            tmp = new NetworkGroup("dedup reset constant");
+            functionCallInput.getNetworks().add(tmp);
+            dedupConstants.setGreenOut(tmp);
+            dedupReset.setGreenIn(tmp);
 
-        NetworkGroup forwardIn = new NetworkGroup();
-        functionCallInput.getNetworks().add(forwardIn);
+            //Forward signals, replacing control flow with predetermined value
+            var c1 = ArithmeticCombinator.withLeftRight(Accessor.signal(Constants.CONTROL_FLOW_SIGNAL), Accessor.constant(-1), Constants.CONTROL_FLOW_SIGNAL, ArithmeticOperator.MUL);
+            var c2 = ArithmeticCombinator.copying();
+            var c3 = DeciderCombinator.withLeftRight(Accessor.signal(Constants.CONTROL_FLOW_SIGNAL), Accessor.constant(0), Writer.one(Constants.CONTROL_FLOW_SIGNAL), DeciderOperator.NEQ);
+            functionCallInput.getCombinators().add(c1);
+            functionCallInput.getCombinators().add(c2);
+            functionCallInput.getCombinators().add(c3);
 
-        c1.setRedIn(forwardIn);
-        c2.setRedIn(forwardIn);
-        c3.setRedIn(forwardIn);
-        dedupInputFunctionArguments.setRedOut(forwardIn);
+            NetworkGroup forwardIn = new NetworkGroup();
+            functionCallInput.getNetworks().add(forwardIn);
 
-        var c4 = ArithmeticCombinator.withLeftRight(Accessor.signal(Constants.CONTROL_FLOW_SIGNAL), Accessor.constant(-1), Constants.CONTROL_FLOW_SIGNAL, ArithmeticOperator.MUL);
-        var c5 = ArithmeticCombinator.copying();
+            c1.setRedIn(forwardIn);
+            c2.setRedIn(forwardIn);
+            c3.setRedIn(forwardIn);
+            dedupInputFunctionArguments.setRedOut(forwardIn);
 
-        int functionCallId = currentFunctionCallId++;
-        var c6 = ArithmeticCombinator.withLeftRight(Accessor.signal(Constants.CONTROL_FLOW_SIGNAL), Accessor.constant(functionCallId), Constants.CONTROL_FLOW_SIGNAL, ArithmeticOperator.MUL);
+            var c4 = ArithmeticCombinator.withLeftRight(Accessor.signal(Constants.CONTROL_FLOW_SIGNAL), Accessor.constant(-1), Constants.CONTROL_FLOW_SIGNAL, ArithmeticOperator.MUL);
+            var c5 = ArithmeticCombinator.copying();
 
-        functionCallInput.getCombinators().add(c4);
-        functionCallInput.getCombinators().add(c5);
-        functionCallInput.getCombinators().add(c6);
+            int functionCallId = currentFunctionCallId++;
+            var c6 = ArithmeticCombinator.withLeftRight(Accessor.signal(Constants.CONTROL_FLOW_SIGNAL), Accessor.constant(functionCallId), Constants.CONTROL_FLOW_SIGNAL, ArithmeticOperator.MUL);
 
-        NetworkGroup forwardInternal = new NetworkGroup();
-        functionCallInput.getNetworks().add(forwardInternal);
+            functionCallInput.getCombinators().add(c4);
+            functionCallInput.getCombinators().add(c5);
+            functionCallInput.getCombinators().add(c6);
 
-        c1.setRedOut(forwardInternal);
-        c2.setRedOut(forwardInternal);
-        c3.setRedOut(forwardInternal);
+            NetworkGroup forwardInternal = new NetworkGroup();
+            functionCallInput.getNetworks().add(forwardInternal);
 
-        c4.setRedIn(forwardInternal);
-        c5.setRedIn(forwardInternal);
-        c6.setRedIn(forwardInternal);
+            c1.setRedOut(forwardInternal);
+            c2.setRedOut(forwardInternal);
+            c3.setRedOut(forwardInternal);
 
-        c4.setGreenOut(currentFunctionContext.getFunctionCallOutputGroup());
-        c5.setGreenOut(currentFunctionContext.getFunctionCallOutputGroup());
-        c6.setGreenOut(currentFunctionContext.getFunctionCallOutputGroup());
+            c4.setRedIn(forwardInternal);
+            c5.setRedIn(forwardInternal);
+            c6.setRedIn(forwardInternal);
 
-        //Store previous state, forward when function call was completed
-        NetworkGroup stateStoreOut = new NetworkGroup();
-        functionCallInput.getNetworks().add(stateStoreOut);
+            c4.setGreenOut(currentFunctionContext.getFunctionCallOutputGroup());
+            c5.setGreenOut(currentFunctionContext.getFunctionCallOutputGroup());
+            c6.setGreenOut(currentFunctionContext.getFunctionCallOutputGroup());
 
-        var preCallStateStore = DeciderCombinator.withLeftRight(Accessor.signal(Constants.TEMP_SIGNAL), Accessor.constant(0), Writer.everything(false), DeciderOperator.EQ);
-        functionCallInput.getCombinators().add(preCallStateStore);
+            //Store previous state, forward when function call was completed
+            NetworkGroup stateStoreOut = new NetworkGroup();
+            functionCallInput.getNetworks().add(stateStoreOut);
 
-        NetworkGroup storeIn = new NetworkGroup();
-        functionCallInput.getNetworks().add(storeIn);
+            var preCallStateStore = DeciderCombinator.withLeftRight(Accessor.signal(Constants.TEMP_SIGNAL), Accessor.constant(0), Writer.everything(false), DeciderOperator.EQ);
+            functionCallInput.getCombinators().add(preCallStateStore);
 
-        dedupInputVariableScope.setRedOut(storeIn);
-        preCallStateStore.setRedIn(storeIn);
-        dedupReset.setRedOut(storeIn);
-        preCallStateStore.setGreenIn(stateStoreOut);
-        preCallStateStore.setGreenOut(stateStoreOut);
+            NetworkGroup storeIn = new NetworkGroup();
+            functionCallInput.getNetworks().add(storeIn);
 
-        var preCallStateOutputGate = DeciderCombinator.withLeftRight(Accessor.signal(Constants.TEMP_SIGNAL), Accessor.constant(-1), Writer.everything(false), DeciderOperator.EQ);
-        functionCallInput.getCombinators().add(preCallStateOutputGate);
+            dedupInputVariableScope.setRedOut(storeIn);
+            preCallStateStore.setRedIn(storeIn);
+            dedupReset.setRedOut(storeIn);
+            preCallStateStore.setGreenIn(stateStoreOut);
+            preCallStateStore.setGreenOut(stateStoreOut);
 
-        preCallStateOutputGate.setGreenIn(stateStoreOut);
-        preCallStateOutputGate.setRedIn(storeIn);
+            var preCallStateOutputGate = DeciderCombinator.withLeftRight(Accessor.signal(Constants.TEMP_SIGNAL), Accessor.constant(-1), Writer.everything(false), DeciderOperator.EQ);
+            functionCallInput.getCombinators().add(preCallStateOutputGate);
 
-        //Function call data return. We might be able to ditch this one
-        var returnGate = DeciderCombinator.withLeftRight(Accessor.signal(Constants.CONTROL_FLOW_SIGNAL), Accessor.constant(functionCallId), Writer.everything(false), DeciderOperator.EQ);
-        functionCallReturn.getCombinators().add(returnGate);
-        returnGate.setRedIn(currentFunctionContext.getFunctionCallReturnGroup());
+            preCallStateOutputGate.setGreenIn(stateStoreOut);
+            preCallStateOutputGate.setRedIn(storeIn);
 
-        tmp = new NetworkGroup();
-        functionCallReturn.getNetworks().add(tmp);
+            //Function call data return. We might be able to ditch this one
+            var returnGate = DeciderCombinator.withLeftRight(Accessor.signal(Constants.CONTROL_FLOW_SIGNAL), Accessor.constant(functionCallId), Writer.everything(false), DeciderOperator.EQ);
+            functionCallReturn.getCombinators().add(returnGate);
+            returnGate.setRedIn(currentFunctionContext.getFunctionCallReturnGroup());
 
-        dedupReset.setRedIn(tmp);
-        returnGate.setRedOut(tmp);
+            tmp = new NetworkGroup();
+            functionCallReturn.getNetworks().add(tmp);
 
-        var filter1 = ArithmeticCombinator.withLeftRight(Accessor.signal(Constants.CONTROL_FLOW_SIGNAL), Accessor.constant(-1), Constants.CONTROL_FLOW_SIGNAL, ArithmeticOperator.MUL);
-        var filter2 = ArithmeticCombinator.copying();
-        functionCallReturn.getCombinators().add(filter1);
-        functionCallReturn.getCombinators().add(filter2);
+            dedupReset.setRedIn(tmp);
+            returnGate.setRedOut(tmp);
 
-        tmp = new NetworkGroup();
-        functionCallReturn.getNetworks().add(tmp);
-        filter1.setGreenIn(tmp);
-        filter2.setGreenIn(tmp);
-        returnGate.setGreenOut(tmp);
+            var filter1 = ArithmeticCombinator.withLeftRight(Accessor.signal(Constants.CONTROL_FLOW_SIGNAL), Accessor.constant(-1), Constants.CONTROL_FLOW_SIGNAL, ArithmeticOperator.MUL);
+            var filter2 = ArithmeticCombinator.copying();
+            functionCallReturn.getCombinators().add(filter1);
+            functionCallReturn.getCombinators().add(filter2);
 
-        var filter3 = ArithmeticCombinator.copying();
-        functionCallReturn.getCombinators().add(filter3);
+            tmp = new NetworkGroup();
+            functionCallReturn.getNetworks().add(tmp);
+            filter1.setGreenIn(tmp);
+            filter2.setGreenIn(tmp);
+            returnGate.setGreenOut(tmp);
 
-        tmp = new NetworkGroup();
-        functionCallReturn.getNetworks().add(tmp);
-        filter1.setGreenOut(tmp);
-        filter2.setGreenOut(tmp);
-        filter3.setGreenIn(tmp);
+            var filter3 = ArithmeticCombinator.copying();
+            functionCallReturn.getCombinators().add(filter3);
 
-        var outputGate = DeciderCombinator.withLeftRight(Accessor.signal(Constants.CONTROL_FLOW_SIGNAL), Accessor.constant(0), Writer.everything(false), DeciderOperator.NEQ);
-        functionCallReturn.getCombinators().add(outputGate);
+            tmp = new NetworkGroup();
+            functionCallReturn.getNetworks().add(tmp);
+            filter1.setGreenOut(tmp);
+            filter2.setGreenOut(tmp);
+            filter3.setGreenIn(tmp);
 
-        tmp = new NetworkGroup();
-        functionCallReturn.getNetworks().add(tmp);
-        outputGate.setGreenIn(tmp);
-        preCallStateOutputGate.setGreenOut(tmp);
-        filter3.setGreenOut(tmp);
+            var outputGate = DeciderCombinator.withLeftRight(Accessor.signal(Constants.CONTROL_FLOW_SIGNAL), Accessor.constant(0), Writer.everything(false), DeciderOperator.NEQ);
+            functionCallReturn.getCombinators().add(outputGate);
 
-        var c8 = new ConstantCombinator(Map.of(Constants.TEMP_SIGNAL, 1));
-        functionCallReturn.getCombinators().add(c8);
-        tmp = new NetworkGroup();
-        functionCallReturn.getNetworks().add(tmp);
-        c8.setRedOut(tmp);
-        outputGate.setRedIn(tmp);
-        outputGate.setGreenOut(functionCallReturn.getOutput());
+            tmp = new NetworkGroup();
+            functionCallReturn.getNetworks().add(tmp);
+            outputGate.setGreenIn(tmp);
+            preCallStateOutputGate.setGreenOut(tmp);
+            filter3.setGreenOut(tmp);
 
-        NetworkGroup argumentsIn = new NetworkGroup();
-        functionCallInput.getNetworks().add(argumentsIn);
+            var c8 = new ConstantCombinator(Map.of(Constants.TEMP_SIGNAL, 1));
+            functionCallReturn.getCombinators().add(c8);
+            tmp = new NetworkGroup();
+            functionCallReturn.getNetworks().add(tmp);
+            c8.setRedOut(tmp);
+            outputGate.setRedIn(tmp);
+            outputGate.setGreenOut(functionCallReturn.getOutput());
 
-        inputGateFunctionArguments.setGreenIn(argumentsIn);
+            NetworkGroup argumentsIn = new NetworkGroup();
+            functionCallInput.getNetworks().add(argumentsIn);
 
-        var functionCallIdCombinator = new ConstantCombinator(Map.of(Constants.FUNCTION_IDENTIFIER, targetFunction.getSignature().getFunctionId()));
-        functionCallInput.getCombinators().add(functionCallIdCombinator);
-        functionCallIdCombinator.setGreenOut(argumentsIn);
+            inputGateFunctionArguments.setGreenIn(argumentsIn);
 
-        var accessorTmp = currentFunctionContext.getControlFlowVariable().createVariableAccessor();
-        functionCallInput.getAccessors().add(accessorTmp);
-        accessorTmp.access(totalDelay).accept(argumentsIn, functionCallInput);
+            var functionCallIdCombinator = new ConstantCombinator(Map.of(Constants.FUNCTION_IDENTIFIER, targetFunction.getSignature().getFunctionId()));
+            functionCallInput.getCombinators().add(functionCallIdCombinator);
+            functionCallIdCombinator.setGreenOut(argumentsIn);
 
-        for(var variable : currentFunctionContext.getVariableScope().getAllVariables().values()) {
-            var accessor = variable.createVariableAccessor();
-            functionCallInput.getAccessors().add(accessor);
-            accessor.access(totalDelay).accept(functionCallInput);
-        }
+            var accessorTmp = currentFunctionContext.getControlFlowVariable().createVariableAccessor();
+            functionCallInput.getAccessors().add(accessorTmp);
+            accessorTmp.access(totalDelay).accept(argumentsIn, functionCallInput);
 
-        for(int i = 0; i < arguments.length; i++) {
-            FactorioSignal[] targetSignal = targetFunction.getSignature().getParameters()[i].getSignal();
-
-            Symbol argument = arguments[i];
-            if(argument instanceof Constant) {
-                int[] vals = ((Constant) argument).getVal();
-                Map<FactorioSignal, Integer> constants = new HashMap<>();
-                for(int j = 0; j < vals.length; j++) {
-                    constants.put(targetSignal[j], vals[j]);
-                }
-                ConstantCombinator combinator = new ConstantCombinator(constants);
-                functionCallInput.getCombinators().add(combinator);
-                combinator.setGreenOut(argumentsIn);
+            for (var variable : currentFunctionContext.getVariableScope().getAllVariables().values()) {
+                var accessor = variable.createVariableAccessor();
+                functionCallInput.getAccessors().add(accessor);
+                accessor.access(totalDelay).accept(functionCallInput);
             }
-            else {
-                Variable var = (Variable) argument;
-                for(int j = 0; j < var.getSignal().length; j++) {
-                    if(var.getSignal()[j] == targetSignal[j]) {
-                        var accessor = var.createVariableAccessor();
-                        functionCallInput.getAccessors().add(accessor);
-                        accessor.access(totalDelay).accept(argumentsIn, functionCallInput);
+
+            for (int i = 0; i < arguments.length; i++) {
+                FactorioSignal[] targetSignal = targetFunction.getSignature().getParameters()[i].getSignal();
+
+                Symbol argument = arguments[i];
+                if (argument instanceof Constant) {
+                    int[] vals = ((Constant) argument).getVal();
+                    Map<FactorioSignal, Integer> constants = new HashMap<>();
+                    for (int j = 0; j < vals.length; j++) {
+                        constants.put(targetSignal[j], vals[j]);
                     }
-                    else {
-                        log("Remapping combinator for " + var.getSignal()[j] + " -> " + targetSignal[j]);
-                        NetworkGroup paramRemapIn = new NetworkGroup();
-                        functionCallInput.getNetworks().add(paramRemapIn);
-                        var accessor = var.createVariableAccessor();
-                        functionCallInput.getAccessors().add(accessor);
-                        accessor.access(totalDelay - 1).accept(paramRemapIn, functionCallInput);
-                        ArithmeticCombinator arithmeticCombinator = ArithmeticCombinator.remapping(argument.getSignal()[j], targetSignal[j]);
-                        functionCallInput.getCombinators().add(arithmeticCombinator);
-                        arithmeticCombinator.setGreenIn(paramRemapIn);
-                        arithmeticCombinator.setGreenOut(argumentsIn);
+                    ConstantCombinator combinator = new ConstantCombinator(constants);
+                    functionCallInput.getCombinators().add(combinator);
+                    combinator.setGreenOut(argumentsIn);
+                } else {
+                    Variable var = (Variable) argument;
+                    for (int j = 0; j < var.getSignal().length; j++) {
+                        if (var.getSignal()[j] == targetSignal[j]) {
+                            var accessor = var.createVariableAccessor();
+                            functionCallInput.getAccessors().add(accessor);
+                            accessor.access(totalDelay).accept(argumentsIn, functionCallInput);
+                        } else {
+                            log("Remapping combinator for " + var.getSignal()[j] + " -> " + targetSignal[j]);
+                            NetworkGroup paramRemapIn = new NetworkGroup();
+                            functionCallInput.getNetworks().add(paramRemapIn);
+                            var accessor = var.createVariableAccessor();
+                            functionCallInput.getAccessors().add(accessor);
+                            accessor.access(totalDelay - 1).accept(paramRemapIn, functionCallInput);
+                            ArithmeticCombinator arithmeticCombinator = ArithmeticCombinator.remapping(argument.getSignal()[j], targetSignal[j]);
+                            functionCallInput.getCombinators().add(arithmeticCombinator);
+                            arithmeticCombinator.setGreenIn(paramRemapIn);
+                            arithmeticCombinator.setGreenOut(argumentsIn);
+                        }
                     }
                 }
             }
+
+            for (var defined : currentFunctionContext.getVariableScope().getAllVariables().entrySet()) {
+                var v = defined.getValue();
+                var rebound = currentFunctionContext.createNamedVariable(defined.getKey(), v.getType(), v.getSignal(), functionCallReturn);
+                rebound.setDelay(0);
+                log("Rebinding " + v + " " + defined.getKey() + " as " + rebound);
+            }
+            currentFunctionContext.clearFunctionCallSlotReservations();
+
+            var returnType = targetFunction.getSignature().getReturnType();
+            var functionReturnVal = currentFunctionContext.createBoundTempVariable(returnType, targetFunction.getSignature().getReturnSignals(), functionCallReturn);
+            functionReturnVal.setDelay(0);
+            log("Function return value: " + functionReturnVal);
+        }
+        else {
+            var controlFlowVar = currentFunctionContext.getControlFlowVariable();
+
+            int functionCallTime = currentFunctionContext.reserveFunctionCallSlot(Math.max(argumentDelay, controlFlowVar.getTickDelay()) + 1, targetFunction.getSignature().getConstantDelay());
+            log("Reserved slot " + functionCallTime + ", " + (functionCallTime + targetFunction.getSignature().getConstantDelay()));
+
+            CombinatorGroup functionCallGroup = new CombinatorGroup(new NetworkGroup(), new NetworkGroup());
+            currentFunctionContext.getFunctionGroup().getSubGroups().add(functionCallGroup);
+
+            var functionOutGate = DeciderCombinator.withLeftRight(Accessor.signal(Constants.CONTROL_FLOW_SIGNAL), Accessor.constant(0), Writer.everything(false), DeciderOperator.NEQ);
+            var functionIdConstant = new ConstantCombinator(Map.of(Constants.FUNCTION_IDENTIFIER, targetFunction.getSignature().getFunctionId()));
+            functionCallGroup.getCombinators().add(functionOutGate);
+            functionCallGroup.getCombinators().add(functionIdConstant);
+
+            NetworkGroup tmp = new NetworkGroup();
+            functionCallGroup.getNetworks().add(tmp);
+            functionIdConstant.setRedOut(tmp);
+            functionOutGate.setRedIn(tmp);
+
+            functionOutGate.setGreenIn(functionCallGroup.getInput());
+
+            functionOutGate.setGreenOut(currentFunctionContext.getFunctionCallOutputGroup());
+
+            var cfAccessor = controlFlowVar.createVariableAccessor();
+            currentFunctionContext.getFunctionGroup().getAccessors().add(cfAccessor);
+            cfAccessor.access(functionCallTime - 1).accept(functionCallGroup);
+
+            for (int i = 0; i < arguments.length; i++) {
+                FactorioSignal[] targetSignal = targetFunction.getSignature().getParameters()[i].getSignal();
+
+                Symbol argument = arguments[i];
+                if (argument instanceof Constant) {
+                    int[] vals = ((Constant) argument).getVal();
+                    Map<FactorioSignal, Integer> constants = new HashMap<>();
+                    for (int j = 0; j < vals.length; j++) {
+                        constants.put(targetSignal[j], vals[j]);
+                    }
+                    ConstantCombinator combinator = new ConstantCombinator(constants);
+                    functionCallGroup.getCombinators().add(combinator);
+                    combinator.setGreenOut(functionCallGroup.getInput());
+                } else {
+                    Variable var = (Variable) argument;
+                    for (int j = 0; j < var.getSignal().length; j++) {
+                        if (var.getSignal()[j] == targetSignal[j]) {
+                            var accessor = var.createVariableAccessor();
+                            functionCallGroup.getAccessors().add(accessor);
+                            accessor.access(functionCallTime - 1).accept(functionCallGroup);
+                        } else {
+                            log("Remapping combinator for " + var.getSignal()[j] + " -> " + targetSignal[j]);
+                            NetworkGroup paramRemapIn = new NetworkGroup();
+                            functionCallGroup.getNetworks().add(paramRemapIn);
+                            var accessor = var.createVariableAccessor();
+                            functionCallGroup.getAccessors().add(accessor);
+                            accessor.access(functionCallTime - 2).accept(paramRemapIn, functionCallGroup);
+                            ArithmeticCombinator arithmeticCombinator = ArithmeticCombinator.remapping(argument.getSignal()[j], targetSignal[j]);
+                            functionCallGroup.getCombinators().add(arithmeticCombinator);
+                            arithmeticCombinator.setGreenIn(paramRemapIn);
+                            arithmeticCombinator.setGreenOut(functionCallGroup.getInput());
+                        }
+                    }
+                }
+            }
+
+            var returnSignalColorMapper = ArithmeticCombinator.copying();
+            functionCallGroup.getCombinators().add(returnSignalColorMapper);
+            returnSignalColorMapper.setRedIn(currentFunctionContext.getFunctionCallReturnGroup());
+            returnSignalColorMapper.setGreenOut(functionCallGroup.getOutput());
+
+            var returnType = targetFunction.getSignature().getReturnType();
+            currentFunctionContext.createBoundTempVariable(returnType, targetFunction.getSignature().getReturnSignals(), functionCallGroup).setDelay(functionCallTime + targetFunction.getSignature().getConstantDelay());
         }
 
-        for(var defined : currentFunctionContext.getVariableScope().getAllVariables().entrySet()) {
-            var v = defined.getValue();
-            var rebound = currentFunctionContext.createNamedVariable(defined.getKey(), v.getType(), v.getSignal(), functionCallReturn);
-            rebound.setDelay(0);
-            log("Rebinding " + v + " " + defined.getKey() + " as " + rebound);
-        }
 
-        var returnType = targetFunction.getSignature().getReturnType();
-        var functionReturnVal = currentFunctionContext.createBoundTempVariable(returnType, targetFunction.getSignature().getReturnSignals(), functionCallReturn);
-        functionReturnVal.setDelay(0);
-        log("Function return value: " + functionReturnVal);
+        //Constant time functions
+        //1. Track ticks in which constant functions are being called/will return
+        //2. Schedule constant time functions so that they never clash
+        //3. If an async function is called, we automatically wait for all variables. (Take this into account if we implement void). Reset tick tracker together with variable delays.
 
         //Example of "functions"
         //0eNrtWllu2zAQvQs/WyUQqc0S0I+kvUURGIpMx0RtyaCooEagA/QWPVtPUtJKbNlayJGXOHV/AjiSRuS8eW8W8QU9zgu65CwVKHpBLMnSHEXfX1DOntJ4rv4nVkuKIsQEXSALpfFC/Yo5E7MFFSy5SbLFI0tjkXFUWoilE/oTRbi0tDYmNGETytsNkPLBQjQVTDBarWj9YzVOi8Uj5fINmrVYaJnl8uksVQtQFn0LrVB0E/i3nnzPhHGaVJeJheS+Bc/m40c6i5+ZfFw+s7U7lpcna1u5ujBlPBfjxu6eGReF/M9mYdUdN3dqWzlVNswfulcPZUvK42qN6JO8JSvEsgC8+Ssqy3K9ubTa63r5WP154pSmdb+yCYoceS/jScHE+icuH+TTxPR2CZl6XQMpMhgp98xIJTOa/KihpdggYkUNexeMzwPAeDV+VkCsncte01obXs5gvLwPyawhYH4DAon3Xb+LDOm/7DaJ1hcGpD8MsBlt3T6hbsaA5Ooba8t21F/NmEFumG62DFXBnS2WMV9fitCXAajSZ8pXYsbSp8r2ciUXW6RiPOXZYsxSaQxFghcUhj2Qtl289MC8DHYwqfHSPS0vaZzMTiWjlW0QAKSTPpxOWtFqc78P48No43vvGHzQpqwdJ+8w4c+v3+/BhRbfBqqoa4VopJGs0Eyzgs0u3tzRD1K4AYncdsE0ZXNBeUdV3OU9lk6zym+FggTXCuMHc3/5ZsIwAgvDNjid8qqkAANTqSECITDu8Mb/+KRxd2MSeO2Oss12ru6DyCJ53be9Xyr6H1Ekt+4+hjziZqLqkMuwP4X5pnb2dbVRlxq2DHjbjeeLeC6pOZf75VKGltmctoSBtyGA/UYAEw95mjTRqKO7Nu727xsHZvkGE1j0bwsybFSQnSr61zL47tVyV/XVE9m2KcDYNYxceLcb7oB4xclT19e0JdtWDNwDCphTY9A9E1LJ9dAJ3ZChEHY04kVgNQ7WjI1GhkyC96fOG4p+eH0ojjSpFwNRHBmSDdjHEi1GR0lScVpPJWet0qbxPAflKL+fLwQ2b/A1bLYNcQ3A9PMugH5K+y+Dfhp6NXAx5Ru8O3fPhsulFRgerCzXgqbrF0zL/HDg7O+0mrnVtXoyu8i6nnjGLal9kgkNsYEjGnuDoX/cEc1dbT7jaD6YG7R0aztu7bs5xM59qw1HgcPysXJGlRwhw3ZTQPAB5WJwdeUi0XzUI+5h0og19jo/7pOh5WRwXmm0L1UZdcD6kGqSaL4kN6vNLh0m2JDHDiwAvPMEwMlGvjXD8G6i3dMufAjb+/nflLruAZVp8M9Wpm2sCgA02QMPeISn2fb32+sE1xs4mf6vy9CKlTjwDr5HwXU9UGioy4PnPFd6XqEdWxuYbjvAgB5M2AqtO6z7MD4/VbwenhpyPoG0fmRRzYN6e1Q7W2whCU9enQkcYTcISeD4rms7pCz/AvsiUOs=
@@ -1015,7 +1103,11 @@ public class Generator extends LanguageBaseListener {
 
         parser = new LanguageParser(new CommonTokenStream(new LanguageLexer(CharStreams.fromString(code))));
 
-        var generator = new Generator(structureParser.getFunctions());
+        var functionMap = new HashMap<>(structureParser.getFunctions());
+        functionMap.put("test", new FunctionContext(new FunctionSignature("test", new FunctionParameter[]{new FunctionParameter("a", PrimitiveType.INT, new FactorioSignal[]{FactorioSignal.SIGNAL_C})}, PrimitiveType.INT, new FactorioSignal[]{FactorioSignal.SIGNAL_C}, 2)));
+        functionMap.get("test").setFunctionHeader(new CombinatorGroup(new NetworkGroup(), new NetworkGroup()));
+
+        var generator = new Generator(functionMap);
 
         parser.addParseListener(generator);
         parser.file();
@@ -1080,6 +1172,6 @@ public class Generator extends LanguageBaseListener {
     }
 
     public static void main(String[] args) {
-        generateBlueprint(TEST);
+        System.out.println(generateBlueprint(TEST));
     }
 }

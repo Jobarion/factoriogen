@@ -30,6 +30,7 @@ public class SimulatedAnnealingSolver {
 //    }
 
     public static void simulatedAnnealing(List<Node> nodes, int maxSteps) {
+        if(nodes.size() <= 1) return;
         var matrix = getDistanceMatrix(nodes);
         double currentEnergy = calculateEnergy(matrix);
 

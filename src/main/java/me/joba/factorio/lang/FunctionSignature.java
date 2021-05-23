@@ -14,12 +14,26 @@ public class FunctionSignature {
     private final Type returnType;
     private final FactorioSignal[] returnSignals;
     private final int functionId = currentFunctionId++;
+    private final int constantDelay;
 
     public FunctionSignature(String name, FunctionParameter[] parameters, Type returnType, FactorioSignal[] returnSignals) {
+        this(name, parameters, returnType, returnSignals, -1);
+    }
+
+    public FunctionSignature(String name, FunctionParameter[] parameters, Type returnType, FactorioSignal[] returnSignals, int delay) {
         this.name = name;
         this.parameters = parameters;
         this.returnType = returnType;
         this.returnSignals = returnSignals;
+        this.constantDelay = delay;
+    }
+
+    public boolean isConstantDelay() {
+        return constantDelay >= 0;
+    }
+
+    public int getConstantDelay() {
+        return constantDelay;
     }
 
     public String getName() {

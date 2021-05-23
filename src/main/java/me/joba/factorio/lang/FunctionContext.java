@@ -24,6 +24,8 @@ public class FunctionContext {
     private final FunctionSignature functionSignature;
     private final NetworkGroup functionCallOutput;
     private final NetworkGroup functionCallReturn;
+    private final Set<Integer> takenFunctionCallSendSlots = new HashSet<>();
+    private final Set<Integer> takenFunctionCallReturnSlots = new HashSet<>();
 
     public FunctionContext(FunctionSignature functionSignature) {
         this.functionSignature = functionSignature;
@@ -57,6 +59,22 @@ public class FunctionContext {
                 }
             }
         }
+    }
+
+    public void clearFunctionCallSlotReservations() {
+        takenFunctionCallSendSlots.clear();
+        takenFunctionCallReturnSlots.clear();
+    }
+
+    public int reserveFunctionCallSlot(int earliestStartTime, int functionCallDuration) {
+        for(;;earliestStartTime++) {
+            if(!takenFunctionCallSendSlots.contains(earliestStartTime) && !takenFunctionCallReturnSlots.contains(earliestStartTime + functionCallDuration)) {
+                break;
+            }
+        }
+        takenFunctionCallSendSlots.add(earliestStartTime);
+        takenFunctionCallReturnSlots.add(earliestStartTime + functionCallDuration);
+        return earliestStartTime;
     }
 
     public void setFunctionHeader(CombinatorGroup functionHeader) {

@@ -104,8 +104,9 @@ public class FunctionPlacer {
                         .map(x -> (Substation)x)
                         .sorted(Comparator.comparingInt((ToIntFunction<Substation>) Entity::getX).thenComparingInt(Entity::getY))
                         .findFirst()
-                        .orElseThrow(() -> new RuntimeException("Function blocks doesn't contain a substation"))
                 )
+                .filter(Optional::isPresent)
+                .map(Optional::get)
                 .sorted(Comparator.comparingInt(Entity::getX))
                 .collect(Collectors.toList());
         List<CircuitNetworkEntity> powerPoles = new ArrayList<>();
@@ -212,7 +213,7 @@ public class FunctionPlacer {
     }
 
     private static List<CircuitNetworkEntity> generateSubstations(List<CircuitNetworkEntity> combinators, NetworkGroup functionCallOutGroup, NetworkGroup functionCallReturnGroup) {
-
+        if(combinators.isEmpty()) return Collections.emptyList();
         int maxX = Integer.MIN_VALUE;
         int maxY = Integer.MIN_VALUE;
         for(var cne : combinators) {
