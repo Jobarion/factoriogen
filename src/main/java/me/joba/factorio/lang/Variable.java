@@ -1,7 +1,7 @@
 
 package me.joba.factorio.lang;
 
-import me.joba.factorio.Accessor;
+import me.joba.factorio.CombinatorIn;
 import me.joba.factorio.CombinatorGroup;
 import me.joba.factorio.lang.types.Type;
 
@@ -38,12 +38,12 @@ public class Variable extends Symbol {
     }
 
     @Override
-    public Accessor[] toAccessor() {
+    public CombinatorIn[] toAccessor() {
         if(getSignal() == null) throw new UnsupportedOperationException("Variable not bound");
-        var accessors = new Accessor[getType().getSize()];
+        var accessors = new CombinatorIn[getType().getSize()];
         var signals = getSignal();
         for(int i = 0; i < accessors.length; i++) {
-            accessors[i] = Accessor.signal(signals[i]);
+            accessors[i] = CombinatorIn.signal(signals[i]);
         }
         return accessors;
     }

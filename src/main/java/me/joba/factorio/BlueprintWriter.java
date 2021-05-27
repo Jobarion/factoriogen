@@ -1,13 +1,10 @@
 package me.joba.factorio;
 
 import me.joba.factorio.game.EntityBlock;
-import me.joba.factorio.game.entities.ArithmeticCombinator;
-import me.joba.factorio.game.entities.ConstantCombinator;
 import me.joba.factorio.graph.FunctionPlacer;
 import me.joba.factorio.graph.MSTSolver;
 import me.joba.factorio.graph.Tuple;
-import me.joba.factorio.lang.FactorioSignal;
-import me.joba.factorio.lang.Memory;
+import me.joba.factorio.lang.MemoryUtil;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
@@ -29,7 +26,7 @@ public class BlueprintWriter {
 //
 //        EntityBlock eb = new EntityBlock(Arrays.asList(e1, e2));
 //        System.out.println(writeBlueprint(Arrays.asList(eb)));
-        var cg = Memory.generateMemoryController(100, new NetworkGroup(), new NetworkGroup(), new NetworkGroup());
+        var cg = MemoryUtil.generateMemoryController(100, new NetworkGroup(), new NetworkGroup(), new NetworkGroup());
 
         Set<CombinatorGroup> generatedGroups = new HashSet<>();
         Queue<CombinatorGroup> toExpand = new LinkedList<>();

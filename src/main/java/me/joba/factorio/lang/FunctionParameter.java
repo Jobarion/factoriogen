@@ -8,7 +8,7 @@ public class FunctionParameter {
     private final Type type;
     private FactorioSignal[] signal;
 
-    public FunctionParameter(String name, Type type, FactorioSignal[] signal) {
+    public FunctionParameter(String name, Type type, FactorioSignal... signal) {
         this.name = name;
         this.type = type;
         this.signal = signal;

@@ -12,7 +12,7 @@ import java.util.Stack;
 
 public class FunctionContext {
 
-    public static final String CONTROL_FLOW_VAR_NAME = "$CONTROL_FLOW";
+    public static final String CONTROL_FLOW_VAR_NAME = "__internal__CONTROL_FLOW";
 
     private int variableIdCounter = 0;
     private Set<FactorioSignal> freeBindings;
@@ -64,6 +64,16 @@ public class FunctionContext {
     public void clearFunctionCallSlotReservations() {
         takenFunctionCallSendSlots.clear();
         takenFunctionCallReturnSlots.clear();
+    }
+
+    public int reserveVoidFunctionCallSlot(int earliestStartTime) {
+        for(;;earliestStartTime++) {
+            if(!takenFunctionCallSendSlots.contains(earliestStartTime)) {
+                break;
+            }
+        }
+        takenFunctionCallSendSlots.add(earliestStartTime);
+        return earliestStartTime;
     }
 
     public int reserveFunctionCallSlot(int earliestStartTime, int functionCallDuration) {

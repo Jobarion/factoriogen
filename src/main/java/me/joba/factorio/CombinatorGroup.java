@@ -22,14 +22,6 @@ public class CombinatorGroup {
         if(output != null && input != output) this.networks.add(output);
     }
 
-    public String getCorrespondingCode() {
-        return correspondingCode;
-    }
-
-    public void setCorrespondingCode(String correspondingCode) {
-        this.correspondingCode = correspondingCode;
-    }
-
     public List<CircuitNetworkEntity> getCombinators() {
         return combinators;
     }

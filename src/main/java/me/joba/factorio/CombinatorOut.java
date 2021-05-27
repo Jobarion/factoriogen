@@ -3,13 +3,13 @@ package me.joba.factorio;
 import me.joba.factorio.lang.FactorioSignal;
 import org.json.simple.JSONObject;
 
-public interface Writer {
+public interface CombinatorOut {
 
     boolean isConstant();
     JSONObject toJson();
 
-    static Writer one(FactorioSignal outSignal) {
-        return new Writer() {
+    static CombinatorOut one(FactorioSignal outSignal) {
+        return new CombinatorOut() {
             @Override
             public boolean isConstant() {
                 return true;
@@ -25,8 +25,8 @@ public interface Writer {
         };
     }
 
-    static Writer fromInput(FactorioSignal outSignal) {
-        return new Writer() {
+    static CombinatorOut fromInput(FactorioSignal outSignal) {
+        return new CombinatorOut() {
 
             @Override
             public boolean isConstant() {
@@ -43,8 +43,8 @@ public interface Writer {
         };
     }
 
-    static Writer everything(boolean one) {
-        return new Writer() {
+    static CombinatorOut everything(boolean one) {
+        return new CombinatorOut() {
 
             @Override
             public boolean isConstant() {

@@ -1,7 +1,7 @@
 package me.joba.factorio.game.entities;
 
-import me.joba.factorio.Accessor;
-import me.joba.factorio.Writer;
+import me.joba.factorio.CombinatorIn;
+import me.joba.factorio.CombinatorOut;
 import me.joba.factorio.lang.FactorioSignal;
 import org.json.simple.JSONObject;
 
@@ -20,7 +20,7 @@ public class DeciderCombinator extends IOCircuitNetworkEntity {
         json.put("control_behavior", controlBehavior);
     }
 
-    public static DeciderCombinator withLeftRight(Accessor left, Accessor right, Writer out, DeciderOperator operator) {
+    public static DeciderCombinator withLeftRight(CombinatorIn left, CombinatorIn right, CombinatorOut out, DeciderOperator operator) {
         JSONObject cbehavior = new JSONObject();
         JSONObject conds = new JSONObject();
         cbehavior.put("decider_conditions", conds);
@@ -37,7 +37,7 @@ public class DeciderCombinator extends IOCircuitNetworkEntity {
         return new DeciderCombinator(cbehavior);
     }
 
-    public static DeciderCombinator withEach(Accessor right, FactorioSignal outSignal, boolean one, DeciderOperator operator) {
+    public static DeciderCombinator withEach(CombinatorIn right, FactorioSignal outSignal, boolean one, DeciderOperator operator) {
         JSONObject cbehavior = new JSONObject();
         JSONObject conds = new JSONObject();
         cbehavior.put("decider_conditions", conds);
@@ -60,7 +60,7 @@ public class DeciderCombinator extends IOCircuitNetworkEntity {
         return new DeciderCombinator(cbehavior);
     }
 
-    public static DeciderCombinator withEach(Accessor right, boolean one, DeciderOperator operator) {
+    public static DeciderCombinator withEach(CombinatorIn right, boolean one, DeciderOperator operator) {
         JSONObject cbehavior = new JSONObject();
         JSONObject conds = new JSONObject();
         cbehavior.put("decider_conditions", conds);
@@ -83,7 +83,7 @@ public class DeciderCombinator extends IOCircuitNetworkEntity {
         return new DeciderCombinator(cbehavior);
     }
 
-    public static DeciderCombinator withAny(Accessor right, Writer out, DeciderOperator operator) {
+    public static DeciderCombinator withAny(CombinatorIn right, CombinatorOut out, DeciderOperator operator) {
         JSONObject cbehavior = new JSONObject();
         JSONObject conds = new JSONObject();
         cbehavior.put("decider_conditions", conds);
@@ -103,7 +103,7 @@ public class DeciderCombinator extends IOCircuitNetworkEntity {
         return new DeciderCombinator(cbehavior);
     }
 
-    public static DeciderCombinator withEvery(Accessor right, Writer out, DeciderOperator operator) {
+    public static DeciderCombinator withEvery(CombinatorIn right, CombinatorOut out, DeciderOperator operator) {
         JSONObject cbehavior = new JSONObject();
         JSONObject conds = new JSONObject();
         cbehavior.put("decider_conditions", conds);

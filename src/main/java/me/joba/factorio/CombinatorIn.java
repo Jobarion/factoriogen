@@ -3,13 +3,13 @@ package me.joba.factorio;
 import me.joba.factorio.lang.FactorioSignal;
 import org.json.simple.JSONObject;
 
-public interface Accessor {
+public interface CombinatorIn {
 
     boolean isConstant();
     Object toJson();
 
-    static Accessor constant(int val) {
-        return new Accessor() {
+    static CombinatorIn constant(int val) {
+        return new CombinatorIn() {
             @Override
             public boolean isConstant() {
                 return true;
@@ -22,8 +22,8 @@ public interface Accessor {
         };
     }
 
-    static Accessor signal(FactorioSignal sid) {
-        return new Accessor() {
+    static CombinatorIn signal(FactorioSignal sid) {
+        return new CombinatorIn() {
             @Override
             public boolean isConstant() {
                 return false;

@@ -1,10 +1,22 @@
 grammar Language;
 
-file: function+;
+file: arrayDeclaration* function+;
 
-function: functionHeader block;
-functionHeader: 'function ' name=functionName '(' functionParams ')' '->' returnType=type;
-functionParams: functionParam (',' functionParam)*;
+function
+    : functionHeader block
+    | functionHeader ';';
+
+functionHeader: 'function ' functionModifiers? name=functionName '(' functionParams ')' '->' returnType=type;
+functionModifiers
+    :
+    | '[' functionModifier (',' functionModifier)* ']';
+
+functionModifier
+    : key='pipelined'
+    | key='native'
+    | key='delay' '=' intLiteral;
+
+functionParams: (functionParam (',' functionParam)*)?;
 functionParam: varName ':' type ('<' signalName '>')?;
 
 block: '{' statement+ '}';
@@ -12,12 +24,15 @@ block: '{' statement+ '}';
 statement
     : block
     | assignment ';'
+    | arrayAssignment ';'
     | ifExpr
     | whileExpr
     | returnStatement ';'
+    | functionCall ';'
     ;
 
 assignment: var=varName '=' x=expr;
+arrayAssignment: var=varName '[' index=expr ']' '=' x=expr;
 
 ifExpr: 'if' '(' ifCond=boolExpr ')' ifPart=ifStatement ('else' elsePart=elseStatement)?;
 elseStatement: statement;
@@ -44,6 +59,7 @@ expr
     | numberLit=intLiteral
     | call=functionCall
     | var=varName
+    | array=expr '[' index=expr ']'
     ;
 
 exprList: expr (',' expr)+;
@@ -57,8 +73,11 @@ boolExpr
 type
     : singleType=TypeName
     | '(' typeList ')'
+    | arrayType=type '[]'
     ;
 typeList: type (',' type)+;
+
+arrayDeclaration: type '[' intLiteral ']' varName ';';
 
 intLiteral: '-'? NumberCharacter+;
 varName: NameCharacterFirst (NameCharacterFirst|NameCharacterRest|NumberCharacter)*;
@@ -68,7 +87,7 @@ signalName: (NameCharacterFirst|NameCharacterRest|NumberCharacter)+;
 NameCharacterFirst: [a-zA-Z];
 NameCharacterRest: [A-Z_];
 NumberCharacter: [0-9];
-TypeName: 'int'|'boolean';
+TypeName: 'int'|'boolean'|'void';
 
 ADD: '+';
 SUB: '-';

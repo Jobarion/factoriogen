@@ -12,8 +12,6 @@ public class Node {
 
     public Node(int id, Set<Integer> neighbors) {
         this.id = id;
-        this.x = x;
-        this.y = y;
         this.neighbors = neighbors;
     }
 

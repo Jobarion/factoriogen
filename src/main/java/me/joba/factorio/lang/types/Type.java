@@ -20,6 +20,9 @@ public interface Type {
             }
             return new TupleType(types);
         }
+        else if(ctx.arrayType != null) {
+            return new ArrayType(parseType(ctx.arrayType));
+        }
         else {
             throw new UnsupportedOperationException("Unsupported return type");
         }

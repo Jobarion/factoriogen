@@ -1,9 +1,7 @@
 package me.joba.factorio.lang.expr;
 
 import me.joba.factorio.CombinatorGroup;
-import me.joba.factorio.Writer;
-import me.joba.factorio.game.entities.ArithmeticCombinator;
-import me.joba.factorio.game.entities.ArithmeticOperator;
+import me.joba.factorio.CombinatorOut;
 import me.joba.factorio.game.entities.DeciderCombinator;
 import me.joba.factorio.game.entities.DeciderOperator;
 import me.joba.factorio.lang.*;
@@ -14,7 +12,7 @@ import java.util.Optional;
 public class ComparisonExpressionResolver extends ExpressionResolver<LanguageParser.BoolExprContext, DeciderOperator> {
 
     public ComparisonExpressionResolver() {
-        super(PrimitiveType.INT, PrimitiveType.INT, PrimitiveType.BOOLEAN);
+        super(PrimitiveType.BOOLEAN, PrimitiveType.INT, PrimitiveType.INT);
     }
 
     @Override
@@ -36,7 +34,7 @@ public class ComparisonExpressionResolver extends ExpressionResolver<LanguagePar
             symbols[0] = tmp;
             operation = operation.getInverted();
         }
-        var connected = DeciderCombinator.withLeftRight(symbols[0].toAccessor()[0],  symbols[1].toAccessor()[0], Writer.one(outSymbol[0]), operation);
+        var connected = DeciderCombinator.withLeftRight(symbols[0].toAccessor()[0],  symbols[1].toAccessor()[0], CombinatorOut.one(outSymbol[0]), operation);
         connected.setGreenIn(group.getInput());
         connected.setGreenOut(group.getOutput());
         group.getCombinators().add(connected);

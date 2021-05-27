@@ -15,17 +15,24 @@ public class FunctionSignature {
     private final FactorioSignal[] returnSignals;
     private final int functionId = currentFunctionId++;
     private final int constantDelay;
+    private final boolean pipelined, isNative;
 
-    public FunctionSignature(String name, FunctionParameter[] parameters, Type returnType, FactorioSignal[] returnSignals) {
-        this(name, parameters, returnType, returnSignals, -1);
-    }
-
-    public FunctionSignature(String name, FunctionParameter[] parameters, Type returnType, FactorioSignal[] returnSignals, int delay) {
+    public FunctionSignature(String name, FunctionParameter[] parameters, Type returnType, FactorioSignal[] returnSignals, int delay, boolean pipelined, boolean isNative) {
         this.name = name;
         this.parameters = parameters;
         this.returnType = returnType;
         this.returnSignals = returnSignals;
         this.constantDelay = delay;
+        this.pipelined = pipelined;
+        this.isNative = isNative;
+    }
+
+    public boolean isPipelined() {
+        return pipelined;
+    }
+
+    public boolean isNative() {
+        return isNative;
     }
 
     public boolean isConstantDelay() {
@@ -62,6 +69,43 @@ public class FunctionSignature {
         for(var param : parameters) {
             paramJoiner.add(param.getName() + ": " + param.getType() + "<" + Arrays.toString(param.getSignal()) + ">");
         }
-        return name + "(" + paramJoiner + ") -> " + returnType;
+
+        return name + "(" + paramJoiner + ") -> " + returnType + "<" + Arrays.toString(returnSignals) + ">";
+    }
+
+    public static class Builder {
+
+        private final String name;
+        private final FunctionParameter[] parameters;
+        private final Type returnType;
+        private final FactorioSignal[] returnSignals;
+        private int constantDelay = -1;
+        private boolean pipelined = false, isNative = false;
+
+        public Builder(String name, FunctionParameter[] parameters, Type returnType, FactorioSignal[] returnSignals) {
+            this.name = name;
+            this.parameters = parameters;
+            this.returnType = returnType;
+            this.returnSignals = returnSignals;
+        }
+
+        public Builder withDelay(int delay) {
+            this.constantDelay = delay;
+            return this;
+        }
+
+        public Builder asPipelined(boolean isPipelined) {
+            this.pipelined = isPipelined;
+            return this;
+        }
+
+        public Builder asNative(boolean isNative) {
+            this.isNative = isNative;
+            return this;
+        }
+
+        public FunctionSignature build() {
+            return new FunctionSignature(name, parameters, returnType, returnSignals, constantDelay, pipelined, isNative);
+        }
     }
 }

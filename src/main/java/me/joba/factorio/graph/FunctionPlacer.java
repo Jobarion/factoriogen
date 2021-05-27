@@ -102,7 +102,7 @@ public class FunctionPlacer {
                 .map(block -> block.getEntities().stream()
                         .filter(x -> x instanceof Substation)
                         .map(x -> (Substation)x)
-                        .sorted(Comparator.comparingInt((ToIntFunction<Substation>) Entity::getX).thenComparingInt(Entity::getY))
+                        .sorted(Comparator.comparingInt((ToIntFunction<Substation>) Entity::getY).thenComparingInt(Entity::getX))
                         .findFirst()
                 )
                 .filter(Optional::isPresent)

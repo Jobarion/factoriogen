@@ -6,29 +6,6 @@ public class SimulatedAnnealingSolver {
 
     private static final Random RANDOM = new Random(1234); //Repeatable outcomes are nice
 
-//    public static void main(String[] args) {
-//        int nodeCount = 1000;
-//        Random random = new Random();
-//        List<Node> nodes = new ArrayList<>();
-//        boolean[][] adjacencyMatrix = new boolean[nodeCount][nodeCount];
-//        for(int i = 0; i < nodeCount; i++) {
-//            Set<Integer> neighbors = new HashSet<>();
-//            for(int x = i + 1; x < nodeCount; x++) {
-//                x += random.nextInt(nodeCount / 2);
-//                if(x >= nodeCount || random.nextBoolean()) continue;
-//                adjacencyMatrix[i][x] = true;
-//                adjacencyMatrix[x][i] = true;
-//            }
-//            for(int n = 0; n < nodeCount; n++) {
-//                if(adjacencyMatrix[i][n]) {
-//                    neighbors.add(n);
-//                }
-//            }
-//            nodes.add(new Node(i, neighbors));
-//        }
-//        simulatedAnnealing(nodes, 10000000);
-//    }
-
     public static void simulatedAnnealing(List<Node> nodes, int maxSteps) {
         if(nodes.size() <= 1) return;
         var matrix = getDistanceMatrix(nodes);

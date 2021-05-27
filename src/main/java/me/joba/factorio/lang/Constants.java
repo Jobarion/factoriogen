@@ -1,7 +1,5 @@
 package me.joba.factorio.lang;
 
-import me.joba.factorio.*;
-
 public class Constants {
 
     public static FactorioSignal CONTROL_FLOW_SIGNAL = FactorioSignal.SIGNAL_CHECK;

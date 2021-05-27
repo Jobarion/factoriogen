@@ -1,16 +1,36 @@
 package me.joba.factorio.lang;
 
+import me.joba.factorio.lang.types.ArrayType;
 import me.joba.factorio.lang.types.Type;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
 public class StructureParser extends LanguageBaseListener {
 
     private Map<String, FunctionContext> functions = new HashMap<>();
+    private Map<String, ArrayDeclaration> declaredArrays = new HashMap<>();
+    private int currentArrayAddress = 1;
 
     public Map<String, FunctionContext> getFunctions() {
         return functions;
+    }
+
+    public Map<String, ArrayDeclaration> getDeclaredArrays() {
+        return declaredArrays;
+    }
+
+    @Override
+    public void exitArrayDeclaration(LanguageParser.ArrayDeclarationContext ctx) {
+        var type = Type.parseType(ctx.type());
+        var name = ctx.varName().getText();
+        var size = Integer.parseInt(ctx.intLiteral().getText());
+
+        var declaration = new ArrayDeclaration(new ArrayType(type), currentArrayAddress, size);
+        currentArrayAddress += size * type.getSize();
+        declaredArrays.put(name, declaration);
+        System.out.println("Declared array " + name + " of type " + type + "[" + size + "] at with address range " + declaration.getAddress() + " - " + (currentArrayAddress - 1));
     }
 
     @Override
@@ -27,8 +47,19 @@ public class StructureParser extends LanguageBaseListener {
             }
             paramTypes[i] = new FunctionParameter(param.varName().getText(), type, signal == null ? null : new FactorioSignal[]{signal});
         }
-        FunctionSignature signature = new FunctionSignature(name, paramTypes, returnType, getFunctionReturnSignals(returnType));
-        FunctionContext context = new FunctionContext(signature);
+        var modifiers = ctx.functionHeader().functionModifiers().functionModifier();
+        if(modifiers == null) modifiers = Collections.emptyList();
+
+        var signatureBuilder = new FunctionSignature.Builder(name, paramTypes, returnType, getFunctionReturnSignals(returnType));
+
+        for(var modifier : modifiers) {
+            switch(modifier.key.getText()) {
+                case "native": signatureBuilder.asNative(true); break;
+                case "pipelined": signatureBuilder.asPipelined(true); break;
+                case "delay": signatureBuilder.withDelay(Integer.parseInt(modifier.intLiteral().getText())); break;
+            }
+        }
+        FunctionContext context = new FunctionContext(signatureBuilder.build());
         functions.put(name, context);
     }
 

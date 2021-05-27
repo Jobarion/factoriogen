@@ -71,7 +71,7 @@ public class VariableAccessor {
                         connected = ArithmeticCombinator.copying(variable.getSignal()[0]);
                     }
                     else {
-                        connected = ArithmeticCombinator.copying(); //Potentially _very_ illegal, idk
+                        connected = ArithmeticCombinator.copying();
                     }
                     connected.setGreenIn(output);
                     connected.setGreenOut(entry.networkGroup);
@@ -88,7 +88,7 @@ public class VariableAccessor {
                     connected = ArithmeticCombinator.copying(variable.getSignal()[0]);
                 }
                 else {
-                    connected = ArithmeticCombinator.copying(); //Potentially _very_ illegal, idk
+                    connected = ArithmeticCombinator.copying();
                 }
                 connected.setGreenIn(output);
                 output = new NetworkGroup();

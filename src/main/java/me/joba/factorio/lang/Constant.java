@@ -1,6 +1,6 @@
 package me.joba.factorio.lang;
 
-import me.joba.factorio.Accessor;
+import me.joba.factorio.CombinatorIn;
 import me.joba.factorio.lang.types.PrimitiveType;
 import me.joba.factorio.lang.types.Type;
 
@@ -30,10 +30,10 @@ public class Constant extends Symbol {
     }
 
     @Override
-    public Accessor[] toAccessor() {
-        var accessors = new Accessor[getType().getSize()];
+    public CombinatorIn[] toAccessor() {
+        var accessors = new CombinatorIn[getType().getSize()];
         for(int i = 0; i < accessors.length; i++) {
-            accessors[i] = Accessor.constant(val[i]);
+            accessors[i] = CombinatorIn.constant(val[i]);
         }
         return accessors;
     }

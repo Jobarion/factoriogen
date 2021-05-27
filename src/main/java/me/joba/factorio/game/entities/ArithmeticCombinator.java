@@ -1,6 +1,6 @@
 package me.joba.factorio.game.entities;
 
-import me.joba.factorio.Accessor;
+import me.joba.factorio.CombinatorIn;
 import me.joba.factorio.lang.FactorioSignal;
 import org.json.simple.JSONObject;
 
@@ -20,18 +20,18 @@ public class ArithmeticCombinator extends IOCircuitNetworkEntity {
     }
 
     public static ArithmeticCombinator copying() {
-        return withEach(Accessor.constant(0), ArithmeticOperator.OR);
+        return withEach(CombinatorIn.constant(0), ArithmeticOperator.OR);
     }
 
     public static ArithmeticCombinator copying(FactorioSignal signal) {
-        return withLeftRight(Accessor.signal(signal), Accessor.constant(0), signal, ArithmeticOperator.OR);
+        return withLeftRight(CombinatorIn.signal(signal), CombinatorIn.constant(0), signal, ArithmeticOperator.OR);
     }
 
     public static ArithmeticCombinator remapping(FactorioSignal in, FactorioSignal out) {
-        return withLeftRight(Accessor.signal(in), Accessor.constant(0), out, ArithmeticOperator.OR);
+        return withLeftRight(CombinatorIn.signal(in), CombinatorIn.constant(0), out, ArithmeticOperator.LSH);
     }
 
-    public static ArithmeticCombinator withLeftRight(Accessor left, Accessor right, FactorioSignal outSignal, ArithmeticOperator operator) {
+    public static ArithmeticCombinator withLeftRight(CombinatorIn left, CombinatorIn right, FactorioSignal outSignal, ArithmeticOperator operator) {
         JSONObject cbehavior = new JSONObject();
         JSONObject conds = new JSONObject();
         cbehavior.put("arithmetic_conditions", conds);
@@ -53,7 +53,7 @@ public class ArithmeticCombinator extends IOCircuitNetworkEntity {
         return new ArithmeticCombinator(cbehavior);
     }
 
-    public static ArithmeticCombinator withEach(Accessor right, ArithmeticOperator operator) {
+    public static ArithmeticCombinator withEach(CombinatorIn right, ArithmeticOperator operator) {
         JSONObject cbehavior = new JSONObject();
         JSONObject conds = new JSONObject();
         cbehavior.put("arithmetic_conditions", conds);
@@ -74,7 +74,7 @@ public class ArithmeticCombinator extends IOCircuitNetworkEntity {
         return new ArithmeticCombinator(cbehavior);
     }
 
-    public static ArithmeticCombinator withEachMerge(Accessor right, FactorioSignal outSignal, ArithmeticOperator operator) {
+    public static ArithmeticCombinator withEachMerge(CombinatorIn right, FactorioSignal outSignal, ArithmeticOperator operator) {
 
         JSONObject cbehavior = new JSONObject();
         JSONObject conds = new JSONObject();

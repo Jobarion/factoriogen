@@ -1,22 +1,101 @@
 package me.joba.factorio.lang;
 
-import me.joba.factorio.Accessor;
+import me.joba.factorio.CombinatorIn;
 import me.joba.factorio.CombinatorGroup;
 import me.joba.factorio.NetworkGroup;
-import me.joba.factorio.Writer;
+import me.joba.factorio.CombinatorOut;
+import me.joba.factorio.game.EntityBlock;
+import me.joba.factorio.game.WireColor;
 import me.joba.factorio.game.entities.*;
+import me.joba.factorio.graph.FunctionPlacer;
+import me.joba.factorio.lang.types.PrimitiveType;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
-public class Memory {
+public class MemoryUtil {
+
+    private static final int MEMORY_READ_DELAY_UNSAFE = 4;
+    private static final int MEMORY_READ_DELAY = MEMORY_READ_DELAY_UNSAFE + 4;
 
     private static final FactorioSignal ADDRESS_SIGNAL = FactorioSignal.SIGNAL_GREY;
     private static final FactorioSignal WRITE_VALUE_SIGNAL = FactorioSignal.SIGNAL_BLACK;
 
+    public static final FunctionSignature MEMORY_READ_SIGNATURE;
+//    public static final FunctionSignature MEMORY_UNSAFE_READ_SIGNATURE; //TODO
+    public static final FunctionSignature MEMORY_WRITE_SIGNATURE;
+
     private static final int MEMORY_CELL_X_OFFSET = 0;
     private static final int MEMORY_CELL_Y_OFFSET = 8;
 
-    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
+    static {
+        MEMORY_READ_SIGNATURE = new FunctionSignature.Builder("__internal__arrayRead", new FunctionParameter[]{new FunctionParameter("address", PrimitiveType.INT, MemoryUtil.ADDRESS_SIGNAL)}, PrimitiveType.INT, new FactorioSignal[]{WRITE_VALUE_SIGNAL})
+                .asNative(true)
+                .asPipelined(true)
+                .withDelay(MEMORY_READ_DELAY)
+                .build();
+//        MEMORY_UNSAFE_READ_SIGNATURE = new FunctionSignature.Builder("__internal__arrayUnsafeRead", new FunctionParameter[]{new FunctionParameter("address", PrimitiveType.INT, MemoryUtil.ADDRESS_SIGNAL)}, PrimitiveType.INT, new FactorioSignal[]{WRITE_VALUE_SIGNAL})
+//                .asNative(true)
+//                .asPipelined(true)
+//                .withDelay(MEMORY_READ_DELAY_UNSAFE)
+//                .build();
+        MEMORY_WRITE_SIGNATURE = new FunctionSignature.Builder("__internal__arrayWrite", new FunctionParameter[]{new FunctionParameter("address", PrimitiveType.INT, MemoryUtil.ADDRESS_SIGNAL), new FunctionParameter("value", PrimitiveType.INT, MemoryUtil.WRITE_VALUE_SIGNAL)}, PrimitiveType.VOID, new FactorioSignal[0])
+                .asNative(true)
+                .asPipelined(true)
+                .build();
+    }
+
+    public static EntityBlock generateMemoryController(int memorySize, NetworkGroup in, NetworkGroup out) {
+        var writeIn = DeciderCombinator.withLeftRight(CombinatorIn.signal(Constants.FUNCTION_IDENTIFIER), CombinatorIn.constant(MEMORY_WRITE_SIGNATURE.getFunctionId()), CombinatorOut.everything(false), DeciderOperator.EQ);
+        var readIn = DeciderCombinator.withLeftRight(CombinatorIn.signal(Constants.FUNCTION_IDENTIFIER), CombinatorIn.constant(MEMORY_READ_SIGNATURE.getFunctionId()), CombinatorOut.everything(false), DeciderOperator.EQ);
+//        var unsafeReadIn = DeciderCombinator.withLeftRight(Accessor.signal(Constants.FUNCTION_IDENTIFIER), Accessor.constant(MEMORY_UNSAFE_READ_SIGNATURE.getFunctionId()), Writer.everything(false), DeciderOperator.EQ);
+
+        NetworkGroup writeInGroup = new NetworkGroup();
+        NetworkGroup readInGroup = new NetworkGroup();
+        writeIn.setGreenIn(in);
+        readIn.setGreenIn(in);
+        writeIn.setGreenOut(writeInGroup);
+        readIn.setGreenOut(readInGroup);
+
+        var cg = generateMemoryController(memorySize, writeInGroup, readInGroup, out);
+        cg.getNetworks().add(writeInGroup);
+        cg.getNetworks().add(readInGroup);
+        cg.getCombinators().add(writeIn);
+        cg.getCombinators().add(readIn);
+
+        readIn.setPosition(MEMORY_CELL_X_OFFSET + 5, MEMORY_CELL_Y_OFFSET - 11, 2);
+        writeIn.setPosition(MEMORY_CELL_X_OFFSET + 3, MEMORY_CELL_Y_OFFSET - 11, 2);
+
+        var sub = new Substation();
+        cg.getCombinators().add(sub);
+        sub.setPosition(MEMORY_CELL_X_OFFSET + 4, MEMORY_CELL_Y_OFFSET - 5, 0);
+        sub.setNetwork(0, WireColor.GREEN, in);
+        sub.setNetwork(0, WireColor.RED, out);
+
+        Set<CombinatorGroup> generatedGroups = new HashSet<>();
+        Queue<CombinatorGroup> toExpand = new LinkedList<>();
+        toExpand.add(cg);
+        while(!toExpand.isEmpty()) {
+            var group = toExpand.poll();
+            generatedGroups.add(group);
+            toExpand.addAll(group.getSubGroups());
+        }
+
+        generatedGroups.forEach(g -> g.getAccessors().forEach(VariableAccessor::generateAccessors));
+
+        var combinators = generatedGroups.stream()
+                .map(CombinatorGroup::getCombinators)
+                .flatMap(Collection::stream)
+                .collect(Collectors.toList());
+
+        var networks = generatedGroups.stream()
+                .map(CombinatorGroup::getNetworks)
+                .flatMap(Collection::stream)
+                .collect(Collectors.toList());
+
+        return FunctionPlacer.placeFunction(combinators, networks, in, out, true);
+    }
+
     public static CombinatorGroup generateMemoryController(int memorySize, NetworkGroup writeIn, NetworkGroup readIn, NetworkGroup readOut) {
         FactorioSignal[] toUse = new FactorioSignal[FactorioSignal.values().length - 2];
         for(int i = 0, j = 0; i < toUse.length; i++, j++) {
@@ -34,12 +113,12 @@ public class Memory {
     private static CombinatorGroup generateWriteSignalTransformer(FactorioSignal[] signals, NetworkGroup constantSignalIdNetwork, NetworkGroup in, NetworkGroup out) {
         CombinatorGroup group = new CombinatorGroup(in, out);
 
-        var in1 = ArithmeticCombinator.withLeftRight(Accessor.signal(ADDRESS_SIGNAL), Accessor.constant(signals.length), ADDRESS_SIGNAL, ArithmeticOperator.MOD);
-        var in2 = DeciderCombinator.withLeftRight(Accessor.signal(ADDRESS_SIGNAL), Accessor.constant(0), Writer.one(ADDRESS_SIGNAL), DeciderOperator.GT);
+        var in1 = ArithmeticCombinator.withLeftRight(CombinatorIn.signal(ADDRESS_SIGNAL), CombinatorIn.constant(signals.length), ADDRESS_SIGNAL, ArithmeticOperator.MOD);
+        var in2 = DeciderCombinator.withLeftRight(CombinatorIn.signal(ADDRESS_SIGNAL), CombinatorIn.constant(0), CombinatorOut.one(ADDRESS_SIGNAL), DeciderOperator.GT);
         var in3 = ArithmeticCombinator.copying(WRITE_VALUE_SIGNAL);
-        var in4 = DeciderCombinator.withLeftRight(Accessor.signal(WRITE_VALUE_SIGNAL), Accessor.constant(0), Writer.one(WRITE_VALUE_SIGNAL), DeciderOperator.EQ);
-        var in5 = ArithmeticCombinator.withLeftRight(Accessor.signal(ADDRESS_SIGNAL), Accessor.constant(signals.length), ADDRESS_SIGNAL, ArithmeticOperator.DIV);
-        var in6 = DeciderCombinator.withLeftRight(Accessor.signal(ADDRESS_SIGNAL), Accessor.constant(0), Writer.one(ADDRESS_SIGNAL), DeciderOperator.GT);
+        var in4 = DeciderCombinator.withLeftRight(CombinatorIn.signal(WRITE_VALUE_SIGNAL), CombinatorIn.constant(0), CombinatorOut.one(WRITE_VALUE_SIGNAL), DeciderOperator.EQ);
+        var in5 = ArithmeticCombinator.withLeftRight(CombinatorIn.signal(ADDRESS_SIGNAL), CombinatorIn.constant(signals.length), ADDRESS_SIGNAL, ArithmeticOperator.DIV);
+        var in6 = DeciderCombinator.withLeftRight(CombinatorIn.signal(ADDRESS_SIGNAL), CombinatorIn.constant(0), CombinatorOut.one(ADDRESS_SIGNAL), DeciderOperator.GT);
 
         group.getCombinators().add(in1);
         group.getCombinators().add(in2);
@@ -71,8 +150,8 @@ public class Memory {
         var tmpOut = new NetworkGroup();
         group.getNetworks().add(tmpOut);
 
-        var out1 = ArithmeticCombinator.withEach(Accessor.signal(WRITE_VALUE_SIGNAL), ArithmeticOperator.MUL);
-        var out2 = ArithmeticCombinator.withLeftRight(Accessor.signal(WRITE_VALUE_SIGNAL), Accessor.constant(-1), WRITE_VALUE_SIGNAL, ArithmeticOperator.MUL);
+        var out1 = ArithmeticCombinator.withEach(CombinatorIn.signal(WRITE_VALUE_SIGNAL), ArithmeticOperator.MUL);
+        var out2 = ArithmeticCombinator.withLeftRight(CombinatorIn.signal(WRITE_VALUE_SIGNAL), CombinatorIn.constant(-1), WRITE_VALUE_SIGNAL, ArithmeticOperator.MUL);
         var out3 = ArithmeticCombinator.copying();
 
         out1.setPosition(MEMORY_CELL_X_OFFSET, MEMORY_CELL_Y_OFFSET - 4, 2);
@@ -89,7 +168,7 @@ public class Memory {
         out2.setGreenOut(out);
         out3.setGreenOut(out);
 
-        var c1 = ArithmeticCombinator.withLeftRight(Accessor.signal(WRITE_VALUE_SIGNAL), Accessor.signal(WRITE_VALUE_SIGNAL), WRITE_VALUE_SIGNAL, ArithmeticOperator.MUL);
+        var c1 = ArithmeticCombinator.withLeftRight(CombinatorIn.signal(WRITE_VALUE_SIGNAL), CombinatorIn.signal(WRITE_VALUE_SIGNAL), WRITE_VALUE_SIGNAL, ArithmeticOperator.MUL);
         var c2 = ArithmeticCombinator.copying(WRITE_VALUE_SIGNAL);
         var c3 = ArithmeticCombinator.copying();
         group.getCombinators().add(c1);
@@ -148,20 +227,20 @@ public class Memory {
 
         //Memory cell write controller
         {
-            var in1 = DeciderCombinator.withLeftRight(Accessor.signal(ADDRESS_SIGNAL), Accessor.constant(0), Writer.everything(false), DeciderOperator.NEQ);
-            var in2 = ArithmeticCombinator.withLeftRight(Accessor.signal(ADDRESS_SIGNAL), Accessor.constant(-1), ADDRESS_SIGNAL, ArithmeticOperator.MUL);
+            var in1 = DeciderCombinator.withLeftRight(CombinatorIn.signal(ADDRESS_SIGNAL), CombinatorIn.constant(0), CombinatorOut.everything(false), DeciderOperator.NEQ);
+            var in2 = ArithmeticCombinator.withLeftRight(CombinatorIn.signal(ADDRESS_SIGNAL), CombinatorIn.constant(-1), ADDRESS_SIGNAL, ArithmeticOperator.MUL);
 
             group.getCombinators().add(in1);
             group.getCombinators().add(in2);
 
-            var c1 = DeciderCombinator.withLeftRight(Accessor.signal(WRITE_VALUE_SIGNAL), Accessor.constant(0), Writer.everything(false), DeciderOperator.EQ);
-            var c2 = ArithmeticCombinator.withLeftRight(Accessor.signal(ADDRESS_SIGNAL), Accessor.constant(-1), ADDRESS_SIGNAL, ArithmeticOperator.MUL);
-            var c3 = ArithmeticCombinator.withEach(Accessor.constant(-1), ArithmeticOperator.MUL);
-            var c4 = ArithmeticCombinator.withEach(Accessor.constant(1073741824), ArithmeticOperator.ADD);
-            var c5 = ArithmeticCombinator.withEach(Accessor.constant(2147483647), ArithmeticOperator.AND);
-            var c6 = ArithmeticCombinator.withEach(Accessor.constant(-2147483648), ArithmeticOperator.AND);
-            var c7 = DeciderCombinator.withLeftRight(Accessor.signal(ADDRESS_SIGNAL), Accessor.constant(0), Writer.fromInput(ADDRESS_SIGNAL), DeciderOperator.NEQ);
-            var c8 = DeciderCombinator.withLeftRight(Accessor.signal(ADDRESS_SIGNAL), Accessor.constant(0), Writer.fromInput(ADDRESS_SIGNAL), DeciderOperator.NEQ);
+            var c1 = DeciderCombinator.withLeftRight(CombinatorIn.signal(WRITE_VALUE_SIGNAL), CombinatorIn.constant(0), CombinatorOut.everything(false), DeciderOperator.EQ);
+            var c2 = ArithmeticCombinator.withLeftRight(CombinatorIn.signal(ADDRESS_SIGNAL), CombinatorIn.constant(-1), ADDRESS_SIGNAL, ArithmeticOperator.MUL);
+            var c3 = ArithmeticCombinator.withEach(CombinatorIn.constant(-1), ArithmeticOperator.MUL);
+            var c4 = ArithmeticCombinator.withEach(CombinatorIn.constant(1073741824), ArithmeticOperator.ADD);
+            var c5 = ArithmeticCombinator.withEach(CombinatorIn.constant(2147483647), ArithmeticOperator.AND);
+            var c6 = ArithmeticCombinator.withEach(CombinatorIn.constant(-2147483648), ArithmeticOperator.AND);
+            var c7 = DeciderCombinator.withLeftRight(CombinatorIn.signal(ADDRESS_SIGNAL), CombinatorIn.constant(0), CombinatorOut.fromInput(ADDRESS_SIGNAL), DeciderOperator.NEQ);
+            var c8 = DeciderCombinator.withLeftRight(CombinatorIn.signal(ADDRESS_SIGNAL), CombinatorIn.constant(0), CombinatorOut.fromInput(ADDRESS_SIGNAL), DeciderOperator.NEQ);
 
             group.getCombinators().add(c1);
             group.getCombinators().add(c2);
@@ -224,13 +303,13 @@ public class Memory {
         NetworkGroup propagator = null;
         for(int cellId = 0; cellId < cellCount; cellId++) {
 
-            var c1 = DeciderCombinator.withLeftRight(Accessor.signal(ADDRESS_SIGNAL), Accessor.constant(0), Writer.everything(false), DeciderOperator.EQ);
-            var c2 = ArithmeticCombinator.withLeftRight(Accessor.signal(ADDRESS_SIGNAL), Accessor.constant(1), ADDRESS_SIGNAL, ArithmeticOperator.SUB);
-            var c3 = DeciderCombinator.withLeftRight(Accessor.signal(ADDRESS_SIGNAL), Accessor.constant(0), Writer.everything(false), DeciderOperator.EQ);
-            var c4 = DeciderCombinator.withLeftRight(Accessor.signal(ADDRESS_SIGNAL), Accessor.constant(0), Writer.everything(false), DeciderOperator.EQ);
-            var c5 = DeciderCombinator.withEach(Accessor.constant(0), false, DeciderOperator.GT);
-            var c6 = DeciderCombinator.withEach(Accessor.constant(-2147483648), false, DeciderOperator.EQ);
-            var c7 = DeciderCombinator.withLeftRight(Accessor.signal(ADDRESS_SIGNAL), Accessor.constant(0), Writer.everything(false), DeciderOperator.EQ);
+            var c1 = DeciderCombinator.withLeftRight(CombinatorIn.signal(ADDRESS_SIGNAL), CombinatorIn.constant(0), CombinatorOut.everything(false), DeciderOperator.EQ);
+            var c2 = ArithmeticCombinator.withLeftRight(CombinatorIn.signal(ADDRESS_SIGNAL), CombinatorIn.constant(1), ADDRESS_SIGNAL, ArithmeticOperator.SUB);
+            var c3 = DeciderCombinator.withLeftRight(CombinatorIn.signal(ADDRESS_SIGNAL), CombinatorIn.constant(0), CombinatorOut.everything(false), DeciderOperator.EQ);
+            var c4 = DeciderCombinator.withLeftRight(CombinatorIn.signal(ADDRESS_SIGNAL), CombinatorIn.constant(0), CombinatorOut.everything(false), DeciderOperator.EQ);
+            var c5 = DeciderCombinator.withEach(CombinatorIn.constant(0), false, DeciderOperator.GT);
+            var c6 = DeciderCombinator.withEach(CombinatorIn.constant(-2147483648), false, DeciderOperator.EQ);
+            var c7 = DeciderCombinator.withLeftRight(CombinatorIn.signal(ADDRESS_SIGNAL), CombinatorIn.constant(0), CombinatorOut.everything(false), DeciderOperator.EQ);
 
             c1.setPosition(MEMORY_CELL_X_OFFSET, MEMORY_CELL_Y_OFFSET + cellId, 2);
             c2.setPosition(MEMORY_CELL_X_OFFSET + 2, MEMORY_CELL_Y_OFFSET + cellId, 2);
@@ -323,10 +402,10 @@ public class Memory {
     private static CombinatorGroup generateRead(FactorioSignal[] signals, NetworkGroup constantSignalIdNetwork, NetworkGroup readIn, NetworkGroup readOut, NetworkGroup memReadIn, NetworkGroup memReadOut) {
         CombinatorGroup group = new CombinatorGroup(null, null);
 
-        var in1 = ArithmeticCombinator.withLeftRight(Accessor.signal(ADDRESS_SIGNAL), Accessor.constant(signals.length), ADDRESS_SIGNAL, ArithmeticOperator.MOD);
-        var in2 = DeciderCombinator.withLeftRight(Accessor.signal(ADDRESS_SIGNAL), Accessor.constant(0), Writer.one(ADDRESS_SIGNAL), DeciderOperator.GT);
-        var in3 = ArithmeticCombinator.withLeftRight(Accessor.signal(ADDRESS_SIGNAL), Accessor.constant(signals.length), ADDRESS_SIGNAL, ArithmeticOperator.DIV);
-        var in4 = DeciderCombinator.withLeftRight(Accessor.signal(ADDRESS_SIGNAL), Accessor.constant(0), Writer.one(ADDRESS_SIGNAL), DeciderOperator.GT);
+        var in1 = ArithmeticCombinator.withLeftRight(CombinatorIn.signal(ADDRESS_SIGNAL), CombinatorIn.constant(signals.length), ADDRESS_SIGNAL, ArithmeticOperator.MOD);
+        var in2 = DeciderCombinator.withLeftRight(CombinatorIn.signal(ADDRESS_SIGNAL), CombinatorIn.constant(0), CombinatorOut.one(ADDRESS_SIGNAL), DeciderOperator.GT);
+        var in3 = ArithmeticCombinator.withLeftRight(CombinatorIn.signal(ADDRESS_SIGNAL), CombinatorIn.constant(signals.length), ADDRESS_SIGNAL, ArithmeticOperator.DIV);
+        var in4 = DeciderCombinator.withLeftRight(CombinatorIn.signal(ADDRESS_SIGNAL), CombinatorIn.constant(0), CombinatorOut.one(ADDRESS_SIGNAL), DeciderOperator.GT);
 
         group.getCombinators().add(in1);
         group.getCombinators().add(in2);
@@ -339,9 +418,9 @@ public class Memory {
         in4.setPosition(MEMORY_CELL_X_OFFSET + 8, MEMORY_CELL_Y_OFFSET - 9, 4);
 
         in1.setGreenIn(readIn);
-        in1.setGreenIn(readIn);
-        in1.setGreenIn(readIn);
-        in1.setGreenIn(readIn);
+        in2.setGreenIn(readIn);
+        in3.setGreenIn(readIn);
+        in4.setGreenIn(readIn);
 
         var tmpIn = new NetworkGroup();
         group.getNetworks().add(tmpIn);
@@ -356,12 +435,12 @@ public class Memory {
 
         group.getSubGroups().add(generateWriteSignalSelector(constantSignalIdNetwork, tmpIn, tmpOut, MEMORY_CELL_X_OFFSET + 4, MEMORY_CELL_Y_OFFSET - 10));
 
-        var c1 = ArithmeticCombinator.withEach(Accessor.constant(-1), ArithmeticOperator.MUL);
-        var c2 = ArithmeticCombinator.withEach(Accessor.constant(-2147483648), ArithmeticOperator.ADD);
-        var c3 = ArithmeticCombinator.withEach(Accessor.constant(2147483647), ArithmeticOperator.AND);
-        var c4 = ArithmeticCombinator.withEach(Accessor.constant(31), ArithmeticOperator.RSH);
-        var c5 = DeciderCombinator.withEach(Accessor.constant(0), WRITE_VALUE_SIGNAL, false, DeciderOperator.LT);
-        var c6 = DeciderCombinator.withEach(Accessor.constant(-2147483648), WRITE_VALUE_SIGNAL, false, DeciderOperator.EQ);
+        var c1 = ArithmeticCombinator.withEach(CombinatorIn.constant(-1), ArithmeticOperator.MUL);
+        var c2 = ArithmeticCombinator.withEach(CombinatorIn.constant(-2147483648), ArithmeticOperator.ADD);
+        var c3 = ArithmeticCombinator.withEach(CombinatorIn.constant(2147483647), ArithmeticOperator.AND);
+        var c4 = ArithmeticCombinator.withEach(CombinatorIn.constant(31), ArithmeticOperator.RSH);
+        var c5 = DeciderCombinator.withEach(CombinatorIn.constant(0), WRITE_VALUE_SIGNAL, false, DeciderOperator.LT);
+        var c6 = DeciderCombinator.withEach(CombinatorIn.constant(-2147483648), WRITE_VALUE_SIGNAL, false, DeciderOperator.EQ);
 
         c1.setPosition(MEMORY_CELL_X_OFFSET + 8, MEMORY_CELL_Y_OFFSET - 5, 2);
         c2.setPosition(MEMORY_CELL_X_OFFSET + 8, MEMORY_CELL_Y_OFFSET - 4, 2);
@@ -381,8 +460,8 @@ public class Memory {
         c2.setRedIn(tmpOut);
         c3.setGreenIn(memReadOut);
         c4.setGreenIn(memReadOut);
-        c5.setGreenOut(readOut);
-        c6.setGreenOut(readOut);
+        c5.setRedOut(readOut);
+        c6.setRedOut(readOut);
 
         var tmp = new NetworkGroup();
         group.getNetworks().add(tmp);
@@ -425,13 +504,13 @@ public class Memory {
     private static CombinatorGroup generateWriteSignalSelector(NetworkGroup constantNetwork, NetworkGroup in, NetworkGroup out, int xOffset, int yOffset) {
         CombinatorGroup group = new CombinatorGroup(in, out);
 
-        ArithmeticCombinator c1 = ArithmeticCombinator.withLeftRight(Accessor.signal(ADDRESS_SIGNAL), Accessor.constant(1), ADDRESS_SIGNAL, ArithmeticOperator.SUB);
+        ArithmeticCombinator c1 = ArithmeticCombinator.withLeftRight(CombinatorIn.signal(ADDRESS_SIGNAL), CombinatorIn.constant(1), ADDRESS_SIGNAL, ArithmeticOperator.SUB);
         c1.setPosition(xOffset + 1, yOffset + 3, 4);
-        DeciderCombinator c2 = DeciderCombinator.withEach(Accessor.signal(ADDRESS_SIGNAL), true, DeciderOperator.EQ);
+        DeciderCombinator c2 = DeciderCombinator.withEach(CombinatorIn.signal(ADDRESS_SIGNAL), true, DeciderOperator.EQ);
         c2.setPosition(xOffset + 2, yOffset + 3, 4);
-        ArithmeticCombinator c3 = ArithmeticCombinator.withLeftRight(Accessor.signal(ADDRESS_SIGNAL), Accessor.constant(-1), ADDRESS_SIGNAL, ArithmeticOperator.MUL);
+        ArithmeticCombinator c3 = ArithmeticCombinator.withLeftRight(CombinatorIn.signal(ADDRESS_SIGNAL), CombinatorIn.constant(-1), ADDRESS_SIGNAL, ArithmeticOperator.MUL);
         c3.setPosition(xOffset + 3, yOffset + 3, 4);
-        DeciderCombinator c4 = DeciderCombinator.withLeftRight(Accessor.signal(ADDRESS_SIGNAL), Accessor.constant(0), Writer.one(ADDRESS_SIGNAL), DeciderOperator.EQ);
+        DeciderCombinator c4 = DeciderCombinator.withLeftRight(CombinatorIn.signal(ADDRESS_SIGNAL), CombinatorIn.constant(0), CombinatorOut.one(ADDRESS_SIGNAL), DeciderOperator.EQ);
         c4.setPosition(xOffset + 4, yOffset + 3, 4);
 
         group.getCombinators().add(c1);

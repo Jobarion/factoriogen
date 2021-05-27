@@ -3,7 +3,6 @@ package me.joba.factorio;
 import me.joba.factorio.lang.Generator;
 
 import java.io.IOException;
-import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 

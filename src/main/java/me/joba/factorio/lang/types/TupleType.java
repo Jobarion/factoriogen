@@ -1,6 +1,7 @@
 package me.joba.factorio.lang.types;
 
 import java.util.Arrays;
+import java.util.StringJoiner;
 
 public class TupleType implements Type {
 
@@ -30,7 +31,11 @@ public class TupleType implements Type {
 
     @Override
     public String toString() {
-        return Arrays.toString(types);
+        StringJoiner sj = new StringJoiner(", ", "(", ")");
+        for(var type : types) {
+            sj.add(type.toString());
+        }
+        return sj.toString();
     }
 
     @Override

@@ -2,7 +2,8 @@ package me.joba.factorio.lang.types;
 
 public enum PrimitiveType implements Type {
     INT(1),
-    BOOLEAN(1);
+    BOOLEAN(1),
+    VOID(0);
 
     private final int size;
 
