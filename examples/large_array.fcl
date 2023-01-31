@@ -1,8 +1,8 @@
 int[5000] TEMP_ARRAY;
 
 function main() -> int {
-  fillArray(TEMP_ARRAY, 4000);
-  return sumArray(TEMP_ARRAY, 4000);
+  fillArray(TEMP_ARRAY, 10);
+  return sumArray(TEMP_ARRAY, 10);
 }
 
 function fillArray(array: int[], size: int) -> int {

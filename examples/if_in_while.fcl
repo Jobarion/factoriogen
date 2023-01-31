@@ -1,0 +1,11 @@
+function main(a: int<red>, b: int<green>) -> int {
+  i = a;
+  sum = 0;
+  while(i <= b) {
+    if(i % 2 == 0) {
+      sum = sum + i / 2;
+    }
+    i = i + 1;
+  }
+  return sum;
+}

@@ -22,7 +22,7 @@ function collatz(currentVal: int, iterations: int) -> int {
   return max;
 }
 
-function [delay=3] max(a: int, b: int) -> int {
+function max(a: int, b: int) -> int {
   if(a < b) {
     a = b;
   }

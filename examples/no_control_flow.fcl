@@ -1,0 +1,4 @@
+function main(a: int<red>, b: int<green>) -> int {
+  c = a + b;
+  return c * c;
+}

@@ -9,6 +9,10 @@ import java.nio.file.Path;
 public class Main {
 
     public static void main(String[] args) throws IOException {
+        if(args.length == 0) {
+            args = new String[]{"examples/large_array.fcl"};
+        }
+
         Path file = Path.of(args[0]);
         var code = Files.readAllLines(file)
                 .stream()
@@ -16,6 +20,4 @@ public class Main {
                 .toString();
         System.out.println(Generator.generateBlueprint(code));
     }
-
-
 }

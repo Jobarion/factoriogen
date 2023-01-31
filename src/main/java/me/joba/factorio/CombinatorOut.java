@@ -18,7 +18,7 @@ public interface CombinatorOut {
             @Override
             public JSONObject toJson() {
                 JSONObject obj = new JSONObject();
-                obj.put("type", outSignal.isVirtual() ? "virtual" : "item");
+                obj.put("type", outSignal.getType().getFactorioName());
                 obj.put("name", outSignal.getFactorioName());
                 return obj;
             }
@@ -36,7 +36,7 @@ public interface CombinatorOut {
             @Override
             public JSONObject toJson() {
                 JSONObject obj = new JSONObject();
-                obj.put("type", outSignal.isVirtual() ? "virtual" : "item");
+                obj.put("type", outSignal.getType().getFactorioName());
                 obj.put("name", outSignal.getFactorioName());
                 return obj;
             }

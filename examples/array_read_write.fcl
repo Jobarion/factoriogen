@@ -1,0 +1,8 @@
+int[3] TEMP_ARRAY;
+
+function main(a: int<red>) -> int {
+  TEMP_ARRAY[0] = 1;
+  TEMP_ARRAY[1] = 3;
+  TEMP_ARRAY[2] = 5;
+  return TEMP_ARRAY[1] + a;
+}

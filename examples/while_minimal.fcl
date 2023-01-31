@@ -1,0 +1,9 @@
+function main(a: int<red>, b: int<green>) -> int {
+  i = a;
+  sum = 0;
+  while(i <= b) {
+    sum = sum + i;
+    i = i + 1;
+  }
+  return sum;
+}

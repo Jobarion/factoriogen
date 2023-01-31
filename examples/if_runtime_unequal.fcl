@@ -1,0 +1,10 @@
+function main(a: int<red>, b: int<green>) -> int {
+  result = 0;
+  if(a > b) {
+    result = a + 1;
+  }
+  else {
+    result = b;
+  }
+  return result;
+}

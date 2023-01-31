@@ -32,7 +32,7 @@ public class MemoryUtil {
         MEMORY_READ_SIGNATURE = new FunctionSignature.Builder("__internal__arrayRead", new FunctionParameter[]{new FunctionParameter("address", PrimitiveType.INT, MemoryUtil.ADDRESS_SIGNAL)}, PrimitiveType.INT, new FactorioSignal[]{WRITE_VALUE_SIGNAL})
                 .asNative(true)
                 .asPipelined(true)
-                .withDelay(MEMORY_READ_DELAY)
+                .withDelay(MEMORY_READ_DELAY_UNSAFE)
                 .build();
 //        MEMORY_UNSAFE_READ_SIGNATURE = new FunctionSignature.Builder("__internal__arrayUnsafeRead", new FunctionParameter[]{new FunctionParameter("address", PrimitiveType.INT, MemoryUtil.ADDRESS_SIGNAL)}, PrimitiveType.INT, new FactorioSignal[]{WRITE_VALUE_SIGNAL})
 //                .asNative(true)

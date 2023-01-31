@@ -1,0 +1,7 @@
+function main(a: int<red>, b: int<green>) -> int {
+  return add(a / 2, b) * 2;
+}
+
+function add(a: int, b: int) -> int {
+  return a + b;
+}

@@ -44,7 +44,7 @@ public class ConstantCombinator extends CircuitNetworkEntity {
             filter.put("index", index++);
             filter.put("count", e.getValue());
             JSONObject signal = new JSONObject();
-            signal.put("type", e.getKey().isVirtual() ? "virtual" : "item");
+            signal.put("type", e.getKey().getType().getFactorioName());
             signal.put("name", e.getKey().getFactorioName());
             filter.put("signal", signal);
             filters.add(filter);

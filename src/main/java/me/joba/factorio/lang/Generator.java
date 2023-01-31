@@ -1261,8 +1261,6 @@ public class Generator extends LanguageBaseListener {
         parser = new LanguageParser(new CommonTokenStream(new LanguageLexer(CharStreams.fromString(code))));
 
         var functionMap = new HashMap<>(structureParser.getFunctions());
-//        functionMap.put("test", new FunctionContext(new FunctionSignature("test", new FunctionParameter[]{new FunctionParameter("a", PrimitiveType.INT, new FactorioSignal[]{FactorioSignal.SIGNAL_C})}, PrimitiveType.INT, new FactorioSignal[]{FactorioSignal.SIGNAL_C}, 2, true, true)));
-//        functionMap.get("test").setFunctionHeader(new CombinatorGroup(new NetworkGroup(), new NetworkGroup()));
 
         var generator = new Generator(functionMap, structureParser.getDeclaredArrays());
 

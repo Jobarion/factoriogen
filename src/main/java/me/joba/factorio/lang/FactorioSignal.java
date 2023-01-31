@@ -2,54 +2,54 @@ package me.joba.factorio.lang;
 
 public enum FactorioSignal {
 
-    SIGNAL_0(true),
-    SIGNAL_1(true),
-    SIGNAL_2(true),
-    SIGNAL_3(true),
-    SIGNAL_4(true),
-    SIGNAL_5(true),
-    SIGNAL_6(true),
-    SIGNAL_7(true),
-    SIGNAL_8(true),
-    SIGNAL_9(true),
-    SIGNAL_A(true, "A"),
-    SIGNAL_B(true, "B"),
-    SIGNAL_C(true, "C"),
-    SIGNAL_D(true, "D"),
-    SIGNAL_E(true, "E"),
-    SIGNAL_F(true, "F"),
-    SIGNAL_G(true, "G"),
-    SIGNAL_H(true, "H"),
-    SIGNAL_I(true, "I"),
-    SIGNAL_J(true, "J"),
-    SIGNAL_K(true, "K"),
-    SIGNAL_L(true, "L"),
-    SIGNAL_M(true, "M"),
-    SIGNAL_N(true, "N"),
-    SIGNAL_O(true, "O"),
-    SIGNAL_P(true, "P"),
-    SIGNAL_Q(true, "Q"),
-    SIGNAL_R(true, "R"),
-    SIGNAL_S(true, "S"),
-    SIGNAL_T(true, "T"),
-    SIGNAL_U(true, "U"),
-    SIGNAL_V(true, "V"),
-    SIGNAL_W(true, "W"),
-    SIGNAL_X(true, "X"),
-    SIGNAL_Y(true, "Y"),
-    SIGNAL_Z(true, "Z"),
-    SIGNAL_RED(true),
-    SIGNAL_GREEN(true),
-    SIGNAL_BLUE(true),
-    SIGNAL_YELLOW(true),
-    SIGNAL_PINK(true),
-    SIGNAL_CYAN(true),
-    SIGNAL_WHITE(true),
-    SIGNAL_GREY(true),
-    SIGNAL_BLACK(true),
-    SIGNAL_CHECK(true, null, true),
-    SIGNAL_INFO(true, null, true),
-    SIGNAL_DOT(true, null, true),
+    SIGNAL_0(SignalType.VIRTUAL),
+    SIGNAL_1(SignalType.VIRTUAL),
+    SIGNAL_2(SignalType.VIRTUAL),
+    SIGNAL_3(SignalType.VIRTUAL),
+    SIGNAL_4(SignalType.VIRTUAL),
+    SIGNAL_5(SignalType.VIRTUAL),
+    SIGNAL_6(SignalType.VIRTUAL),
+    SIGNAL_7(SignalType.VIRTUAL),
+    SIGNAL_8(SignalType.VIRTUAL),
+    SIGNAL_9(SignalType.VIRTUAL),
+    SIGNAL_A(SignalType.VIRTUAL, "A"),
+    SIGNAL_B(SignalType.VIRTUAL, "B"),
+    SIGNAL_C(SignalType.VIRTUAL, "C"),
+    SIGNAL_D(SignalType.VIRTUAL, "D"),
+    SIGNAL_E(SignalType.VIRTUAL, "E"),
+    SIGNAL_F(SignalType.VIRTUAL, "F"),
+    SIGNAL_G(SignalType.VIRTUAL, "G"),
+    SIGNAL_H(SignalType.VIRTUAL, "H"),
+    SIGNAL_I(SignalType.VIRTUAL, "I"),
+    SIGNAL_J(SignalType.VIRTUAL, "J"),
+    SIGNAL_K(SignalType.VIRTUAL, "K"),
+    SIGNAL_L(SignalType.VIRTUAL, "L"),
+    SIGNAL_M(SignalType.VIRTUAL, "M"),
+    SIGNAL_N(SignalType.VIRTUAL, "N"),
+    SIGNAL_O(SignalType.VIRTUAL, "O"),
+    SIGNAL_P(SignalType.VIRTUAL, "P"),
+    SIGNAL_Q(SignalType.VIRTUAL, "Q"),
+    SIGNAL_R(SignalType.VIRTUAL, "R"),
+    SIGNAL_S(SignalType.VIRTUAL, "S"),
+    SIGNAL_T(SignalType.VIRTUAL, "T"),
+    SIGNAL_U(SignalType.VIRTUAL, "U"),
+    SIGNAL_V(SignalType.VIRTUAL, "V"),
+    SIGNAL_W(SignalType.VIRTUAL, "W"),
+    SIGNAL_X(SignalType.VIRTUAL, "X"),
+    SIGNAL_Y(SignalType.VIRTUAL, "Y"),
+    SIGNAL_Z(SignalType.VIRTUAL, "Z"),
+    SIGNAL_RED(SignalType.VIRTUAL),
+    SIGNAL_GREEN(SignalType.VIRTUAL),
+    SIGNAL_BLUE(SignalType.VIRTUAL),
+    SIGNAL_YELLOW(SignalType.VIRTUAL),
+    SIGNAL_PINK(SignalType.VIRTUAL),
+    SIGNAL_CYAN(SignalType.VIRTUAL),
+    SIGNAL_WHITE(SignalType.VIRTUAL),
+    SIGNAL_GREY(SignalType.VIRTUAL),
+    SIGNAL_BLACK(SignalType.VIRTUAL),
+    SIGNAL_CHECK(SignalType.VIRTUAL, null, true),
+    SIGNAL_INFO(SignalType.VIRTUAL, null, true),
+    SIGNAL_DOT(SignalType.VIRTUAL, null, true),
     WOODEN_CHEST,
     IRON_CHEST,
     STEEL_CHEST,
@@ -167,6 +167,7 @@ public enum FactorioSignal {
     CRUDE_OIL_BARREL,
     HEAVY_OIL_BARREL,
     LIGHT_OIL_BARREL,
+    LUBRICANT_BARREL,
     PETROLEUM_GAS_BARREL,
     SULFURIC_ACID_BARREL,
     WATER_BARREL,
@@ -252,42 +253,43 @@ public enum FactorioSignal {
     ARTILLERY_TARGETING_REMOTE,
     RADAR,
     ROCKET_SILO,
-    WATER,
-    CRUDE_OIL,
-    STEAM,
-    HEAVY_OIL,
-    LIGHT_OIL,
-    PETROLEUM_GAS,
-    SULFURIC_ACID,;
+    WATER(SignalType.FLUID),
+    CRUDE_OIL(SignalType.FLUID),
+    STEAM(SignalType.FLUID),
+    HEAVY_OIL(SignalType.FLUID),
+    LIGHT_OIL(SignalType.FLUID),
+    PETROLEUM_GAS(SignalType.FLUID),
+    SULFURIC_ACID(SignalType.FLUID),
+    LUBRICANT(SignalType.FLUID);
 
     private final String suffix;
     private final boolean reserved;
-    private final boolean virtual;
+    private final SignalType signalType;
 
-    FactorioSignal(boolean virtual, String suffix) {
-        this(virtual, suffix, false);
+    FactorioSignal(SignalType signalType, String suffix) {
+        this(signalType, suffix, false);
     }
 
-    FactorioSignal(boolean virtual, String suffix, boolean reserved) {
+    FactorioSignal(SignalType signalType, String suffix, boolean reserved) {
         this.reserved = reserved;
         this.suffix = suffix;
-        this.virtual = virtual;
+        this.signalType = signalType;
     }
 
-    FactorioSignal(boolean virtual) {
-        this(virtual, null);
+    FactorioSignal(SignalType signalType) {
+        this(signalType, null);
     }
 
     FactorioSignal() {
-        this(false);
+        this(SignalType.ITEM);
     }
 
     public boolean isReserved() {
         return reserved;
     }
 
-    public boolean isVirtual() {
-        return virtual;
+    public SignalType getType() {
+        return signalType;
     }
 
     public String getFactorioName() {
@@ -295,5 +297,15 @@ public enum FactorioSignal {
             return this.name().toLowerCase().replace('_', '-');
         }
         return "signal-" + suffix;
+    }
+
+    public enum SignalType {
+        ITEM,
+        FLUID,
+        VIRTUAL;
+
+        public String getFactorioName() {
+            return this.name().toLowerCase();
+        }
     }
 }
