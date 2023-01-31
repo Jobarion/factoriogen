@@ -1,0 +1,26 @@
+int[5000] TEMP_ARRAY;
+
+function main() -> int {
+  fillArray(TEMP_ARRAY, 4000);
+  return sumArray(TEMP_ARRAY, 4000);
+}
+
+function fillArray(array: int[], size: int) -> int {
+    index = 0;
+    while(index < size) {
+        array[index] = index;
+        index = index + 1;
+    }
+    return 1;
+}
+
+function sumArray(array: int[], size: int) -> int {
+    index = 0;
+    sum = 0;
+    while(index < size) {
+        x = array[index];
+        sum = sum + x;
+        index = index + 1;
+    }
+    return sum;
+}

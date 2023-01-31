@@ -15,46 +15,6 @@ import java.util.zip.Deflater;
 
 public class BlueprintWriter {
 
-    public static void main(String[] args) {
-//        var e1 = ArithmeticCombinator.copying();
-//        var e2 = ArithmeticCombinator.copying(FactorioSignal.SIGNAL_C);
-//        e1.setPosition(1, 7, 2);
-//        e1.setFixedLocation(true);
-//
-//        e2.setPosition(3, 7, 6);
-//        e2.setFixedLocation(true);
-//
-//        EntityBlock eb = new EntityBlock(Arrays.asList(e1, e2));
-//        System.out.println(writeBlueprint(Arrays.asList(eb)));
-        var cg = MemoryUtil.generateMemoryController(100, new NetworkGroup(), new NetworkGroup(), new NetworkGroup());
-
-        Set<CombinatorGroup> generatedGroups = new HashSet<>();
-        Queue<CombinatorGroup> toExpand = new LinkedList<>();
-        toExpand.add(cg);
-        while(!toExpand.isEmpty()) {
-            var group = toExpand.poll();
-            generatedGroups.add(group);
-            toExpand.addAll(group.getSubGroups());
-        }
-
-        var combinators = generatedGroups.stream()
-                .map(CombinatorGroup::getCombinators)
-                .flatMap(Collection::stream)
-                .collect(Collectors.toList());
-
-        var networks = generatedGroups.stream()
-                .peek(x -> {
-                    if(x.getNetworks().contains(null)) {
-                        System.out.println(x);
-                    }
-                })
-                .map(CombinatorGroup::getNetworks)
-                .flatMap(Collection::stream)
-                .collect(Collectors.toList());
-
-        System.out.println(writeBlueprint(Arrays.asList(FunctionPlacer.placeFunction(combinators, networks, new NetworkGroup(), new NetworkGroup(), true))));
-    }
-
     public static String writeBlueprint(List<EntityBlock> blocks) {
         JSONArray entities = new JSONArray();
 

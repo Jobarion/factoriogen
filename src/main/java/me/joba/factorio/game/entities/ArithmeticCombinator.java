@@ -47,7 +47,7 @@ public class ArithmeticCombinator extends IOCircuitNetworkEntity {
         }
         conds.put("operation", operator.getBlueprintCode());
         JSONObject out = new JSONObject();
-        out.put("type", "virtual");
+        out.put("type", outSignal.isVirtual() ? "virtual" : "item");
         out.put("name", outSignal.getFactorioName());
         conds.put("output_signal", out);
         return new ArithmeticCombinator(cbehavior);
@@ -90,7 +90,7 @@ public class ArithmeticCombinator extends IOCircuitNetworkEntity {
         }
         conds.put("operation", operator.getBlueprintCode());
         JSONObject out = new JSONObject();
-        out.put("type", "virtual");
+        out.put("type", outSignal.isVirtual() ? "virtual" : "item");
         out.put("name", outSignal.getFactorioName());
         conds.put("output_signal", out);
         return new ArithmeticCombinator(cbehavior);

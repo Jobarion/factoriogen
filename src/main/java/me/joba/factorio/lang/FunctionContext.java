@@ -55,7 +55,7 @@ public class FunctionContext {
             }
             else {
                 for(FactorioSignal signal : param.getSignal()) {
-                    if(signal.isReserved()) throw new IllegalArgumentException("Signal " + param.getSignal() + " is reserved");
+                    if(signal.isReserved()) throw new IllegalArgumentException("Signal " + Arrays.toString(param.getSignal()) + " is reserved");
                 }
             }
         }

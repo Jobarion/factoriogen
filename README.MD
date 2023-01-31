@@ -74,7 +74,7 @@ In this example function header `function add(a: int<red>, b: int) -> int`
 
 Functions must not call each other recursively (Function calls are a directed acyclic graph). The compiler will not prevent recursive calls, but if a recursive call is performed, stuff will break.
 
-The function body is a block of code with a final `return` statement.
+All function parameters are pass by value, except for arrays, which are passed as references.
 
 #### Return statement
 The return statement must the last statement in a function. Right now that's not enforced, but having multiple return statements, or returning in a `while` loop _will_ break things.
@@ -83,10 +83,10 @@ The return statement must the last statement in a function. Right now that's not
 The only supported types right now are:
 - `int` a 32 bit integer, the same type that factorio uses for signals.
 - `boolean` either true or false. 
-- n-tuple. Tuples are a typed, fixed-size, ordered list of elements. E.g. `(int, boolean, (int, int))` is a tuple with 3 values. First, an `int`, second a `boolean`, third another `(int, int)`. 
+- n-tuple. Tuples are a typed, fixed-size, ordered list of elements. E.g. `(int, boolean, (int, int))` is a tuple with 3 values. First, an `int`, second a `boolean`, third another tuple `(int, int)`. 
+- Arrays of any other type. E.g. `int[]` or `(int, boolean)[][]`.
 
 ## ToDo
-- Array support
-- Various optimizations
-- Add named tuple types
+- Lots of optimizations
+- Named tuple types
 - Better error messages

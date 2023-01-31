@@ -32,7 +32,7 @@ public interface CombinatorIn {
             @Override
             public Object toJson() {
                 JSONObject jsonObject = new JSONObject();
-                jsonObject.put("type", "virtual");
+                jsonObject.put("type", sid.isVirtual() ? "virtual" : "item");
                 jsonObject.put("name", sid.getFactorioName());
                 return jsonObject;
             }

@@ -69,7 +69,7 @@ public class FunctionPlacer {
         SimulatedAnnealingSolver.simulatedAnnealing(nodes, 10_000_000);
 
         Map<Integer, Node> nodeIdMap = nodes.stream()
-                .collect(Collectors.toMap(e -> e.getId(), e -> e));
+                .collect(Collectors.toMap(Node::getId, e -> e));
 
         for(CircuitNetworkEntity entity : combinators) {
             var node = nodeIdMap.get(entityIdNodeIdMap.get(entity.getEntityId()));
@@ -101,9 +101,8 @@ public class FunctionPlacer {
         List<CircuitNetworkEntity> closestSubstations = functionBlocks.stream()
                 .map(block -> block.getEntities().stream()
                         .filter(x -> x instanceof Substation)
-                        .map(x -> (Substation)x)
-                        .sorted(Comparator.comparingInt((ToIntFunction<Substation>) Entity::getY).thenComparingInt(Entity::getX))
-                        .findFirst()
+                        .map(x -> (Substation) x)
+                        .min(Comparator.comparingInt((ToIntFunction<Substation>) Entity::getY).thenComparingInt(Entity::getX))
                 )
                 .filter(Optional::isPresent)
                 .map(Optional::get)

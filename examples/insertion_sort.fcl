@@ -1,0 +1,26 @@
+int[10] ARRAY_1;
+
+function main() -> void {
+    sort(ARRAY_1, 10);
+}
+
+function sort(arr: int[], size: int) -> void {
+    start = 0;
+    while(start < size - 1) {
+        index = start + 1;
+        smallestIndex = start;
+        smallest = arr[start];
+        while(index < size) {
+            x = arr[index];
+            if(x < smallest) {
+                smallest = x;
+                smallestIndex = index;
+            }
+            index = index + 1;
+        }
+        tmp = arr[start];
+        arr[start] = smallest;
+        arr[smallestIndex] = tmp;
+        start = start + 1;
+    }
+}

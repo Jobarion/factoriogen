@@ -53,10 +53,10 @@ public class StructureParser extends LanguageBaseListener {
         var signatureBuilder = new FunctionSignature.Builder(name, paramTypes, returnType, getFunctionReturnSignals(returnType));
 
         for(var modifier : modifiers) {
-            switch(modifier.key.getText()) {
-                case "native": signatureBuilder.asNative(true); break;
-                case "pipelined": signatureBuilder.asPipelined(true); break;
-                case "delay": signatureBuilder.withDelay(Integer.parseInt(modifier.intLiteral().getText())); break;
+            switch (modifier.key.getText()) {
+                case "native" -> signatureBuilder.asNative(true);
+                case "pipelined" -> signatureBuilder.asPipelined(true);
+                case "delay" -> signatureBuilder.withDelay(Integer.parseInt(modifier.intLiteral().getText()));
             }
         }
         FunctionContext context = new FunctionContext(signatureBuilder.build());

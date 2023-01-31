@@ -23,8 +23,8 @@
       <plugin>
         <artifactId>maven-compiler-plugin</artifactId>
         <configuration>
-          <source>14</source>
-          <target>14</target>
+          <source>15</source>
+          <target>15</target>
         </configuration>
       </plugin>
       <plugin>
@@ -32,8 +32,8 @@
         <configuration>
           <archive>
             <manifest>
-              <mainClass>me.joba.factorio.Main</mainClass>
-              <packageName>me.joba.factorio</packageName>
+              <mainClass>me.joba.factorio.lang.Generator</mainClass>
+              <packageName>me.joba.factorio.lang</packageName>
             </manifest>
             <manifestEntries>
               <mode>development</mode>
@@ -60,8 +60,8 @@
     </plugins>
   </build>
   <properties>
-    <maven.compiler.target>14</maven.compiler.target>
-    <maven.compiler.source>14</maven.compiler.source>
+    <maven.compiler.target>15</maven.compiler.target>
+    <maven.compiler.source>15</maven.compiler.source>
   </properties>
 </project>
 

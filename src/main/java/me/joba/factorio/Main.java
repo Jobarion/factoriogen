@@ -12,7 +12,7 @@ public class Main {
         Path file = Path.of(args[0]);
         var code = Files.readAllLines(file)
                 .stream()
-                .collect(StringBuffer::new, (acc, val) -> acc.append(val), (acc1, acc2) -> acc1.append(acc2))
+                .collect(StringBuffer::new, StringBuffer::append, StringBuffer::append)
                 .toString();
         System.out.println(Generator.generateBlueprint(code));
     }

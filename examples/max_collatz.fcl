@@ -1,0 +1,30 @@
+function main(start: int<red>, end: int<green>, iterations: int<i>) -> int {
+  max = -1;
+  while(start <= end) {
+    max = max(collatz(start, iterations), max);
+    start = start + 1;
+  }
+  return max;
+}
+
+function collatz(currentVal: int, iterations: int) -> int {
+  max = currentVal;
+  while(iterations != 0) {
+    iterations = iterations - 1;
+    if(currentVal % 2 == 0) {
+      currentVal = currentVal / 2;
+    }
+    else {
+      currentVal = currentVal * 3 + 1;
+    }
+    max = max(currentVal, max);
+  }
+  return max;
+}
+
+function [delay=3] max(a: int, b: int) -> int {
+  if(a < b) {
+    a = b;
+  }
+  return a;
+}

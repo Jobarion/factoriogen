@@ -21,13 +21,13 @@ import java.util.stream.Collectors;
 public class Generator extends LanguageBaseListener {
 
     private static final String ARRAY_SORT_TEST = """
-            
+
             int[10] ARRAY_1;
-            
+
             function main() -> void {
                 sort(ARRAY_1, 10);
             }
-            
+
             function sort(arr: int[], size: int) -> void {
                 start = 0;
                 while(start < size - 1) {
@@ -51,38 +51,39 @@ public class Generator extends LanguageBaseListener {
             """;
 
     private static final String FUNCTION_FUCKING_COMPLEX =
-            "function main(start: int<red>, end: int<green>, iterations: int<i>) -> int {\n" +
-            "  max = -1;\n" +
-            "  while(start <= end) {\n" +
-            "    max = max(collatz(start, iterations), max);\n" +
-            "    start = start + 1;\n" +
-            "  }\n" +
-            "  return max;\n" +
-            "}\n" +
-            "\n" +
-            "function collatz(currentVal: int, iterations: int) -> int {\n" +
-            "  max = currentVal;\n" +
-            "  while(iterations != 0) {\n" +
-            "    iterations = iterations - 1;\n" +
-            "    if(currentVal % 2 == 0) {\n" +
-            "      currentVal = currentVal / 2;\n" +
-            "    }\n" +
-            "    else {\n" +
-            "      currentVal = currentVal * 3 + 1;\n" +
-            "    }\n" +
-            "    max = max(currentVal, max);\n" +
-            "  }\n" +
-            "  return max;\n" +
-            "}\n" +
-            "\n" +
-            "function max(a: int, b: int) -> int {\n" +
-            "  if(a < b) {\n" +
-            "    a = b;\n" +
-            "  }\n" +
-            "  return a;\n" +
-            "}";
+            """
+                    function main(start: int<red>, end: int<green>, iterations: int<i>) -> int {
+                      max = -1;
+                      while(start <= end) {
+                        max = max(collatz(start, iterations), max);
+                        start = start + 1;
+                      }
+                      return max;
+                    }
 
-    private static final String TEST = ARRAY_SORT_TEST;
+                    function collatz(currentVal: int, iterations: int) -> int {
+                      max = currentVal;
+                      while(iterations != 0) {
+                        iterations = iterations - 1;
+                        if(currentVal % 2 == 0) {
+                          currentVal = currentVal / 2;
+                        }
+                        else {
+                          currentVal = currentVal * 3 + 1;
+                        }
+                        max = max(currentVal, max);
+                      }
+                      return max;
+                    }
+
+                    function max(a: int, b: int) -> int {
+                      if(a < b) {
+                        a = b;
+                      }
+                      return a;
+                    }""";
+
+    private static final String TEST = FUNCTION_FUCKING_COMPLEX;
 
     private static final ExpressionResolver<LanguageParser.ExprContext, ArithmeticOperator> EXPR_PARSER = new IntExpressionResolver();
     private static final ExpressionResolver<LanguageParser.BoolExprContext, DeciderOperator> BOOL_EXPR_COMPONENT_PARSER = new ComparisonExpressionResolver();
@@ -142,7 +143,7 @@ public class Generator extends LanguageBaseListener {
         var returnVal = currentFunctionContext.popTempVariable();
 
         if(!returnVal.getType().equals(currentFunctionContext.getSignature().getReturnType())) {
-            throw new RuntimeException("Invalid return type " + returnVal.getType() + ", expected " + currentFunctionContext.getSignature().getReturnSignals());
+            throw new RuntimeException("Invalid return type " + returnVal.getType() + ", expected " + Arrays.toString(currentFunctionContext.getSignature().getReturnSignals()));
         }
 
         var returnGroup = currentFunctionContext.getFunctionReturnGroup();
@@ -436,9 +437,7 @@ public class Generator extends LanguageBaseListener {
         elseInput.setGreenIn(conditionGroup.getInput());
         elseInput.setGreenOut(conditionContext.getElseProvider().getOutput());
 
-        int conditionDelay = condition.getTickDelay() + 1;//green -> red conversion :( @TODO allow accessors to use red wires instead
-
-        int outsideVariableDelay = conditionDelay;
+        int outsideVariableDelay = condition.getTickDelay() + 1;
         int ifDelay = 0;
         int elseDelay = 0;
         for(var varName : currentFunctionContext.getVariableScope().getAllVariables().keySet()) {
@@ -871,8 +870,8 @@ public class Generator extends LanguageBaseListener {
                 if(symbol instanceof Constant) {
                     int[] vals = ((Constant) symbol).getVal();
                     Map<FactorioSignal, Integer> constants = new HashMap<>();
-                    for(int j = 0; j < vals.length; j++) {
-                        constants.put(remappedSignals[offset++], vals[j]);
+                    for (int val : vals) {
+                        constants.put(remappedSignals[offset++], val);
                     }
                     ConstantCombinator cc = new ConstantCombinator(constants);
                     group.getCombinators().add(cc);

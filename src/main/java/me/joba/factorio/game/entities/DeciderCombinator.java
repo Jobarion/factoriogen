@@ -53,7 +53,7 @@ public class DeciderCombinator extends IOCircuitNetworkEntity {
         }
         conds.put("comparator", operator.getBlueprintCode());
         JSONObject out = new JSONObject();
-        out.put("type", "virtual");
+        out.put("type", outSignal.isVirtual() ? "virtual" : "item");
         out.put("name", outSignal.getFactorioName());
         conds.put("output_signal", out);
         conds.put("copy_count_from_input", !one);
