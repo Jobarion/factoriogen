@@ -26,7 +26,7 @@ public class Constant extends Symbol {
 
     @Override
     public String toString() {
-        return "Const(" + Arrays.toString(val) + ")";
+        return "Const(" + Arrays.toString(val) + ")<" + getType() + ">";
     }
 
     @Override

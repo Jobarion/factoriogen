@@ -34,7 +34,7 @@ public class Variable extends Symbol {
 
     @Override
     public String toString() {
-        return !isBound() ? "Var(" + id + ")" : "Var(" + Arrays.toString(getSignal()) + ", " + id + ")";
+        return (!isBound() ? "Var(" + id + ")" : "Var(" + Arrays.toString(getSignal()) + ", " + id + ")") + "<" + getType() + ">";
     }
 
     @Override

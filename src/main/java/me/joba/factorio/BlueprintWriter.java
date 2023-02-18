@@ -1,16 +1,16 @@
 package me.joba.factorio;
 
 import me.joba.factorio.game.EntityBlock;
-import me.joba.factorio.graph.FunctionPlacer;
 import me.joba.factorio.graph.MSTSolver;
 import me.joba.factorio.graph.Tuple;
-import me.joba.factorio.lang.MemoryUtil;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
 import java.nio.charset.StandardCharsets;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.Base64;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.zip.Deflater;
 
 public class BlueprintWriter {
@@ -31,6 +31,7 @@ public class BlueprintWriter {
         blueprint.put("version", 281474976710656L);
         JSONObject root = new JSONObject();
         root.put("blueprint", blueprint);
+
         String outString = root.toJSONString();
         Deflater deflater = new Deflater(9);
         deflater.setInput(outString.getBytes(StandardCharsets.UTF_8));

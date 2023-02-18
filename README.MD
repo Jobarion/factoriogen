@@ -14,6 +14,7 @@ An expression is either
 - A function call (e.g. `max(a, b)`)
 - An n-tuple of sub-expressions (e.g. `(1, a == b, a * b)` would be a 3-tuple with the type `(int, boolean, int)`). Nested tuples are permitted.
 - A tuple access (e.g. assuming `a` holds a 2-tuple of type `(int, int)`, `a.0` and `a.1` can be used to access the values stored in the tuple).
+- 
 
 For a more formal definition, please take a look at the [grammar](src/main/antlr4/me/joba/factorio/lang/Language.g4).
 
@@ -86,7 +87,7 @@ The only supported types right now are:
 - n-tuple. Tuples are a typed, fixed-size, ordered list of elements. E.g. `(int, boolean, (int, int))` is a tuple with 3 values. First, an `int`, second a `boolean`, third another tuple `(int, int)`. 
 - Arrays of any other type. E.g. `int[]` or `(int, boolean)[][]`.
 
-## ToDo
+## Todo
 - Lots of optimizations
 - Named tuple types
 - Better error messages

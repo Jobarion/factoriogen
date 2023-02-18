@@ -1,0 +1,18 @@
+boolean[10] TEMP_ARRAY;
+
+function main() -> void {
+  test(0);
+}
+
+function test(a: int) -> void {
+  array = getArray();
+  array[a] = getTuple(1, 2).1;
+}
+
+function getTuple(a: int, b: int) -> ((int, int), boolean) {
+    return ((a, b), true);
+}
+
+function getArray() -> boolean[] {
+    return TEMP_ARRAY;
+}

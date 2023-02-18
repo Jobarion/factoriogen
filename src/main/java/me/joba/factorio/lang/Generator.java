@@ -131,7 +131,21 @@ public class Generator extends LanguageBaseListener {
         }
         inputCombinator.setDescription("Input function");
         functionHeader.getCombinators().add(inputCombinator);
-        inputCombinator.setGreenOut(out);
+        //TODO optimization, 0-1 ticks per function call
+        //This part removes the function id signal to avoid having it mix with one from following function call.
+        //It is often not necessary, only if we have nested function calls, but I don't know yet how to detect that.
+        var tmp = new NetworkGroup();
+        inputCombinator.setGreenOut(tmp);
+        functionHeader.getNetworks().add(tmp);
+        var c1 = ArithmeticCombinator.withLeftRight(CombinatorIn.signal(Constants.FUNCTION_IDENTIFIER), CombinatorIn.constant(-1), Constants.FUNCTION_IDENTIFIER, ArithmeticOperator.MUL);
+        var c2 = ArithmeticCombinator.copying();
+        functionHeader.getCombinators().add(c1);
+        functionHeader.getCombinators().add(c2);
+        c1.setGreenIn(tmp);
+        c2.setGreenIn(tmp);
+        c1.setGreenOut(out);
+        c2.setGreenOut(out);
+
         currentFunctionContext.setFunctionHeader(functionHeader);
         currentFunctionContext.overwriteControlFlowVariable(functionHeader).setDelay(0);
         log("Defining function " + currentFunctionContext.getSignature());
@@ -897,8 +911,22 @@ public class Generator extends LanguageBaseListener {
             EXPR_PARSER.parse(currentFunctionContext, ctx);
         }
         else if(ctx.numberLit != null) {//Literal int
-            int val = Integer.parseInt(ctx.getText());
+            int radix;
+            if(ctx.numberLit.decimal != null) {
+                radix = 10;
+            }
+            else if(ctx.numberLit.hex != null){
+                radix = 16;
+            }
+            else {
+                throw new UnsupportedOperationException("Unknown int literal " + ctx.getText());
+            }
+            int val = Integer.parseInt(ctx.getText(), radix);
             currentFunctionContext.pushTempVariable(new Constant(val));
+        }
+        else if(ctx.boolLit != null) {
+            boolean val = Boolean.parseBoolean(ctx.getText());
+            currentFunctionContext.pushTempVariable(new Constant(PrimitiveType.BOOLEAN, val ? 1 : 0));
         }
         else if(ctx.var != null) {//Variable access
             var named = currentFunctionContext.getNamedVariable(ctx.var.getText());
@@ -1048,19 +1076,10 @@ public class Generator extends LanguageBaseListener {
     public void exitArrayAssignment(LanguageParser.ArrayAssignmentContext ctx) {
         var value = currentFunctionContext.popTempVariable();
         var index = currentFunctionContext.popTempVariable();
+        var array = currentFunctionContext.popTempVariable();
         if(index.getType() != PrimitiveType.INT) throw new RuntimeException("Invalid array index type " + index.getType() + ", expected INT");
 
-        String varName = ctx.var.getText();
-        Symbol array = currentFunctionContext.getNamedVariable(varName);
-        if(array == null) {
-            var declaredArray = declaredArrays.get(ctx.var.getText());
-            if(declaredArray == null) {
-                throw new RuntimeException("Variable " + ctx.var.getText() + " is not defined");
-            }
-            array = new Constant(declaredArray.getType(), declaredArray.getAddress());
-        }
-
-        if(!(array.getType() instanceof ArrayType)) throw new RuntimeException(varName + " is not an array. Expected " + new ArrayType(value.getType()) + ", found " + array.getType());
+        if(!(array.getType() instanceof ArrayType)) throw new RuntimeException(array + " is not an array. Expected " + new ArrayType(value.getType()) + ", found " + array.getType());
         var arraySubtype = ((ArrayType)array.getType()).getSubType();
 
         if(!arraySubtype.equals(value.getType())) throw new RuntimeException("Type mismatch " + value + " to array " + array);
@@ -1081,18 +1100,26 @@ public class Generator extends LanguageBaseListener {
             CombinatorGroup addressOffsetGroup = new CombinatorGroup(null, new NetworkGroup());
             arrayWriterGroup.getSubGroups().add(addressOffsetGroup);
 
-            var addressOffsetCalculator = ArithmeticCombinator.withLeftRight(CombinatorIn.signal(index.getSignal()[0]), CombinatorIn.constant(arraySubtype.getSize()), arrayWriteFunctionCallParamSignal, ArithmeticOperator.MUL);
-            addressOffsetGroup.getCombinators().add(addressOffsetCalculator);
-            addressOffsetCalculator.setGreenIn(arrayWriterGroup.getInput());
-            addressOffsetCalculator.setGreenOut(addressOffsetGroup.getOutput());
+            Symbol indexOffsetVar;
+            if(index instanceof Constant c) {
+                int addressOffset = c.getVal()[0] * arraySubtype.getSize();
+                indexOffsetVar = new Constant(addressOffset);
+            }
+            else {
+                var addressOffsetCalculator = ArithmeticCombinator.withLeftRight(CombinatorIn.signal(index.getSignal()[0]), CombinatorIn.constant(arraySubtype.getSize()), arrayWriteFunctionCallParamSignal, ArithmeticOperator.MUL);
+                addressOffsetGroup.getCombinators().add(addressOffsetCalculator);
+                addressOffsetCalculator.setGreenIn(arrayWriterGroup.getInput());
+                addressOffsetCalculator.setGreenOut(addressOffsetGroup.getOutput());
 
-            var indexOffsetVar = currentFunctionContext.createBoundTempVariable(PrimitiveType.INT, new FactorioSignal[]{arrayWriteFunctionCallParamSignal}, addressOffsetGroup);
-            indexOffsetVar.setDelay(index.getTickDelay() + 1);
-            currentFunctionContext.popTempVariable();//createBoundTempVariable puts it on the stack. We don't want that
+                var _indexOffsetVar = currentFunctionContext.createBoundTempVariable(PrimitiveType.INT, new FactorioSignal[]{arrayWriteFunctionCallParamSignal}, addressOffsetGroup);
+                _indexOffsetVar.setDelay(index.getTickDelay() + 1);
+                currentFunctionContext.popTempVariable();//createBoundTempVariable puts it on the stack. We don't want that
 
-            var accessor = ((Variable)index).createVariableAccessor();
-            arrayWriterGroup.getAccessors().add(accessor);
-            accessor.access(index.getTickDelay()).accept(arrayWriterGroup);
+                var accessor = ((Variable)index).createVariableAccessor();
+                arrayWriterGroup.getAccessors().add(accessor);
+                accessor.access(index.getTickDelay()).accept(arrayWriterGroup);
+                indexOffsetVar = _indexOffsetVar;
+            }
 
             for(int i = 0; i < arraySubtype.getSize(); i++) {
                 //This is only a virtual variable we create that represents one int of the larger value.

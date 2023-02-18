@@ -32,7 +32,7 @@ statement
     ;
 
 assignment: var=varName '=' x=expr;
-arrayAssignment: var=varName '[' index=expr ']' '=' x=expr;
+arrayAssignment: array=expr '[' index=expr ']' '=' x=expr;
 
 ifExpr: 'if' '(' ifCond=boolExpr ')' ifPart=ifStatement ('else' elsePart=elseStatement)?;
 elseStatement: statement;
@@ -44,7 +44,7 @@ loopBody: statement;
 returnStatement: 'return ' expr;
 
 functionCall: functionName '(' argumentList ')';
-argumentList: expr (',' expr)*;
+argumentList: (expr (',' expr)*)?;
 
 expr
     : '(' wrapped=expr ')'
@@ -57,6 +57,7 @@ expr
     | left=expr op=BOR right=expr
     | left=expr op=BXOR right=expr
     | numberLit=intLiteral
+    | boolLit=boolLiteral
     | call=functionCall
     | var=varName
     | array=expr '[' index=expr ']'
@@ -79,7 +80,13 @@ typeList: type (',' type)+;
 
 arrayDeclaration: type '[' intLiteral ']' varName ';';
 
-intLiteral: '-'? NumberCharacter+;
+intLiteral
+          : decimal=decimalLiteral
+          | hex=hexLiteral
+          ;
+decimalLiteral: '-'? NumberCharacter+;
+hexLiteral: '-'? HexCharacter+;
+boolLiteral: BoolLiteral;
 varName: NameCharacterFirst (NameCharacterFirst|NameCharacterRest|NumberCharacter)*;
 functionName: NameCharacterFirst (NameCharacterFirst|NameCharacterRest|NumberCharacter)*;
 signalName: (NameCharacterFirst|NameCharacterRest|NumberCharacter)+;
@@ -87,7 +94,9 @@ signalName: (NameCharacterFirst|NameCharacterRest|NumberCharacter)+;
 NameCharacterFirst: [a-zA-Z];
 NameCharacterRest: [A-Z_];
 NumberCharacter: [0-9];
+HexCharacter: [0-9a-fA-F];
 TypeName: 'int'|'boolean'|'void';
+BoolLiteral: 'true'|'false';
 
 ADD: '+';
 SUB: '-';

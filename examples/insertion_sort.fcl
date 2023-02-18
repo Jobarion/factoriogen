@@ -1,6 +1,11 @@
 int[10] ARRAY_1;
 
 function main() -> void {
+    i = 0;
+    while(i < 10) {
+      ARRAY_1[i] = 10 - i;
+      i = i + 1;
+    }
     sort(ARRAY_1, 10);
 }
 
