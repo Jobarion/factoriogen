@@ -31,7 +31,7 @@ public class BooleanExpressionResolver extends ExpressionResolver<LanguageParser
     }
 
     @Override
-    public int generateCombinators(Symbol[] symbols, ArithmeticOperator operation, FactorioSignal[] outSymbol, CombinatorGroup group) {
+    public int generateCombinators(Symbol[] symbols, ArithmeticOperator operation, FactorioSignal[] outSymbol, CombinatorGroup group, FunctionContext context) {
         var connected = ArithmeticCombinator.withLeftRight(symbols[0].toAccessor()[0],  symbols[1].toAccessor()[0], outSymbol[0], operation);
         connected.setGreenIn(group.getInput());
         connected.setGreenOut(group.getOutput());

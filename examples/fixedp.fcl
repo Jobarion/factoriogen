@@ -1,13 +1,8 @@
-int[10] TEMP_ARRAY;
-
-function main() -> int {
-  return read(0);
-}
-
-function read(index: int) -> int {
-  return getArray()[index];
-}
-
-function getArray() -> int[] {
-  return TEMP_ARRAY;
+function main() -> fixedp<6> {
+  a = 10;
+  sum = 14.0;
+  while(a > 0) {
+    sum = sum * 1.03;
+  }
+  return sum;
 }

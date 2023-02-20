@@ -12,6 +12,9 @@ public interface Type {
         if(ctx.singleType != null) {
             return PrimitiveType.valueOf(ctx.singleType.getText().toUpperCase(Locale.ROOT));
         }
+        else if(ctx.fracbits != null) {
+            return new FixedpType(Integer.parseInt(ctx.fracbits.getText()));
+        }
         else if(ctx.typeList() != null) {
             Type[] types = new Type[ctx.typeList().type().size()];
             int i = 0;

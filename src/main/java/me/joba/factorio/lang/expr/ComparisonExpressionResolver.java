@@ -27,7 +27,7 @@ public class ComparisonExpressionResolver extends ExpressionResolver<LanguagePar
     }
 
     @Override
-    public int generateCombinators(Symbol[] symbols, DeciderOperator operation, FactorioSignal[] outSymbol, CombinatorGroup group) {
+    public int generateCombinators(Symbol[] symbols, DeciderOperator operation, FactorioSignal[] outSymbol, CombinatorGroup group, FunctionContext context) {
         if(symbols[0] instanceof Constant) {
             var tmp = symbols[1];
             symbols[1] = symbols[0];

@@ -2,34 +2,34 @@ package me.joba.factorio.lang.types;
 
 import java.util.Objects;
 
-public class ArrayType implements Type{
+public class FixedpType implements Type{
 
-    private final Type subType;
+    private final int fractionBits;
 
-    public ArrayType(Type subType) {
-        this.subType = subType;
+    public FixedpType(int fractionBits) {
+        this.fractionBits = fractionBits;
     }
 
-    public Type getSubType() {
-        return subType;
+    public int getFractionBits() {
+        return fractionBits;
     }
 
     @Override
     public String toString() {
-        return subType + "[]";
+        return "fixedp<" + fractionBits + ">";
     }
 
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        ArrayType arrayType = (ArrayType) o;
-        return subType.equals(arrayType.subType);
+        FixedpType that = (FixedpType) o;
+        return fractionBits == that.fractionBits;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(subType);
+        return Objects.hash(fractionBits);
     }
 
     @Override
