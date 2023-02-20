@@ -10,8 +10,8 @@ import java.util.Optional;
 
 public abstract class ExpressionResolver<RC extends ParserRuleContext, OP> {
 
-    private final Type[] inputTypes;
-    private final Type outputType;
+    protected final Type[] inputTypes;
+    protected final Type outputType;
 
     protected ExpressionResolver(Type outputType, Type... inputTypes) {
         this.inputTypes = inputTypes;
@@ -60,7 +60,7 @@ public abstract class ExpressionResolver<RC extends ParserRuleContext, OP> {
             }
         }
 
-        int propagationDelay = generateCombinators(symbols, op, outSymbol, outputContext);
+        int propagationDelay = generateCombinators(symbols, op, outSymbol, outputContext, context);
         bound.setDelay(maxInputDelay + propagationDelay);
 
         log(context, Arrays.toString(symbols) + " (using " + op + ") = " + bound + ", with delay " + bound.getTickDelay());
@@ -72,5 +72,5 @@ public abstract class ExpressionResolver<RC extends ParserRuleContext, OP> {
 
     public abstract OP getOperation(RC ruleContext);
     public abstract Optional<Constant> computeConstExpr(Constant[] constants, OP operation);
-    public abstract int generateCombinators(Symbol[] symbols, OP operation, FactorioSignal[] outSymbol, CombinatorGroup group);
+    public abstract int generateCombinators(Symbol[] symbols, OP operation, FactorioSignal[] outSymbol, CombinatorGroup group, FunctionContext context);
 }

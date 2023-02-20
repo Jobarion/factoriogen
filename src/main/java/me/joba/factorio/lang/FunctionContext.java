@@ -196,6 +196,7 @@ public class FunctionContext {
         return tempVariables.peek();
     }
 
+    //TODO create named constant
     public Variable createNamedVariable(String name, Type type, FactorioSignal[] signal, CombinatorGroup producer) {
         return variables.peek().createNamedVariable(name, type, signal, producer);
     }

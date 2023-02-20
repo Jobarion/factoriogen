@@ -31,8 +31,8 @@ statement
     | functionCall ';'
     ;
 
-assignment: var=varName '=' x=expr;
-arrayAssignment: var=varName '[' index=expr ']' '=' x=expr;
+assignment: var=varName('<' fractBits=intLiteral '>')? '=' x=expr;
+arrayAssignment: array=expr '[' index=expr ']' '=' x=expr;
 
 ifExpr: 'if' '(' ifCond=boolExpr ')' ifPart=ifStatement ('else' elsePart=elseStatement)?;
 elseStatement: statement;
@@ -49,6 +49,9 @@ argumentList: (expr (',' expr)*)?;
 expr
     : '(' wrapped=expr ')'
     | '(' tupleValues=exprList ')'
+    | var=varName
+    | array=expr '[' index=expr ']'
+    | call=functionCall
     | tuple=expr (op=ACCESS) propertyId=intLiteral
     | left=expr (op=MUL | op=DIV | op=MOD) right=expr
     | left=expr (op=ADD | op=SUB) right=expr
@@ -56,10 +59,13 @@ expr
     | left=expr op=BAND right=expr
     | left=expr op=BOR right=expr
     | left=expr op=BXOR right=expr
+    | simpleExpr
+    ;
+
+simpleExpr
+    : fixedpLit=fixedpLiteral
     | numberLit=intLiteral
-    | call=functionCall
-    | var=varName
-    | array=expr '[' index=expr ']'
+    | boolLit=boolLiteral
     ;
 
 exprList: expr (',' expr)+;
@@ -72,6 +78,7 @@ boolExpr
 
 type
     : singleType=TypeName
+    | 'fixedp' LT fracbits=intLiteral GT
     | '(' typeList ')'
     | arrayType=type '[]'
     ;
@@ -79,7 +86,15 @@ typeList: type (',' type)+;
 
 arrayDeclaration: type '[' intLiteral ']' varName ';';
 
-intLiteral: '-'? NumberCharacter+;
+
+fixedpLiteral: decimalLiteral '.' NumberCharacter+;
+intLiteral
+          : decimal=decimalLiteral
+          | hex=hexLiteral
+          ;
+decimalLiteral: '-'? NumberCharacter+;
+hexLiteral: '-'? HexCharacter+;
+boolLiteral: BoolLiteral;
 varName: NameCharacterFirst (NameCharacterFirst|NameCharacterRest|NumberCharacter)*;
 functionName: NameCharacterFirst (NameCharacterFirst|NameCharacterRest|NumberCharacter)*;
 signalName: (NameCharacterFirst|NameCharacterRest|NumberCharacter)+;
@@ -87,7 +102,9 @@ signalName: (NameCharacterFirst|NameCharacterRest|NumberCharacter)+;
 NameCharacterFirst: [a-zA-Z];
 NameCharacterRest: [A-Z_];
 NumberCharacter: [0-9];
+HexCharacter: [0-9a-fA-F];
 TypeName: 'int'|'boolean'|'void';
+BoolLiteral: 'true'|'false';
 
 ADD: '+';
 SUB: '-';

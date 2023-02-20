@@ -27,7 +27,7 @@ public class BooleanNotExpressionResolver extends ExpressionResolver<LanguagePar
     }
 
     @Override
-    public int generateCombinators(Symbol[] symbols, Void operation, FactorioSignal[] outSymbol, CombinatorGroup group) {
+    public int generateCombinators(Symbol[] symbols, Void operation, FactorioSignal[] outSymbol, CombinatorGroup group, FunctionContext context) {
         var connected = DeciderCombinator.withLeftRight(symbols[0].toAccessor()[0], CombinatorIn.constant(0), CombinatorOut.one(outSymbol[0]), DeciderOperator.EQ);
         connected.setGreenIn(group.getInput());
         connected.setGreenOut(group.getOutput());

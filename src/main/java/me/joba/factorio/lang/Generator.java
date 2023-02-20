@@ -4,14 +4,8 @@ import me.joba.factorio.*;
 import me.joba.factorio.game.EntityBlock;
 import me.joba.factorio.game.entities.*;
 import me.joba.factorio.graph.FunctionPlacer;
-import me.joba.factorio.lang.expr.BooleanExpressionResolver;
-import me.joba.factorio.lang.expr.BooleanNotExpressionResolver;
-import me.joba.factorio.lang.expr.ComparisonExpressionResolver;
-import me.joba.factorio.lang.expr.IntExpressionResolver;
-import me.joba.factorio.lang.types.ArrayType;
-import me.joba.factorio.lang.types.PrimitiveType;
-import me.joba.factorio.lang.types.TupleType;
-import me.joba.factorio.lang.types.Type;
+import me.joba.factorio.lang.expr.*;
+import me.joba.factorio.lang.types.*;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 
@@ -86,6 +80,7 @@ public class Generator extends LanguageBaseListener {
     private static final String TEST = FUNCTION_FUCKING_COMPLEX;
 
     private static final ExpressionResolver<LanguageParser.ExprContext, ArithmeticOperator> EXPR_PARSER = new IntExpressionResolver();
+    private static final ExpressionResolver<LanguageParser.ExprContext, ArithmeticOperator> FIXEDP_PARSER = new FixedpExpressionResolver();
     private static final ExpressionResolver<LanguageParser.BoolExprContext, DeciderOperator> BOOL_EXPR_COMPONENT_PARSER = new ComparisonExpressionResolver();
     private static final ExpressionResolver<LanguageParser.BoolExprContext, ArithmeticOperator> BOOL_EXPR_PARSER = new BooleanExpressionResolver();
     private static final ExpressionResolver<LanguageParser.BoolExprContext, Void> NOT_EXPR_PARSER = new BooleanNotExpressionResolver();
@@ -140,7 +135,21 @@ public class Generator extends LanguageBaseListener {
         }
         inputCombinator.setDescription("Input function");
         functionHeader.getCombinators().add(inputCombinator);
-        inputCombinator.setGreenOut(out);
+        //TODO optimization, 0-1 ticks per function call
+        //This part removes the function id signal to avoid having it mix with one from following function call.
+        //It is often not necessary, only if we have nested function calls, but I don't know yet how to detect that.
+        var tmp = new NetworkGroup();
+        inputCombinator.setGreenOut(tmp);
+        functionHeader.getNetworks().add(tmp);
+        var c1 = ArithmeticCombinator.withLeftRight(CombinatorIn.signal(Constants.FUNCTION_IDENTIFIER), CombinatorIn.constant(-1), Constants.FUNCTION_IDENTIFIER, ArithmeticOperator.MUL);
+        var c2 = ArithmeticCombinator.copying();
+        functionHeader.getCombinators().add(c1);
+        functionHeader.getCombinators().add(c2);
+        c1.setGreenIn(tmp);
+        c2.setGreenIn(tmp);
+        c1.setGreenOut(out);
+        c2.setGreenOut(out);
+
         currentFunctionContext.setFunctionHeader(functionHeader);
         currentFunctionContext.overwriteControlFlowVariable(functionHeader).setDelay(0);
         log("Defining function " + currentFunctionContext.getSignature());
@@ -151,11 +160,37 @@ public class Generator extends LanguageBaseListener {
     public void exitReturnStatement(LanguageParser.ReturnStatementContext ctx) {
         var returnVal = currentFunctionContext.popTempVariable();
 
+        var returnGroup = currentFunctionContext.getFunctionReturnGroup();
+
+        if((returnVal.getType() instanceof FixedpType || returnVal.getType() == PrimitiveType.UNASSIGNED_FIXEDP) && currentFunctionContext.getSignature().getReturnType() instanceof FixedpType rfpt) {
+            if(returnVal.getType() == PrimitiveType.UNASSIGNED_FIXEDP) {
+                if(!(returnVal instanceof Constant)) throw new IllegalArgumentException(PrimitiveType.UNASSIGNED_FIXEDP + " has to be constant");
+                returnVal = FixedpExpressionResolver.unassignedConstToFixedpIntConst((Constant)returnVal, rfpt.getFractionBits());
+            }
+            else if (rfpt.getFractionBits() != ((FixedpType)returnVal.getType()).getFractionBits()){
+                if(!returnVal.isBound()) {
+                    returnVal.bind(currentFunctionContext.getFreeSymbol());
+                }
+                var var = (Variable) returnVal;
+                var shiftGroup = new CombinatorGroup(new NetworkGroup(), new NetworkGroup());
+                returnGroup.getSubGroups().add(shiftGroup);
+                var accessor = var.createVariableAccessor();
+                shiftGroup.getAccessors().add(accessor);
+                accessor.access(var.getTickDelay()).accept(shiftGroup);
+                int vfb = ((FixedpType)returnVal.getType()).getFractionBits();
+                var shift = ArithmeticCombinator.withLeftRight(CombinatorIn.signal(returnVal.getSignal()[0]), CombinatorIn.constant(Math.abs(rfpt.getFractionBits() - vfb)), returnVal.getSignal()[0], rfpt.getFractionBits() > vfb ? ArithmeticOperator.LSH : ArithmeticOperator.RSH);
+                shiftGroup.getCombinators().add(shift);
+                shift.setGreenIn(shiftGroup.getInput());
+                shift.setGreenOut(shiftGroup.getOutput());
+                var tempVar = currentFunctionContext.createBoundTempVariable(currentFunctionContext.getSignature().getReturnType(), returnVal.getSignal(), shiftGroup);
+                tempVar.setDelay(returnVal.getTickDelay() + 1);
+                returnVal = tempVar;
+            }
+        }
         if(!returnVal.getType().equals(currentFunctionContext.getSignature().getReturnType())) {
             throw new RuntimeException("Invalid return type " + returnVal.getType() + ", expected " + Arrays.toString(currentFunctionContext.getSignature().getReturnSignals()));
         }
 
-        var returnGroup = currentFunctionContext.getFunctionReturnGroup();
 
         var outputGate = DeciderCombinator.withLeftRight(CombinatorIn.signal(Constants.CONTROL_FLOW_SIGNAL), CombinatorIn.constant(0), CombinatorOut.everything(false), DeciderOperator.NEQ);
         returnGroup.getCombinators().add(outputGate);
@@ -565,10 +600,6 @@ public class Generator extends LanguageBaseListener {
         for(var variable : currentFunctionContext.getTempVariables()) {
             outsideDelay = Math.max(outsideDelay, variable.getTickDelay());
         }
-        for(var variable : currentFunctionContext.getVariableScope().getAllVariables().values()) {
-            outsideDelay = Math.max(outsideDelay, variable.getTickDelay());
-        }
-
 
         int totalDelay = Math.max(outsideDelay, argumentDelay);
 
@@ -861,6 +892,35 @@ public class Generator extends LanguageBaseListener {
     }
 
     @Override
+    public void exitSimpleExpr(LanguageParser.SimpleExprContext ctx) {
+        if(ctx.numberLit != null) {//Literal int
+            int radix;
+            if(ctx.numberLit.decimal != null) {
+                radix = 10;
+            }
+            else if(ctx.numberLit.hex != null){
+                radix = 16;
+            }
+            else {
+                throw new UnsupportedOperationException("Unknown int literal " + ctx.getText());
+            }
+            int val = Integer.parseInt(ctx.getText(), radix);
+            currentFunctionContext.pushTempVariable(new Constant(val));
+        }
+        else if(ctx.boolLit != null) {
+            boolean val = Boolean.parseBoolean(ctx.getText());
+            currentFunctionContext.pushTempVariable(new Constant(PrimitiveType.BOOLEAN, val ? 1 : 0));
+        }
+        else if(ctx.fixedpLit != null) {
+            var parts = ctx.getText().split("\\.");
+            int realPart = Integer.parseInt(parts[0]);
+            int fractPart = (int)((long)(Double.parseDouble("0." + parts[1]) * 0xFFFFFFFFL));
+
+            currentFunctionContext.pushTempVariable(new Constant(PrimitiveType.UNASSIGNED_FIXEDP, realPart, fractPart));
+        }
+    }
+
+    @Override
     public void exitExpr(LanguageParser.ExprContext ctx) {
         if(ctx.tuple != null) {//Tuple access
             var tupleVar = currentFunctionContext.popTempVariable();
@@ -900,6 +960,16 @@ public class Generator extends LanguageBaseListener {
                     ac.setGreenOut(group.getOutput());
                 }
                 currentFunctionContext.createBoundTempVariable(subtype, newSignals, group).setDelay(tupleVar.getTickDelay() + 1);
+            }
+        }
+        else if(ctx.left != null) {//Arithmetic
+            var tmpVar = currentFunctionContext.popTempVariable();
+            currentFunctionContext.pushTempVariable(tmpVar);
+            if(tmpVar.getType() == PrimitiveType.INT) {
+                EXPR_PARSER.parse(currentFunctionContext, ctx);
+            }
+            else if(tmpVar.getType() == PrimitiveType.UNASSIGNED_FIXEDP || tmpVar.getType() instanceof FixedpType) {
+                FIXEDP_PARSER.parse(currentFunctionContext, ctx);
             }
         }
         else if(ctx.tupleValues != null) {//Tuple creation
@@ -952,13 +1022,6 @@ public class Generator extends LanguageBaseListener {
             }
             log("Combining " + Arrays.toString(symbols) + " into tuple, delay: " + (delay + tupleCreationDelay));
             currentFunctionContext.createBoundTempVariable(tupleType, remappedSignals, group).setDelay(delay + tupleCreationDelay);
-        }
-        else if(ctx.left != null) {//Arithmetic
-            EXPR_PARSER.parse(currentFunctionContext, ctx);
-        }
-        else if(ctx.numberLit != null) {//Literal int
-            int val = Integer.parseInt(ctx.getText());
-            currentFunctionContext.pushTempVariable(new Constant(val));
         }
         else if(ctx.var != null) {//Variable access
             var named = currentFunctionContext.getNamedVariable(ctx.var.getText());
@@ -1060,6 +1123,10 @@ public class Generator extends LanguageBaseListener {
     @Override
     public void exitAssignment(LanguageParser.AssignmentContext ctx) {
         var value = currentFunctionContext.popTempVariable();
+
+        if(value instanceof Constant c && value.getType() == PrimitiveType.UNASSIGNED_FIXEDP) {
+            value = FixedpExpressionResolver.unassignedConstToFixedpIntConst(c, ctx.fractBits != null ? Integer.parseInt(ctx.fractBits.getText()) : 16);
+        }
         String varName = ctx.var.getText();
 
         FactorioSignal[] variableSymbols;
@@ -1075,8 +1142,8 @@ public class Generator extends LanguageBaseListener {
         CombinatorGroup group = new CombinatorGroup(new NetworkGroup(), new NetworkGroup());
         currentFunctionContext.getFunctionGroup().getSubGroups().add(group);
 
-        if(value instanceof Constant) {
-            int[] vals = ((Constant) value).getVal();
+        if(value instanceof Constant c) {
+            int[] vals = c.getVal();
             Map<FactorioSignal, Integer> constants = new HashMap<>();
             for(int j = 0; j < vals.length; j++) {
                 constants.put(variableSymbols[j], vals[j]);

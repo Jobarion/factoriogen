@@ -33,7 +33,7 @@ public class ArithmeticCombinator extends IOCircuitNetworkEntity {
     }
 
     public static ArithmeticCombinator remapping(FactorioSignal in, FactorioSignal out) {
-        return withLeftRight(CombinatorIn.signal(in), CombinatorIn.constant(0), out, ArithmeticOperator.LSH);
+        return withLeftRight(CombinatorIn.signal(in), CombinatorIn.constant(0), out, ArithmeticOperator.OR);
     }
 
     public static ArithmeticCombinator withLeftRight(CombinatorIn left, CombinatorIn right, FactorioSignal outSignal, ArithmeticOperator operator) {

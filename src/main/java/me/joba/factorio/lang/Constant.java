@@ -26,7 +26,13 @@ public class Constant extends Symbol {
 
     @Override
     public String toString() {
-        return "Const(" + Arrays.toString(val) + ")";
+        if(getType() == PrimitiveType.UNASSIGNED_FIXEDP) {
+            return "Const(" + val[0] + "." + String.valueOf((double)Integer.toUnsignedLong(val[1]) / (double)0xFFFFFFFFL).substring(2) + ", " + Arrays.toString(val) + ")<" + getType() + ">";
+        }
+        else {
+
+        }
+        return "Const(" + Arrays.toString(val) + ")<" + getType() + ">";
     }
 
     @Override
