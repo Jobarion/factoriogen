@@ -85,6 +85,7 @@ public class FunctionSignature {
         public Builder(String name, FunctionParameter[] parameters, Type returnType, FactorioSignal[] returnSignals) {
             this.name = name;
             this.parameters = parameters;
+            if(returnType.getSize() != returnSignals.length) throw new IllegalArgumentException(returnType + " has different size than " + Arrays.toString(returnSignals));
             this.returnType = returnType;
             this.returnSignals = returnSignals;
         }

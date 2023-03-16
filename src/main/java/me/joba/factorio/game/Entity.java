@@ -10,7 +10,7 @@ public abstract class Entity {
 
     private final String name;
     private final int entityId;
-    private int x = -1, y = -1, orientation;
+    private int x = -1, y = -1, orientation = 2;
     private String description;
     private boolean fixedLocation = false;
 

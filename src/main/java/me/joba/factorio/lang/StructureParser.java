@@ -41,16 +41,30 @@ public class StructureParser extends LanguageBaseListener {
         for(int i = 0; i < paramTypes.length; i++) {
             var param = ctx.functionHeader().functionParams().functionParam(i);
             var type = Type.parseType(param.type());
-            FactorioSignal signal = null;
-            if(param.signalName() != null) {
-                signal = FactorioSignal.valueOf("SIGNAL_" + param.signalName().getText().toUpperCase().replace('-', '_'));
+            FactorioSignal[] signals = null;
+            if(param.signalList() != null) {
+                signals = new FactorioSignal[param.signalList().signalName().size()];
+                for(int j = 0; j < signals.length; j++) {
+                    signals[j] = FactorioSignal.valueOf("SIGNAL_" + param.signalList().signalName(j).getText().toUpperCase().replace('-', '_'));
+                }
             }
-            paramTypes[i] = new FunctionParameter(param.varName().getText(), type, signal == null ? null : new FactorioSignal[]{signal});
+            paramTypes[i] = new FunctionParameter(param.varName().getText(), type, signals);
         }
         var modifiers = ctx.functionHeader().functionModifiers().functionModifier();
         if(modifiers == null) modifiers = Collections.emptyList();
 
-        var signatureBuilder = new FunctionSignature.Builder(name, paramTypes, returnType, getFunctionReturnSignals(returnType));
+        FactorioSignal[] returnSignals;
+        if(ctx.functionHeader().returnSignals != null) {
+            returnSignals = new FactorioSignal[returnType.getSize()];
+            for(int i = 0; i < returnSignals.length; i++) {
+                returnSignals[i] = FactorioSignal.valueOf("SIGNAL_" + ctx.functionHeader().returnSignals.signalName(i).getText().toUpperCase().replace('-', '_'));
+            }
+        }
+        else {
+            returnSignals = generateFunctionReturnSignals(returnType);
+        }
+
+        var signatureBuilder = new FunctionSignature.Builder(name, paramTypes, returnType, returnSignals);
 
         for(var modifier : modifiers) {
             switch (modifier.key.getText()) {
@@ -63,7 +77,7 @@ public class StructureParser extends LanguageBaseListener {
         functions.put(name, context);
     }
 
-    private static FactorioSignal[] getFunctionReturnSignals(Type type) {
+    private static FactorioSignal[] generateFunctionReturnSignals(Type type) {
         var returnSignals = new FactorioSignal[type.getSize()];
         var allSignals = FactorioSignal.values();
         int cursor = 0;

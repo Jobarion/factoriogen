@@ -16,7 +16,7 @@ import java.util.stream.Collectors;
 public class MemoryUtil {
 
     private static final int MEMORY_READ_DELAY_UNSAFE = 4;
-    private static final int MEMORY_READ_DELAY = MEMORY_READ_DELAY_UNSAFE + 4;
+//    private static final int MEMORY_READ_DELAY = MEMORY_READ_DELAY_UNSAFE + 4;
 
     private static final FactorioSignal ADDRESS_SIGNAL = FactorioSignal.SIGNAL_GREY;
     private static final FactorioSignal WRITE_VALUE_SIGNAL = FactorioSignal.SIGNAL_BLACK;

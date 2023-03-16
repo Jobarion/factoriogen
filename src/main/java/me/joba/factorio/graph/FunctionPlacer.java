@@ -56,11 +56,11 @@ public class FunctionPlacer {
                 }
             }
             var node = new Node(entityIdNodeIdMap.get(cc.getEntityId()), connectedTo);
+            node.setOrientation(cc.getOrientation());
             if(cc.isFixedLocation()) {
                 node.setFixedLocation(true);
                 node.setX(cc.getX());
                 node.setY(cc.getY());
-                node.setOrientation(cc.getOrientation());
             }
             nodes.add(node);
         }
@@ -200,7 +200,6 @@ public class FunctionPlacer {
                 i--;
                 continue;
             }
-            node.setOrientation(2);
             node.setX(x * 2);
             node.setY(y);
             x++;
@@ -228,11 +227,15 @@ public class FunctionPlacer {
             }
         }
 
-        boolean placeXEdge = (maxX - SUBSTATION_OFFSET_X + 1) % SUBSTATION_SPACING_X > SUBSTATION_OFFSET_X || maxX < SUBSTATION_OFFSET_X;
-        boolean placeYEdge = (maxY - SUBSTATION_OFFSET_Y + 1) % SUBSTATION_SPACING_Y > SUBSTATION_OFFSET_Y || maxY < SUBSTATION_OFFSET_Y;
+        boolean placeXEdge = (maxX - SUBSTATION_OFFSET_X + 2) % SUBSTATION_SPACING_X > SUBSTATION_OFFSET_X || maxX < SUBSTATION_OFFSET_X;
+        boolean placeYEdge = (maxY - SUBSTATION_OFFSET_Y + 2) % SUBSTATION_SPACING_Y > SUBSTATION_OFFSET_Y || maxY < SUBSTATION_OFFSET_Y;
+
+        //TODO FIX
+        placeYEdge = false;
+        placeXEdge = false;
 
         if(placeXEdge) {
-            int x = maxX + 2;
+            int x = maxX + 1;
             for(int y = SUBSTATION_OFFSET_Y; y <= maxY; y += SUBSTATION_SPACING_Y) {
                 var substation = new Substation(x, y);
                 substations.add(substation);
@@ -240,7 +243,7 @@ public class FunctionPlacer {
         }
 
         if(placeYEdge) {
-            int y = maxY + 2;
+            int y = maxY + 1;
             for(int x = SUBSTATION_OFFSET_X; x <= maxX; x += SUBSTATION_SPACING_X) {
                 var substation = new Substation(x, y);
                 substations.add(substation);
@@ -248,7 +251,7 @@ public class FunctionPlacer {
         }
 
         if(placeXEdge && placeYEdge) {
-            substations.add(new Substation(maxX + 2, maxY + 2));
+            substations.add(new Substation(maxX + 1, maxY + 1));
         }
         for(var s : substations) {
             var conn = s.getConnectionPoints()[0].getConnections();

@@ -6,7 +6,7 @@ function
     : functionHeader block
     | functionHeader ';';
 
-functionHeader: 'function ' functionModifiers? name=functionName '(' functionParams ')' '->' returnType=type;
+functionHeader: 'function ' functionModifiers? name=functionName '(' functionParams ')' '->' returnType=type returnSignals=signalList?;
 functionModifiers
     :
     | '[' functionModifier (',' functionModifier)* ']';
@@ -17,7 +17,8 @@ functionModifier
     | key='delay' '=' intLiteral;
 
 functionParams: (functionParam (',' functionParam)*)?;
-functionParam: varName ':' type ('<' signalName '>')?;
+functionParam: varName ':' type signalList?;
+signalList: '<' signalName (',' signalName)* '>';
 
 block: '{' statement+ '}';
 

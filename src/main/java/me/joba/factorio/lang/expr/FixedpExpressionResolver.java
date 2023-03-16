@@ -48,7 +48,7 @@ public class FixedpExpressionResolver extends ExpressionResolver<LanguageParser.
         context.getFunctionGroup().getSubGroups().add(outputContext);
 
         int maxInputDelay = prepareSymbols(symbols, targetType, op, outputContext, context);
-        var outSymbol = context.getFreeSymbols(targetType.getSize());
+        var outSymbol = context.getFreeSignals(targetType.getSize());
 
         var bound = context.createBoundTempVariable(targetType, outSymbol, outputContext);
         int propagationDelay = generateCombinators(symbols, op, outSymbol, outputContext, context);
@@ -58,12 +58,11 @@ public class FixedpExpressionResolver extends ExpressionResolver<LanguageParser.
     }
 
     public static void main(String[] args) {
-        System.out.println(constToFloat(new Constant(new FixedpType(15), 5733015)));
-        System.out.println(floatToFixedpInt("13.43", 20));
-        System.out.println(floatToFixedpInt("13.042", 20));
-        System.out.println((floatToFixedpInt("13.43", 15) >>> 6) + "  " + constToFloat(floatToFixedpInt("13.43", 14) >>> 6, 8));
-        System.out.println((floatToFixedpInt("13.042", 17) >>> 10) + "  " + constToFloat(floatToFixedpInt("13.042", 17) >>> 10, 7));
-        System.out.println(constToFloat((floatToFixedpInt("13.43", 14) >>> 6) * (floatToFixedpInt("13.042", 17) >>> 10), 15));
+        System.out.println(constToFloat(new Constant(new FixedpType(16), 205863)));
+        System.out.println(floatToFixedpInt("-14.0", 16));
+        System.out.println(floatToFixedpInt("14.0", 16));
+        System.out.println((floatToFixedpInt("-14.0", 16) >> 8) * (floatToFixedpInt("14.0", 16) >> 8));
+        System.out.println(constToFloat((floatToFixedpInt("-13.0", 16) << 8) / (floatToFixedpInt("-2.0", 16) >> 8), 16));
 
     }
 
@@ -171,7 +170,7 @@ public class FixedpExpressionResolver extends ExpressionResolver<LanguageParser.
                 maxInputDelay = Math.max(maxInputDelay, s.getTickDelay());
             }
             if(s instanceof Variable && !s.isBound()) {
-                s.bind(context.getFreeSymbol());
+                s.bind(context.getFreeSignal());
             }
         }
 
@@ -180,22 +179,23 @@ public class FixedpExpressionResolver extends ExpressionResolver<LanguageParser.
         context.getFunctionGroup().getSubGroups().add(outputContext);
         boolean isShifted = false;
         for(int i = 0; i < symbols.length; i++) {
+            var targetFractBits = outputType.getFractionBits() - operationRequiredRightShifts[i];
             if(symbols[i] instanceof Constant c) {
-                symbols[i] = unassignedConstToFixedpIntConst(c, outputType.getFractionBits());
+                symbols[i] = unassignedConstToFixedpIntConst(c, targetFractBits);
             }
             if(symbols[i] instanceof Variable v) {
                 var accessor = v.createVariableAccessor();
                 var fractBits = ((FixedpType)v.getType()).getFractionBits();
-                var targetFractBits = outputType.getFractionBits() - operationRequiredRightShifts[i];
                 if(fractBits == targetFractBits) {
                     accessor.access(maxInputDelay).accept(outputContext);
                 }
                 else {
                     isShifted = true;
                     accessor.access(maxInputDelay - 1).accept(shiftGroup);
-                    var shifted = context.createBoundTempVariable(new FixedpType(targetFractBits), v.getSignal(), outputContext);
+                    var shifted = context.createBoundTempVariable(new FixedpType(targetFractBits), context.getFreeSignals(1), outputContext);
+                    context.popTempVariable();
                     shifted.setDelay(maxInputDelay);
-                    var shiftCombinator = ArithmeticCombinator.withLeftRight(v.toAccessor()[0], CombinatorIn.constant(Math.abs(fractBits - targetFractBits)), symbols[i].getSignal()[0], fractBits > targetFractBits ? ArithmeticOperator.RSH : ArithmeticOperator.LSH);
+                    var shiftCombinator = ArithmeticCombinator.withLeftRight(v.toAccessor()[0], CombinatorIn.constant(Math.abs(fractBits - targetFractBits)), shifted.getSignal()[0], fractBits > targetFractBits ? ArithmeticOperator.RSH : ArithmeticOperator.LSH);
                     shiftCombinator.setGreenIn(shiftGroup.getInput());
                     shiftCombinator.setGreenOut(shiftGroup.getOutput());
                     shiftGroup.getCombinators().add(shiftCombinator);

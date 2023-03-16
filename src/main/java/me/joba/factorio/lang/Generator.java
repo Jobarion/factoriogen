@@ -14,6 +14,12 @@ import java.util.stream.Collectors;
 
 public class Generator extends LanguageBaseListener {
 
+    /*
+    TODO
+     - Figure out arithmetic expressions with same signal operands (e.g. SIGNAL_0 + SIGNAL_0 or SIGNAL_2 * SIGNAL_2)
+     - Figure out argument sanitizing for function calls? Why can't we just get the ControlFlowVariable with delay 1 and clean it? (delay 20 works tho)
+     */
+
     private static final String ARRAY_SORT_TEST = """
 
             int[10] ARRAY_1;
@@ -127,7 +133,7 @@ public class Generator extends LanguageBaseListener {
             }
             else if (rfpt.getFractionBits() != ((FixedpType)returnVal.getType()).getFractionBits()){
                 if(!returnVal.isBound()) {
-                    returnVal.bind(currentFunctionContext.getFreeSymbol());
+                    returnVal.bind(currentFunctionContext.getFreeSignal());
                 }
                 var var = (Variable) returnVal;
                 var shiftGroup = new CombinatorGroup(new NetworkGroup(), new NetworkGroup());
@@ -171,7 +177,7 @@ public class Generator extends LanguageBaseListener {
         }
         log("Returning " + returnVal + " with delay " + returnVal.getTickDelay());
 
-        int delay = Math.max(returnVal.getTickDelay() + 1, currentFunctionContext.getControlFlowVariable().getTickDelay());
+        int delay = Math.max(returnVal.getTickDelay(), currentFunctionContext.getControlFlowVariable().getTickDelay());
 
         if(returnVal instanceof Constant) {
             int[] vals = ((Constant) returnVal).getVal();
@@ -540,13 +546,18 @@ public class Generator extends LanguageBaseListener {
             }
             argumentDelay = Math.max(argumentDelay, delay);
         }
-        int outsideDelay = 0;
+        int outsideDelay = currentFunctionContext.getControlFlowVariable().getTickDelay() + 1;
         for(var variable : currentFunctionContext.getVariableScope().getAllVariables().values()) {
             outsideDelay = Math.max(outsideDelay, variable.getTickDelay());
         }
+        var tempVarStack = new Stack<Symbol>();
+        while(currentFunctionContext.hasTempVariable()) {
+            var tempVar = currentFunctionContext.popTempVariable();
+            tempVarStack.push(tempVar);
+            outsideDelay = Math.max(outsideDelay, tempVar.getTickDelay());
+        }
 
         int totalDelay = Math.max(outsideDelay, argumentDelay);
-
         CombinatorGroup functionCallInput = new CombinatorGroup(new NetworkGroup(), new NetworkGroup());
         currentFunctionContext.getFunctionGroup().getSubGroups().add(functionCallInput);
 
@@ -568,6 +579,9 @@ public class Generator extends LanguageBaseListener {
         var dedupInputVariableScope = DeciderCombinator.withLeftRight(CombinatorIn.signal(Constants.TEMP_SIGNAL), CombinatorIn.constant(0), CombinatorOut.everything(false), DeciderOperator.EQ);
         functionCallInput.getCombinators().add(dedupInputVariableScope);
 
+        var filterFunctionCallId = ArithmeticCombinator.withLeftRight(CombinatorIn.signal(Constants.FUNCTION_IDENTIFIER), CombinatorIn.constant(-1), Constants.FUNCTION_IDENTIFIER, ArithmeticOperator.MUL);
+        functionCallInput.getCombinators().add(filterFunctionCallId);
+
         var dedupStore = DeciderCombinator.withAny(CombinatorIn.constant(0), CombinatorOut.one(Constants.TEMP_SIGNAL), DeciderOperator.NEQ);
         functionCallInput.getCombinators().add(dedupStore);
 
@@ -580,6 +594,7 @@ public class Generator extends LanguageBaseListener {
         NetworkGroup tmp = new NetworkGroup("dedup network");
         functionCallInput.getNetworks().add(tmp);
         dedupInputVariableScope.setGreenIn(tmp);
+        filterFunctionCallId.setGreenIn(tmp);
         dedupInputFunctionArguments.setGreenIn(tmp);
         dedupStore.setGreenIn(tmp);
         dedupStore.setGreenOut(tmp);
@@ -594,6 +609,7 @@ public class Generator extends LanguageBaseListener {
         functionCallInput.getNetworks().add(tmp);
         inputGateVariableScope.setRedOut(tmp);
         dedupInputVariableScope.setRedIn(tmp);
+        filterFunctionCallId.setRedIn(tmp);
         dedupStore.setRedIn(tmp);
 
         tmp = new NetworkGroup("dedup reset constant");
@@ -653,6 +669,7 @@ public class Generator extends LanguageBaseListener {
         functionCallInput.getNetworks().add(storeIn);
 
         dedupInputVariableScope.setRedOut(storeIn);
+        filterFunctionCallId.setRedOut(storeIn);
         preCallStateStore.setRedIn(storeIn);
         dedupReset.setRedOut(storeIn);
         preCallStateStore.setGreenIn(stateStoreOut);
@@ -667,7 +684,31 @@ public class Generator extends LanguageBaseListener {
         //Function call data return. We might be able to ditch this one
         var returnGate = DeciderCombinator.withLeftRight(CombinatorIn.signal(Constants.CONTROL_FLOW_SIGNAL), CombinatorIn.constant(functionCallId), CombinatorOut.everything(false), DeciderOperator.EQ);
         functionCallReturn.getCombinators().add(returnGate);
-        returnGate.setRedIn(currentFunctionContext.getFunctionCallReturnGroup());
+
+        FactorioSignal[] functionReturnSignals;
+        if(currentFunctionContext.isSignalFree(targetFunction.getSignature().getReturnSignals())) {
+            functionReturnSignals = targetFunction.getSignature().getReturnSignals();
+            currentFunctionContext.claimSymbol(targetFunction.getSignature().getReturnSignals());
+            returnGate.setRedIn(currentFunctionContext.getFunctionCallReturnGroup());
+        }
+        else {
+            CombinatorGroup remappedReturn = new CombinatorGroup(currentFunctionContext.getFunctionCallReturnGroup(), new NetworkGroup());
+            functionCallReturn.getSubGroups().add(remappedReturn);
+            functionReturnSignals = currentFunctionContext.getFreeSignals(targetFunction.getSignature().getReturnType().getSize());
+            log("Function return signals " + Arrays.toString(targetFunction.getSignature().getReturnSignals()) + " already used. Remapping to " + Arrays.toString(functionReturnSignals));
+            for(int i = 0; i < functionReturnSignals.length; i++) {
+                var c = ArithmeticCombinator.remapping(targetFunction.getSignature().getReturnSignals()[i], functionReturnSignals[i]);
+                c.setRedIn(remappedReturn.getInput());
+                c.setRedOut(remappedReturn.getOutput());
+                remappedReturn.getCombinators().add(c);
+            }
+            var c = ArithmeticCombinator.copying(Constants.CONTROL_FLOW_SIGNAL);
+            c.setRedIn(remappedReturn.getInput());
+            c.setRedOut(remappedReturn.getOutput());
+            remappedReturn.getCombinators().add(c);
+            returnGate.setRedIn(remappedReturn.getOutput());
+        }
+
 
         tmp = new NetworkGroup();
         functionCallReturn.getNetworks().add(tmp);
@@ -722,13 +763,21 @@ public class Generator extends LanguageBaseListener {
         functionCallIdCombinator.setGreenOut(argumentsIn);
 
         var accessorTmp = currentFunctionContext.getControlFlowVariable().createVariableAccessor();
+
         functionCallInput.getAccessors().add(accessorTmp);
-        accessorTmp.access(totalDelay).accept(argumentsIn, functionCallInput);
+        accessorTmp.access(totalDelay - 1).accept(argumentsIn, functionCallInput);
 
         for (var variable : currentFunctionContext.getVariableScope().getAllVariables().values()) {
             var accessor = variable.createVariableAccessor();
             functionCallInput.getAccessors().add(accessor);
             accessor.access(totalDelay).accept(functionCallInput);
+        }
+        for (var symbol : tempVarStack) {
+            if(symbol instanceof Variable v) {
+                var accessor = v.createVariableAccessor();
+                functionCallInput.getAccessors().add(accessor);
+                accessor.access(totalDelay).accept(functionCallInput);
+            }
         }
 
         for (int i = 0; i < arguments.length; i++) {
@@ -767,18 +816,43 @@ public class Generator extends LanguageBaseListener {
             }
         }
 
+        CombinatorGroup specialSymbolsGroup = new CombinatorGroup(functionCallReturn.getOutput(), new NetworkGroup());
+        functionCallReturn.getSubGroups().add(specialSymbolsGroup);
         for (var defined : currentFunctionContext.getVariableScope().getAllVariables().entrySet()) {
             var v = defined.getValue();
-            var rebound = currentFunctionContext.createNamedVariable(defined.getKey(), v.getType(), v.getSignal(), functionCallReturn);
-            rebound.setDelay(0);
+            Variable rebound;
+            if(defined.getKey().equals(FunctionContext.CONTROL_FLOW_VAR_NAME)) {
+                var c = ArithmeticCombinator.copying(Constants.CONTROL_FLOW_SIGNAL);
+                c.setGreenIn(specialSymbolsGroup.getInput());
+                c.setGreenOut(specialSymbolsGroup.getOutput());
+                specialSymbolsGroup.getCombinators().add(c);
+                rebound = currentFunctionContext.createNamedVariable(defined.getKey(), v.getType(), v.getSignal(), specialSymbolsGroup);
+                rebound.setDelay(1);//TODO Optimization we can get the signal one tick earlier and avoid the delay here
+            }
+            else {
+                rebound = currentFunctionContext.createNamedVariable(defined.getKey(), v.getType(), v.getSignal(), functionCallReturn);
+                rebound.setDelay(0);
+            }
             log("Rebinding " + v + " " + defined.getKey() + " as " + rebound);
         }
+        while(!tempVarStack.isEmpty()) {
+            var tempVar = tempVarStack.pop();
+            if(tempVar instanceof Variable v) {
+                var rebound = currentFunctionContext.createBoundTempVariable(v.getType(), v.getSignal(), functionCallReturn);
+                rebound.setDelay(0);
+            }
+            else {
+                currentFunctionContext.pushTempVariable(tempVar);
+            }
+        }
+
+
         currentFunctionContext.clearFunctionCallSlotReservations();
 
         var returnType = targetFunction.getSignature().getReturnType();
 
         if(returnType != PrimitiveType.VOID) {
-            var functionReturnVal = currentFunctionContext.createBoundTempVariable(returnType, targetFunction.getSignature().getReturnSignals(), functionCallReturn);
+            var functionReturnVal = currentFunctionContext.createBoundTempVariable(returnType, functionReturnSignals, functionCallReturn);
             functionReturnVal.setDelay(0);
             log("Function return value: " + functionReturnVal);
         }
@@ -856,11 +930,11 @@ public class Generator extends LanguageBaseListener {
             }
             else {
                 if(!tupleVar.isBound()) {
-                    tupleVar.bind(currentFunctionContext.getFreeSymbols(tupleVar.getType().getSize()));
+                    tupleVar.bind(currentFunctionContext.getFreeSignals(tupleVar.getType().getSize()));
                 }
                 var oldSignals = new FactorioSignal[subtype.getSize()];
                 System.arraycopy(tupleVar.getSignal(), offset, oldSignals, 0, oldSignals.length);
-                var newSignals = currentFunctionContext.getFreeSymbols(subtype.getSize());
+                var newSignals = currentFunctionContext.getFreeSignals(subtype.getSize());
                 log("Accessing tuple " + tupleVar + " value " + propId + " -> " + Arrays.toString(newSignals));
                 CombinatorGroup group = new CombinatorGroup(((Variable)tupleVar).getProducer().getOutput(), new NetworkGroup());
                 currentFunctionContext.getFunctionGroup().getSubGroups().add(group);
@@ -874,7 +948,7 @@ public class Generator extends LanguageBaseListener {
             }
         }
         else if(ctx.left != null) {//Arithmetic
-            var tmpVar = currentFunctionContext.popTempVariable();
+                var tmpVar = currentFunctionContext.popTempVariable();
             currentFunctionContext.pushTempVariable(tmpVar);
             if(tmpVar.getType() == PrimitiveType.INT) {
                 EXPR_PARSER.parse(currentFunctionContext, ctx);
@@ -890,7 +964,7 @@ public class Generator extends LanguageBaseListener {
             for(int i = symbols.length - 1; i >= 0; i--) {
                 var symbol = currentFunctionContext.popTempVariable();
                 if(!symbol.isBound()) {
-                    symbol.bind(currentFunctionContext.getFreeSymbols(symbol.getType().getSize()));
+                    symbol.bind(currentFunctionContext.getFreeSignals(symbol.getType().getSize()));
                 }
                 symbols[i] = symbol;
                 types[i] = symbol.getType();
@@ -905,7 +979,7 @@ public class Generator extends LanguageBaseListener {
             CombinatorGroup group = new CombinatorGroup(new NetworkGroup(), new NetworkGroup());
             currentFunctionContext.getFunctionGroup().getSubGroups().add(group);
             int offset = 0;
-            FactorioSignal[] remappedSignals = currentFunctionContext.getFreeSymbols(tupleType.getSize());
+            FactorioSignal[] remappedSignals = currentFunctionContext.getFreeSignals(tupleType.getSize());
             int tupleCreationDelay = 0;
             for(Symbol symbol : symbols) {
                 if(symbol instanceof Constant) {
@@ -993,7 +1067,7 @@ public class Generator extends LanguageBaseListener {
 
                 if(arraySubtype instanceof TupleType) {
                     Variable[] tupleComponents = new Variable[arraySubtype.getSize()];
-                    FactorioSignal[] signals = currentFunctionContext.getFreeSymbols(tupleComponents.length);
+                    FactorioSignal[] signals = currentFunctionContext.getFreeSignals(tupleComponents.length);
                     int maxDelay = -1;
 
                     for(int i = tupleComponents.length - 1; i >= 0; i--) {
@@ -1048,7 +1122,7 @@ public class Generator extends LanguageBaseListener {
             variableSymbols = existing.getSignal();
         }
         else {
-            variableSymbols = currentFunctionContext.getFreeSymbols(value.getType().getSize());
+            variableSymbols = currentFunctionContext.getFreeSignals(value.getType().getSize());
         }
 
         CombinatorGroup group = new CombinatorGroup(new NetworkGroup(), new NetworkGroup());
@@ -1219,7 +1293,6 @@ public class Generator extends LanguageBaseListener {
         }
 
         functionOutGate.setGreenIn(functionCallGroup.getInput());
-
         functionOutGate.setGreenOut(currentFunctionContext.getFunctionCallOutputGroup());
 
         var cfAccessor = controlFlowVar.createVariableAccessor();

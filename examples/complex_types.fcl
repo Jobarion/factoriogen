@@ -1,18 +1,19 @@
-boolean[10] TEMP_ARRAY;
+((int, int), boolean)[10] TEMP_ARRAY;
 
-function main() -> void {
-  test(0);
+function main() -> int {
+  return test(0);
 }
 
-function test(a: int) -> void {
+function test(a: int) -> int {
   array = getArray();
-  array[a] = getTuple(1, 2).1;
+  array[a] = getTuple(1, 2);
+  return 1;
 }
 
 function getTuple(a: int, b: int) -> ((int, int), boolean) {
     return ((a, b), true);
 }
 
-function getArray() -> boolean[] {
+function getArray() -> ((int, int), boolean)[] {
     return TEMP_ARRAY;
-}
+}d

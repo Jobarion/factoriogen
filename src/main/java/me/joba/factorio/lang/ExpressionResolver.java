@@ -2,10 +2,13 @@ package me.joba.factorio.lang;
 
 import me.joba.factorio.CombinatorGroup;
 import me.joba.factorio.NetworkGroup;
+import me.joba.factorio.game.entities.ArithmeticCombinator;
 import me.joba.factorio.lang.types.Type;
 import org.antlr.v4.runtime.ParserRuleContext;
 
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 
 public abstract class ExpressionResolver<RC extends ParserRuleContext, OP> {
@@ -39,24 +42,64 @@ public abstract class ExpressionResolver<RC extends ParserRuleContext, OP> {
                 return;
             }
         }
-        int maxInputDelay = -1;
-        for(Symbol s : symbols) {
-            maxInputDelay = Math.max(maxInputDelay, s.getTickDelay());
-            if(!s.isBound()) {
-                s.bind(context.getFreeSymbol());
-            }
-        }
 
-        var outSymbol = context.getFreeSymbols(outputType.getSize());
+        var outSymbol = context.getFreeSignals(outputType.getSize());
         var outputContext = new CombinatorGroup(new NetworkGroup(), new NetworkGroup());
         context.getFunctionGroup().getSubGroups().add(outputContext);
         var bound = context.createBoundTempVariable(outputType, outSymbol, outputContext);
 
-        for(var s : symbols) {
-            if(s instanceof Variable) {
-                var accessor = ((Variable)s).createVariableAccessor();
-                accessor.access(maxInputDelay).accept(outputContext);
-                outputContext.getAccessors().add(accessor);
+        //TODO deal with merging symbols that have the same signal (a * a, or, even worse, a() * a())
+
+        Map<FactorioSignal, Integer> signalUseCount = new HashMap<>();
+        for(Symbol s : symbols) {
+            if(!s.isBound()) {
+                s.bind(context.getFreeSignals(s.getType().getSize()));
+            }
+            for(var signal : s.getSignal()) {
+                signalUseCount.compute(signal, (k, v) -> v == null ? 1 : v + 1);
+            }
+        }
+        Map<Symbol, Boolean> requiresRemapping = new HashMap<>();
+        int maxInputDelay = -1;
+        for(Symbol s : symbols) {
+            boolean clashes = false;
+            for(FactorioSignal signal : s.getSignal()) {
+                if(signalUseCount.get(signal) > 1) {
+                    clashes = true;
+                    break;
+                }
+            }
+            requiresRemapping.put(s, clashes);
+            if(!clashes) {
+                maxInputDelay = Math.max(maxInputDelay, s.getTickDelay());
+            }
+            else {
+                maxInputDelay = Math.max(maxInputDelay, s.getTickDelay() + 1);
+            }
+        }
+        for(int i = 0; i < symbols.length; i++) {
+            if(symbols[i] instanceof Variable v) {
+                if(requiresRemapping.get(v)) {
+                    CombinatorGroup remappedProducer = new CombinatorGroup(new NetworkGroup(), outputContext.getInput());
+                    outputContext.getSubGroups().add(remappedProducer);
+                    var accessor = v.createVariableAccessor();
+                    accessor.access(maxInputDelay - 1).accept(remappedProducer);
+                    outputContext.getAccessors().add(accessor);
+                    var newSignals = context.getFreeSignals(v.getType().getSize());
+                    for(int j = 0; j < v.getType().getSize(); j++) {
+                        var remapping = ArithmeticCombinator.remapping(v.getSignal()[j], newSignals[j]);
+                        remapping.setGreenIn(remappedProducer.getInput());
+                        remapping.setGreenOut(remappedProducer.getOutput());
+                        remappedProducer.getCombinators().add(remapping);
+                    }
+                    symbols[i] = context.createBoundTempVariable(v.getType(), newSignals, remappedProducer);
+                    context.popTempVariable();
+                }
+                else {
+                    var accessor = v.createVariableAccessor();
+                    accessor.access(maxInputDelay).accept(outputContext);
+                    outputContext.getAccessors().add(accessor);
+                }
             }
         }
 

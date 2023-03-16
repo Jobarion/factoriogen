@@ -51,7 +51,7 @@ public class FunctionContext {
         }
         for(var param : functionSignature.getParameters()) {
             if(param.getSignal() == null) {
-                param.setSignal(getFreeSymbols(param.getType().getSize()));
+                param.setSignal(getFreeSignals(param.getType().getSize()));
             }
             else {
                 for(FactorioSignal signal : param.getSignal()) {
@@ -137,6 +137,10 @@ public class FunctionContext {
         return tempVariables.pop();
     }
 
+    public boolean hasTempVariable() {
+        return !tempVariables.isEmpty();
+    }
+
     //TODO create named constant
     public Variable createNamedVariable(String name, Type type, FactorioSignal[] signal, CombinatorGroup producer) {
         return variables.peek().createNamedVariable(name, type, signal, producer);
@@ -198,13 +202,20 @@ public class FunctionContext {
         return conditionContexts.peek();
     }
 
-    public FactorioSignal getFreeSymbol() {
+    public boolean isSignalFree(FactorioSignal... signals) {
+        for(FactorioSignal signal : signals) {
+            if(!freeBindings.contains(signal)) return false;
+        }
+        return true;
+    }
+
+    public FactorioSignal getFreeSignal() {
         var signal = freeBindings.iterator().next();
         freeBindings.remove(signal);
         return signal;
     }
 
-    public FactorioSignal[] getFreeSymbols(int count) {
+    public FactorioSignal[] getFreeSignals(int count) {
         FactorioSignal[] signals = new FactorioSignal[count];
         var iter = freeBindings.iterator();
         for(int i = 0; i < count; i++) {

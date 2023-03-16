@@ -1,0 +1,7 @@
+int[2] ARRAY_1;
+
+function main() -> int {
+  ARRAY_1[0] = 4;
+  ARRAY_1[1] = ARRAY_1[0] * ARRAY_1[0];
+  return ARRAY_1[0] + ARRAY_1[1];
+}

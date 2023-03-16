@@ -1,11 +1,12 @@
 package me.joba.factorio.lang.expr;
 
 import me.joba.factorio.CombinatorGroup;
+import me.joba.factorio.CombinatorIn;
+import me.joba.factorio.NetworkGroup;
 import me.joba.factorio.game.entities.ArithmeticCombinator;
 import me.joba.factorio.game.entities.ArithmeticOperator;
 import me.joba.factorio.lang.*;
 import me.joba.factorio.lang.types.PrimitiveType;
-import me.joba.factorio.lang.types.Type;
 
 import java.util.Optional;
 

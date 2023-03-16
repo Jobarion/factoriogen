@@ -1,8 +1,3 @@
-function main() -> fixedp<6> {
-  a = 10;
-  sum = 14.0;
-  while(a > 0) {
-    sum = sum * 1.03;
-  }
-  return sum;
+function main(a: fixedp<16><red>, b: fixedp<16><green>) -> fixedp<16> {
+  return (a * a) / b;
 }

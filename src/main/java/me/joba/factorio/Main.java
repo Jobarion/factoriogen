@@ -10,7 +10,7 @@ public class Main {
 
     public static void main(String[] args) throws IOException {
         if(args.length == 0) {
-            args = new String[]{"examples/fixedp.fcl"};
+            args = new String[]{"examples/function_call_tree_arrays.fcl"};
         }
 
         Path file = Path.of(args[0]);
