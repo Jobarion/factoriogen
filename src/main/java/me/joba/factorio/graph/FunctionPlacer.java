@@ -227,11 +227,11 @@ public class FunctionPlacer {
             }
         }
 
-        boolean placeXEdge = (maxX - SUBSTATION_OFFSET_X + 2) % SUBSTATION_SPACING_X > SUBSTATION_OFFSET_X || maxX < SUBSTATION_OFFSET_X;
-        boolean placeYEdge = (maxY - SUBSTATION_OFFSET_Y + 2) % SUBSTATION_SPACING_Y > SUBSTATION_OFFSET_Y || maxY < SUBSTATION_OFFSET_Y;
+        boolean placeXEdge = (maxX - SUBSTATION_OFFSET_X + 1) % SUBSTATION_SPACING_X > SUBSTATION_OFFSET_X || maxX < SUBSTATION_OFFSET_X;
+        boolean placeYEdge = (maxY - SUBSTATION_OFFSET_Y + 1) % SUBSTATION_SPACING_Y > SUBSTATION_OFFSET_Y || maxY < SUBSTATION_OFFSET_Y;
 
         if(placeXEdge) {
-            int x = maxX + 1;
+            int x = maxX + 2;
             for(int y = SUBSTATION_OFFSET_Y; y <= maxY; y += SUBSTATION_SPACING_Y) {
                 var substation = new Substation(x + 1, y);
                 substations.add(substation);
@@ -239,7 +239,7 @@ public class FunctionPlacer {
         }
 
         if(placeYEdge) {
-            int y = maxY + 1;
+            int y = maxY + 2;
             for(int x = SUBSTATION_OFFSET_X; x <= maxX; x += SUBSTATION_SPACING_X) {
                 var substation = new Substation(x, y + 1);
                 substations.add(substation);
@@ -247,7 +247,7 @@ public class FunctionPlacer {
         }
 
         if(placeXEdge && placeYEdge) {
-            substations.add(new Substation(maxX + 1, maxY + 1));
+            substations.add(new Substation(maxX + 2, maxY + 2));
         }
         for(var s : substations) {
             var conn = s.getConnectionPoints()[0].getConnections();
