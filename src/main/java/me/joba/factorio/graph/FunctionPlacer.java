@@ -21,7 +21,7 @@ public class FunctionPlacer {
     private static final int SUBSTATION_SPACING_X = 14;
     private static final int SUBSTATION_SPACING_Y = 18;
 
-    private static void placeCombinators(List<CircuitNetworkEntity> combinators, Collection<NetworkGroup> networks) {
+    private static void placeCombinators(List<CircuitNetworkEntity> combinators, Collection<NetworkGroup> networks, boolean optimizePlacement) {
         List<Node> nodes = new ArrayList<>();
 
         Map<Integer, Integer> entityIdNodeIdMap = new HashMap<>();
@@ -56,17 +56,19 @@ public class FunctionPlacer {
                 }
             }
             var node = new Node(entityIdNodeIdMap.get(cc.getEntityId()), connectedTo);
+            node.setOrientation(cc.getOrientation());
             if(cc.isFixedLocation()) {
                 node.setFixedLocation(true);
                 node.setX(cc.getX());
                 node.setY(cc.getY());
-                node.setOrientation(cc.getOrientation());
             }
             nodes.add(node);
         }
 
         placeInitial(nodes);
-        SimulatedAnnealingSolver.simulatedAnnealing(nodes, 10_000_000);
+        if(optimizePlacement) {
+            SimulatedAnnealingSolver.simulatedAnnealing(nodes, 10_000_000);
+        }
 
         Map<Integer, Node> nodeIdMap = nodes.stream()
                 .collect(Collectors.toMap(Node::getId, e -> e));
@@ -80,12 +82,16 @@ public class FunctionPlacer {
     }
 
     public static EntityBlock placeFunction(List<CircuitNetworkEntity> combinators, List<NetworkGroup> networks, NetworkGroup functionCallOutGroup, NetworkGroup functionCallReturnGroup) {
-        return placeFunction(combinators, networks, functionCallOutGroup, functionCallReturnGroup, false);
+        return placeFunction(combinators, networks, functionCallOutGroup, functionCallReturnGroup, false, true);
     }
 
-    public static EntityBlock placeFunction(List<CircuitNetworkEntity> combinators, List<NetworkGroup> networks, NetworkGroup functionCallOutGroup, NetworkGroup functionCallReturnGroup, boolean prePlaced) {
+    public static EntityBlock placeFunctionFast(List<CircuitNetworkEntity> combinators, List<NetworkGroup> networks, NetworkGroup functionCallOutGroup, NetworkGroup functionCallReturnGroup) {
+        return placeFunction(combinators, networks, functionCallOutGroup, functionCallReturnGroup, false, false);
+    }
+
+    public static EntityBlock placeFunction(List<CircuitNetworkEntity> combinators, List<NetworkGroup> networks, NetworkGroup functionCallOutGroup, NetworkGroup functionCallReturnGroup, boolean prePlaced, boolean optimizePlacement) {
         if(!prePlaced) {
-            placeCombinators(combinators, networks);
+            placeCombinators(combinators, networks, optimizePlacement);
             combinators.addAll(generateSubstations(combinators, functionCallOutGroup, functionCallReturnGroup));
         }
         var connections = buildConnectionObjects(MSTSolver.solveMst(combinators));
@@ -200,7 +206,6 @@ public class FunctionPlacer {
                 i--;
                 continue;
             }
-            node.setOrientation(2);
             node.setX(x * 2);
             node.setY(y);
             x++;

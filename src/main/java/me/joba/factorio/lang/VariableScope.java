@@ -5,6 +5,7 @@ import me.joba.factorio.lang.types.Type;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Stack;
 
 public class VariableScope {
 
@@ -12,6 +13,7 @@ public class VariableScope {
     private Map<String, Variable> variables;
     private VariableScope parentScope;
     private boolean sync = true;
+//    private final Stack<Symbol> tempVariables = new Stack<>();
 
     public VariableScope(VariableScope parent) {
         this.parentScope = parent;
@@ -42,6 +44,15 @@ public class VariableScope {
         variables.put(name, var);
         return var;
     }
+
+//    public void pushTempVariable(Symbol var) {
+//        tempVariables.push(var);
+//    }
+//
+//    public Symbol popTempVariable() {
+//        return tempVariables.pop();
+//    }
+
 
     protected VariableScope getParentScope() {
         return parentScope;

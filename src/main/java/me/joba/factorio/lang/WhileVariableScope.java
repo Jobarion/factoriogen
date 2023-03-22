@@ -2,6 +2,8 @@ package me.joba.factorio.lang;
 
 import me.joba.factorio.CombinatorGroup;
 
+import java.util.Stack;
+
 public class WhileVariableScope extends VariableScope {
 
     private final CombinatorGroup preConditionProvider;

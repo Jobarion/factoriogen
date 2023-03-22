@@ -1,5 +1,6 @@
 package me.joba.factorio.lang;
 
+import me.joba.factorio.NetworkGroup;
 import me.joba.factorio.lang.types.ArrayType;
 import me.joba.factorio.lang.types.Type;
 
@@ -19,6 +20,17 @@ public class StructureParser extends LanguageBaseListener {
 
     public Map<String, ArrayDeclaration> getDeclaredArrays() {
         return declaredArrays;
+    }
+
+    private final NetworkGroup FUNCTION_CALL_IN = new NetworkGroup("Global function call out");
+    private final NetworkGroup FUNCTION_CALL_RETURN = new NetworkGroup("Global function call return");
+
+    public NetworkGroup getFunctionCallIn() {
+        return FUNCTION_CALL_IN;
+    }
+
+    public NetworkGroup getFunctionCallReturn() {
+        return FUNCTION_CALL_RETURN;
     }
 
     @Override
@@ -59,7 +71,7 @@ public class StructureParser extends LanguageBaseListener {
                 case "delay" -> signatureBuilder.withDelay(Integer.parseInt(modifier.intLiteral().getText()));
             }
         }
-        FunctionContext context = new FunctionContext(signatureBuilder.build());
+        FunctionContext context = new FunctionContext(signatureBuilder.build(), FUNCTION_CALL_IN, FUNCTION_CALL_RETURN);
         functions.put(name, context);
     }
 

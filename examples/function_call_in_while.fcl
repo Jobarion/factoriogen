@@ -1,0 +1,11 @@
+function main() -> int {
+  a = 0;
+  while(a < 10) {
+    a = a + c();
+  }
+  return a;
+}
+
+function c() -> int {
+  return 1;
+}

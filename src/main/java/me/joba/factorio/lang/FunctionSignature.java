@@ -16,8 +16,9 @@ public class FunctionSignature {
     private final int functionId = currentFunctionId++;
     private final int constantDelay;
     private final boolean pipelined, isNative;
+    private final SideEffectsType sideEffectsType;
 
-    public FunctionSignature(String name, FunctionParameter[] parameters, Type returnType, FactorioSignal[] returnSignals, int delay, boolean pipelined, boolean isNative) {
+    public FunctionSignature(String name, FunctionParameter[] parameters, Type returnType, FactorioSignal[] returnSignals, int delay, boolean pipelined, boolean isNative, SideEffectsType sideEffectsType) {
         this.name = name;
         this.parameters = parameters;
         this.returnType = returnType;
@@ -25,6 +26,7 @@ public class FunctionSignature {
         this.constantDelay = delay;
         this.pipelined = pipelined;
         this.isNative = isNative;
+        this.sideEffectsType = sideEffectsType;
     }
 
     public boolean isPipelined() {
@@ -33,6 +35,10 @@ public class FunctionSignature {
 
     public boolean isNative() {
         return isNative;
+    }
+
+    public SideEffectsType getSideEffectsType() {
+        return sideEffectsType;
     }
 
     public boolean isConstantDelay() {
@@ -81,6 +87,7 @@ public class FunctionSignature {
         private final FactorioSignal[] returnSignals;
         private int constantDelay = -1;
         private boolean pipelined = false, isNative = false;
+        private SideEffectsType sideEffectsType = SideEffectsType.ANY;
 
         public Builder(String name, FunctionParameter[] parameters, Type returnType, FactorioSignal[] returnSignals) {
             this.name = name;
@@ -104,8 +111,20 @@ public class FunctionSignature {
             return this;
         }
 
-        public FunctionSignature build() {
-            return new FunctionSignature(name, parameters, returnType, returnSignals, constantDelay, pipelined, isNative);
+        public Builder withSideEffects(SideEffectsType sideEffectsType) {
+            this.sideEffectsType = sideEffectsType;
+            return this;
         }
+
+        public FunctionSignature build() {
+            return new FunctionSignature(name, parameters, returnType, returnSignals, constantDelay, pipelined, isNative, sideEffectsType);
+        }
+    }
+
+    public enum SideEffectsType {
+        PURE,
+        IDEMPOTENT_READ,
+        IDEMPOTENT_WRITE,
+        ANY
     }
 }

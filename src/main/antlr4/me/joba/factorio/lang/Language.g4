@@ -44,7 +44,7 @@ loopBody: statement;
 returnStatement: 'return ' expr;
 
 functionCall: functionName '(' argumentList ')';
-argumentList: expr (',' expr)*;
+argumentList: (expr (',' expr)*)?;
 
 expr
     : '(' wrapped=expr ')'
