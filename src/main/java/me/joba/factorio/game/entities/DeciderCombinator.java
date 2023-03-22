@@ -5,12 +5,16 @@ import me.joba.factorio.CombinatorOut;
 import me.joba.factorio.lang.FactorioSignal;
 import org.json.simple.JSONObject;
 
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
 public class DeciderCombinator extends IOCircuitNetworkEntity {
 
     private final JSONObject controlBehavior;
 
-    private DeciderCombinator(JSONObject controlBehavior) {
-        super("decider-combinator");
+    private DeciderCombinator(JSONObject controlBehavior, Function<Map<FactorioSignal, Integer>, Map<FactorioSignal, Integer>> function) {
+        super("decider-combinator", function);
         this.controlBehavior = controlBehavior;
     }
 
@@ -34,7 +38,7 @@ public class DeciderCombinator extends IOCircuitNetworkEntity {
         conds.put("comparator", operator.getBlueprintCode());
         conds.put("output_signal", out.toJson());
         conds.put("copy_count_from_input", !out.isConstant());
-        return new DeciderCombinator(cbehavior);
+        return new DeciderCombinator(cbehavior, in -> operator.test(left.sample(in), right.sample(in)) ? out.sample(in) : Map.of());
     }
 
     public static DeciderCombinator withEach(CombinatorIn right, FactorioSignal outSignal, boolean one, DeciderOperator operator) {
@@ -57,7 +61,11 @@ public class DeciderCombinator extends IOCircuitNetworkEntity {
         out.put("name", outSignal.getFactorioName());
         conds.put("output_signal", out);
         conds.put("copy_count_from_input", !one);
-        return new DeciderCombinator(cbehavior);
+        return new DeciderCombinator(cbehavior, in -> Map.of(outSignal, in.values().stream()
+                .filter(integer -> operator.test(integer, right.sample(in)))
+                .mapToInt(integer -> one ? 1 : integer)
+                .sum())
+        );
     }
 
     public static DeciderCombinator withEach(CombinatorIn right, boolean one, DeciderOperator operator) {
@@ -80,7 +88,10 @@ public class DeciderCombinator extends IOCircuitNetworkEntity {
         out.put("name", "signal-each");
         conds.put("output_signal", out);
         conds.put("copy_count_from_input", !one);
-        return new DeciderCombinator(cbehavior);
+        return new DeciderCombinator(cbehavior, in -> in.entrySet().stream()
+                .filter(e -> operator.test(e.getValue(), right.sample(in)))
+                .collect(Collectors.toMap(Map.Entry::getKey, e -> one ? 1 : e.getValue()))
+        );
     }
 
     public static DeciderCombinator withAny(CombinatorIn right, CombinatorOut out, DeciderOperator operator) {
@@ -100,7 +111,10 @@ public class DeciderCombinator extends IOCircuitNetworkEntity {
         conds.put("comparator", operator.getBlueprintCode());
         conds.put("output_signal", out.toJson());
         conds.put("copy_count_from_input", !out.isConstant());
-        return new DeciderCombinator(cbehavior);
+        return new DeciderCombinator(cbehavior, in -> in.entrySet().stream()
+                .filter(e -> e.getValue() != 0)
+                .anyMatch(e -> operator.test(e.getValue(), right.sample(in))) ? out.sample(in) : Map.of() //TODO this breaks for a combinator like ANY > 0 return ANY' (instead of 'ANY > 0 return EVERY')
+        );
     }
 
     public static DeciderCombinator withEvery(CombinatorIn right, CombinatorOut out, DeciderOperator operator) {
@@ -120,7 +134,10 @@ public class DeciderCombinator extends IOCircuitNetworkEntity {
         conds.put("operation", operator.getBlueprintCode());
         conds.put("output_signal", out.toJson());
         conds.put("copy_count_from_input", !out.isConstant());
-        return new DeciderCombinator(cbehavior);
+        return new DeciderCombinator(cbehavior, in -> in.entrySet().stream()
+                .filter(e -> e.getValue() != 0)
+                .allMatch(e -> operator.test(e.getValue(), right.sample(in))) ? out.sample(in) : Map.of()
+        );
     }
 
 }

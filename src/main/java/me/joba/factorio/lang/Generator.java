@@ -58,7 +58,7 @@ public class Generator extends LanguageBaseListener {
     private static final ExpressionResolver<LanguageParser.BoolExprContext, ArithmeticOperator> BOOL_EXPR_PARSER = new BooleanExpressionResolver();
     private static final ExpressionResolver<LanguageParser.BoolExprContext, Void> NOT_EXPR_PARSER = new BooleanNotExpressionResolver();
 
-    private static final int CONSTANT_DELAY_FUNCTION_OVERHEAD = 2;
+    protected static final int CONSTANT_DELAY_FUNCTION_OVERHEAD = 2;
 
     private FunctionContext currentFunctionContext;
     private final Map<String, FunctionContext> definedFunctions;
@@ -92,6 +92,7 @@ public class Generator extends LanguageBaseListener {
             inputCombinator.setX(0);
             inputCombinator.setY(0);
             inputCombinator.setOrientation(2);
+            inputCombinator.setGreenIn(FunctionContext.PROGRAM_IN);
         }
         else {
             inputCombinator = DeciderCombinator.withLeftRight(CombinatorIn.signal(Constants.FUNCTION_IDENTIFIER), CombinatorIn.constant(currentFunctionContext.getSignature().getFunctionId()), CombinatorOut.everything(false), DeciderOperator.EQ);
@@ -166,6 +167,7 @@ public class Generator extends LanguageBaseListener {
             outputGate.setX(0);
             outputGate.setY(1);
             outputGate.setOrientation(6);
+            outputGate.setRedOut(FunctionContext.PROGRAM_RETURN);
         }
         outputGate.setDescription("Output " + ctx.getText());
 
@@ -1249,13 +1251,11 @@ public class Generator extends LanguageBaseListener {
 
         var controlFlowVar = currentFunctionContext.getControlFlowVariable();
 
-        int functionCallTime;
+        int functionCallTime = currentFunctionContext.reserveFunctionCallSlot(targetFunction.getSignature(), Math.max(argumentDelay, controlFlowVar.getTickDelay()) + 1);
         if(targetFunction.getSignature().getReturnType() == PrimitiveType.VOID) {
-            functionCallTime = currentFunctionContext.reserveVoidFunctionCallSlot(Math.max(argumentDelay, controlFlowVar.getTickDelay()) + 1);
             log("Reserved slot " + functionCallTime);
         }
         else {
-            functionCallTime = currentFunctionContext.reserveFunctionCallSlot(Math.max(argumentDelay, controlFlowVar.getTickDelay()) + 1, targetFunction.getSignature().getConstantDelay() + CONSTANT_DELAY_FUNCTION_OVERHEAD);
             log("Reserved slot " + functionCallTime + ", " + (functionCallTime + targetFunction.getSignature().getConstantDelay() + CONSTANT_DELAY_FUNCTION_OVERHEAD));
         }
 
@@ -1361,7 +1361,7 @@ public class Generator extends LanguageBaseListener {
         System.out.println("\t".repeat(currentFunctionContext.getDepth() + indentationLevel) + msg);
     }
 
-    public static String generateBlueprint(String code) {
+    public static Program generateProgram(String code) {
         LanguageParser parser = new LanguageParser(new CommonTokenStream(new LanguageLexer(CharStreams.fromString(code))));
 
         var structureParser = new StructureParser();
@@ -1417,7 +1417,15 @@ public class Generator extends LanguageBaseListener {
                     .flatMap(Collection::stream)
                     .collect(Collectors.toList());
 
-            entityBlocks.add(FunctionPlacer.placeFunction(combinators, networks, function.getFunctionCallOutputGroup(), function.getFunctionCallReturnGroup()));
+            if(function.getName().equals("main")) {
+                var networksWithInOut = new ArrayList<>(networks);
+                networksWithInOut.add(FunctionContext.PROGRAM_IN);
+                networksWithInOut.add(FunctionContext.PROGRAM_RETURN);
+                entityBlocks.add(FunctionPlacer.placeFunction(combinators, networksWithInOut, function.getFunctionCallOutputGroup(), function.getFunctionCallReturnGroup()));
+            }
+            else {
+                entityBlocks.add(FunctionPlacer.placeFunction(combinators, networks, function.getFunctionCallOutputGroup(), function.getFunctionCallReturnGroup()));
+            }
         }
 
         if(!structureParser.getDeclaredArrays().isEmpty()) {
@@ -1426,9 +1434,15 @@ public class Generator extends LanguageBaseListener {
                     .mapToInt(dc -> dc.getSize() * ((ArrayType)dc.getType()).getSubType().getSize())
                     .sum();
             System.out.println("Generating memory controller with " + arraySize * 4 + "B capacity");
-            entityBlocks.add(MemoryUtil.generateMemoryController(arraySize, new NetworkGroup(), new NetworkGroup()));
+            entityBlocks.add(MemoryUtil.generateMemoryController(arraySize, FunctionContext.FUNCTION_CALL_IN, FunctionContext.FUNCTION_CALL_RETURN));
         }
+        if(mainFound) {
+            return new Program(FunctionContext.PROGRAM_IN, FunctionContext.PROGRAM_RETURN, entityBlocks);
+        }
+        return new Program(null, null, entityBlocks);
+    }
 
+    public static String generateBlueprint(List<EntityBlock> entityBlocks) {
         int currentX = 0;
         for(var block : entityBlocks) {
             block.applyOffset(currentX - block.getMinX(), -block.getMinY());//Align top left corner to (currentX, 0)
@@ -1440,6 +1454,6 @@ public class Generator extends LanguageBaseListener {
     }
 
     public static void main(String[] args) {
-        System.out.println(generateBlueprint(TEST));
+        System.out.println(generateBlueprint(generateProgram(TEST).entities()));
     }
 }

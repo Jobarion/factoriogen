@@ -1,5 +1,9 @@
 package me.joba.factorio.game.entities;
 
+import me.joba.factorio.lang.FactorioSignal;
+
+import java.util.Map;
+
 public class Substation extends CircuitNetworkEntity{
 
     public Substation() {
@@ -10,5 +14,20 @@ public class Substation extends CircuitNetworkEntity{
         super("substation", 1, 19.0);
         setX(x);
         setY(y);
+    }
+
+    @Override
+    public void gatherSignals() {
+
+    }
+
+    @Override
+    public void update() {
+
+    }
+
+    @Override
+    public Map<FactorioSignal, Integer> getOutput() {
+        return Map.of();
     }
 }

@@ -10,7 +10,7 @@ public class Main {
 
     public static void main(String[] args) throws IOException {
         if(args.length == 0) {
-            args = new String[]{"examples/function_call_tree_arrays.fcl"};
+            args = new String[]{"examples/function_call_in_while.fcl"};
         }
 
         Path file = Path.of(args[0]);
@@ -18,6 +18,6 @@ public class Main {
                 .stream()
                 .collect(StringBuffer::new, StringBuffer::append, StringBuffer::append)
                 .toString();
-        System.out.println(Generator.generateBlueprint(code));
+        System.out.println(Generator.generateBlueprint(Generator.generateProgram(code).entities()));
     }
 }

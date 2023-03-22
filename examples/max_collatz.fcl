@@ -1,7 +1,7 @@
 function main(start: int<red>, end: int<green>, iterations: int<i>) -> int {
   max = -1;
   while(start <= end) {
-    max = max(collatz(start, iterations), max);
+    max = max(start * start, max);
     start = start + 1;
   }
   return max;

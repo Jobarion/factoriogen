@@ -4,12 +4,17 @@ import me.joba.factorio.CombinatorIn;
 import me.joba.factorio.lang.FactorioSignal;
 import org.json.simple.JSONObject;
 
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
 public class ArithmeticCombinator extends IOCircuitNetworkEntity {
 
     private final JSONObject controlBehavior;
-
-    private ArithmeticCombinator(JSONObject controlBehavior) {
-        super("arithmetic-combinator");
+    private ArithmeticCombinator(JSONObject controlBehavior, Function<Map<FactorioSignal, Integer>, Map<FactorioSignal, Integer>> function) {
+        super("arithmetic-combinator", function);
         this.controlBehavior = controlBehavior;
     }
 
@@ -50,7 +55,7 @@ public class ArithmeticCombinator extends IOCircuitNetworkEntity {
         out.put("type", outSignal.getType().getFactorioName());
         out.put("name", outSignal.getFactorioName());
         conds.put("output_signal", out);
-        return new ArithmeticCombinator(cbehavior);
+        return new ArithmeticCombinator(cbehavior, in -> Map.of(outSignal, operator.applyAsInt(left.sample(in), right.sample(in))));
     }
 
     public static ArithmeticCombinator withEach(CombinatorIn right, ArithmeticOperator operator) {
@@ -71,7 +76,11 @@ public class ArithmeticCombinator extends IOCircuitNetworkEntity {
         out.put("type", "virtual");
         out.put("name", "signal-each");
         conds.put("output_signal", out);
-        return new ArithmeticCombinator(cbehavior);
+        return new ArithmeticCombinator(cbehavior, in -> in.entrySet().stream()
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        e -> operator.applyAsInt(e.getValue(), right.sample(in))))
+        );
     }
 
     public static ArithmeticCombinator withEachMerge(CombinatorIn right, FactorioSignal outSignal, ArithmeticOperator operator) {
@@ -93,7 +102,11 @@ public class ArithmeticCombinator extends IOCircuitNetworkEntity {
         out.put("type", outSignal.getType().getFactorioName());
         out.put("name", outSignal.getFactorioName());
         conds.put("output_signal", out);
-        return new ArithmeticCombinator(cbehavior);
+        return new ArithmeticCombinator(cbehavior, in -> Map.of(outSignal, in.values().stream()
+                .mapToInt(i -> i)
+                .map(i -> operator.applyAsInt(i, right.sample(in)))
+                .sum())
+        );
     }
 
 }

@@ -33,6 +33,7 @@ public class MemoryUtil {
                 .asNative(true)
                 .asPipelined(true)
                 .withDelay(MEMORY_READ_DELAY_UNSAFE)
+                .withSideEffects(FunctionSignature.SideEffectsType.IDEMPOTENT_READ)
                 .build();
 //        MEMORY_UNSAFE_READ_SIGNATURE = new FunctionSignature.Builder("__internal__arrayUnsafeRead", new FunctionParameter[]{new FunctionParameter("address", PrimitiveType.INT, MemoryUtil.ADDRESS_SIGNAL)}, PrimitiveType.INT, new FactorioSignal[]{WRITE_VALUE_SIGNAL})
 //                .asNative(true)
@@ -42,6 +43,7 @@ public class MemoryUtil {
         MEMORY_WRITE_SIGNATURE = new FunctionSignature.Builder("__internal__arrayWrite", new FunctionParameter[]{new FunctionParameter("address", PrimitiveType.INT, MemoryUtil.ADDRESS_SIGNAL), new FunctionParameter("value", PrimitiveType.INT, MemoryUtil.WRITE_VALUE_SIGNAL)}, PrimitiveType.VOID, new FactorioSignal[0])
                 .asNative(true)
                 .asPipelined(true)
+                .withSideEffects(FunctionSignature.SideEffectsType.IDEMPOTENT_WRITE)
                 .build();
     }
 

@@ -5,10 +5,9 @@ import me.joba.factorio.NetworkGroup;
 import me.joba.factorio.lang.types.PrimitiveType;
 import me.joba.factorio.lang.types.Type;
 
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.Stack;
+import java.util.*;
+
+import static me.joba.factorio.lang.Generator.CONSTANT_DELAY_FUNCTION_OVERHEAD;
 
 public class FunctionContext {
 
@@ -22,10 +21,15 @@ public class FunctionContext {
     private CombinatorGroup functionHeader;
     private CombinatorGroup functionReturn;
     private final FunctionSignature functionSignature;
-    private final NetworkGroup functionCallOutput;
-    private final NetworkGroup functionCallReturn;
+    public static final NetworkGroup PROGRAM_IN = new NetworkGroup("Main in");
+    public static final NetworkGroup PROGRAM_RETURN = new NetworkGroup("Main return");
+    public static final NetworkGroup FUNCTION_CALL_IN = new NetworkGroup("Global function call out");
+    public static final NetworkGroup FUNCTION_CALL_RETURN = new NetworkGroup("Global function call return");
+    private final NetworkGroup functionCallOutput = FUNCTION_CALL_IN;
+    private final NetworkGroup functionCallReturn = FUNCTION_CALL_RETURN;
     private final Set<Integer> takenFunctionCallSendSlots = new HashSet<>();
     private final Set<Integer> takenFunctionCallReturnSlots = new HashSet<>();
+    private final Map<FunctionSignature.SideEffectsType, Integer> firstAvailableSlotBySideEffectType;
 
     public FunctionContext(FunctionSignature functionSignature) {
         this.functionSignature = functionSignature;
@@ -36,9 +40,12 @@ public class FunctionContext {
         freeBindings.addAll(Arrays.asList(FactorioSignal.values()));
         freeBindings.removeIf(FactorioSignal::isReserved);
         conditionContexts = new Stack<>();
-
-        functionCallOutput = new NetworkGroup("Function call out of group " + functionSignature);
-        functionCallReturn = new NetworkGroup("Function call return of group " + functionSignature);
+        firstAvailableSlotBySideEffectType = new HashMap<>();
+        for(var type : FunctionSignature.SideEffectsType.values()) {
+            firstAvailableSlotBySideEffectType.put(type, 0);
+        }
+//        functionCallOutput = new NetworkGroup("Function call out of group " + functionSignature);
+//        functionCallReturn = new NetworkGroup("Function call return of group " + functionSignature);
 
         bindParameterSignals();
     }
@@ -64,27 +71,77 @@ public class FunctionContext {
     public void clearFunctionCallSlotReservations() {
         takenFunctionCallSendSlots.clear();
         takenFunctionCallReturnSlots.clear();
+        for(var type : FunctionSignature.SideEffectsType.values()) {
+            firstAvailableSlotBySideEffectType.put(type, 0);
+        }
     }
 
-    public int reserveVoidFunctionCallSlot(int earliestStartTime) {
-        for(;;earliestStartTime++) {
-            if(!takenFunctionCallSendSlots.contains(earliestStartTime)) {
-                break;
+    public int reserveFunctionCallSlot(FunctionSignature signature, int earliestStartTime) {
+        if(signature.getReturnType() != PrimitiveType.VOID && !signature.isConstantDelay()) throw new IllegalArgumentException(signature + " is not constant delay");
+        earliestStartTime = Math.max(earliestStartTime, firstAvailableSlotBySideEffectType.get(signature.getSideEffectsType()));
+        if(signature.getReturnType() != PrimitiveType.VOID) {
+            for(;;earliestStartTime++) {
+                if(!takenFunctionCallSendSlots.contains(earliestStartTime) && !takenFunctionCallReturnSlots.contains(earliestStartTime + signature.getConstantDelay() + CONSTANT_DELAY_FUNCTION_OVERHEAD)) {
+                    break;
+                }
             }
+            takenFunctionCallSendSlots.add(earliestStartTime);
+            takenFunctionCallReturnSlots.add(earliestStartTime + signature.getConstantDelay() + CONSTANT_DELAY_FUNCTION_OVERHEAD);
         }
-        takenFunctionCallSendSlots.add(earliestStartTime);
+        else {
+            for(;;earliestStartTime++) {
+                if(!takenFunctionCallSendSlots.contains(earliestStartTime)) {
+                    break;
+                }
+            }
+            takenFunctionCallSendSlots.add(earliestStartTime);
+        }
+        updateSideEffectOrdering(signature, earliestStartTime);
         return earliestStartTime;
     }
 
-    public int reserveFunctionCallSlot(int earliestStartTime, int functionCallDuration) {
-        for(;;earliestStartTime++) {
-            if(!takenFunctionCallSendSlots.contains(earliestStartTime) && !takenFunctionCallReturnSlots.contains(earliestStartTime + functionCallDuration)) {
-                break;
+    private void updateSideEffectOrdering(FunctionSignature signature, int callTime) {
+        //TODO this just hard codes array read after write delay :(
+        if(signature == MemoryUtil.MEMORY_READ_SIGNATURE || signature == MemoryUtil.MEMORY_WRITE_SIGNATURE) {
+            switch (signature.getSideEffectsType()) {
+                case ANY -> {
+                    setMax(firstAvailableSlotBySideEffectType, FunctionSignature.SideEffectsType.ANY, callTime);
+                    setMax(firstAvailableSlotBySideEffectType, FunctionSignature.SideEffectsType.IDEMPOTENT_READ, callTime);
+                    setMax(firstAvailableSlotBySideEffectType, FunctionSignature.SideEffectsType.IDEMPOTENT_WRITE, callTime);
+                }
+                case IDEMPOTENT_WRITE -> {
+                    setMax(firstAvailableSlotBySideEffectType, FunctionSignature.SideEffectsType.ANY, callTime);
+                    setMax(firstAvailableSlotBySideEffectType, FunctionSignature.SideEffectsType.IDEMPOTENT_READ, callTime + 6);
+                    setMax(firstAvailableSlotBySideEffectType, FunctionSignature.SideEffectsType.IDEMPOTENT_WRITE, callTime);
+                }
+                case IDEMPOTENT_READ -> {
+                    setMax(firstAvailableSlotBySideEffectType, FunctionSignature.SideEffectsType.ANY, callTime);
+                    setMax(firstAvailableSlotBySideEffectType, FunctionSignature.SideEffectsType.IDEMPOTENT_WRITE, Math.max(0, callTime - 5));
+                }
             }
         }
-        takenFunctionCallSendSlots.add(earliestStartTime);
-        takenFunctionCallReturnSlots.add(earliestStartTime + functionCallDuration);
-        return earliestStartTime;
+        else {
+            switch (signature.getSideEffectsType()) {
+                case ANY -> {
+                    setMax(firstAvailableSlotBySideEffectType, FunctionSignature.SideEffectsType.ANY, callTime);
+                    setMax(firstAvailableSlotBySideEffectType, FunctionSignature.SideEffectsType.IDEMPOTENT_READ, callTime);
+                    setMax(firstAvailableSlotBySideEffectType, FunctionSignature.SideEffectsType.IDEMPOTENT_WRITE, callTime);
+                }
+                case IDEMPOTENT_WRITE -> {
+                    setMax(firstAvailableSlotBySideEffectType, FunctionSignature.SideEffectsType.ANY, callTime);
+                    setMax(firstAvailableSlotBySideEffectType, FunctionSignature.SideEffectsType.IDEMPOTENT_READ, callTime);
+                    setMax(firstAvailableSlotBySideEffectType, FunctionSignature.SideEffectsType.IDEMPOTENT_WRITE, callTime);
+                }
+                case IDEMPOTENT_READ -> {
+                    setMax(firstAvailableSlotBySideEffectType, FunctionSignature.SideEffectsType.ANY, callTime);
+                    setMax(firstAvailableSlotBySideEffectType, FunctionSignature.SideEffectsType.IDEMPOTENT_WRITE, callTime);
+                }
+            }
+        }
+    }
+
+    private  <T> int setMax(Map<T, Integer> map, T key, int newVal) {
+        return map.compute(key, (k, v) -> v == null ? newVal : Math.max(v, newVal));
     }
 
     public void setFunctionHeader(CombinatorGroup functionHeader) {

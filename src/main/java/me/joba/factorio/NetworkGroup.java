@@ -1,6 +1,10 @@
 package me.joba.factorio;
 
+import me.joba.factorio.game.entities.CircuitNetworkEntity;
+import me.joba.factorio.lang.FactorioSignal;
+
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class NetworkGroup {
 
@@ -8,6 +12,8 @@ public class NetworkGroup {
 
 
     private final String name;
+
+    private final List<CircuitNetworkEntity> connectedEntities = new ArrayList<>();
 
     public NetworkGroup() {
         this(null);
@@ -19,6 +25,16 @@ public class NetworkGroup {
 
     public String getName() {
         return name;
+    }
+
+    public void addEntity(CircuitNetworkEntity entity) {
+        getCanonical(this).connectedEntities.add(entity);
+    }
+
+    public Map<FactorioSignal, Integer> getValues() {
+        return getCanonical(this).connectedEntities.stream()
+                .flatMap(e -> e.getOutput().entrySet().stream())
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, Integer::sum));
     }
 
     public static void merge(NetworkGroup... groups) {

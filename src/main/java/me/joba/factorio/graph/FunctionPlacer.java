@@ -230,14 +230,10 @@ public class FunctionPlacer {
         boolean placeXEdge = (maxX - SUBSTATION_OFFSET_X + 2) % SUBSTATION_SPACING_X > SUBSTATION_OFFSET_X || maxX < SUBSTATION_OFFSET_X;
         boolean placeYEdge = (maxY - SUBSTATION_OFFSET_Y + 2) % SUBSTATION_SPACING_Y > SUBSTATION_OFFSET_Y || maxY < SUBSTATION_OFFSET_Y;
 
-        //TODO FIX
-        placeYEdge = false;
-        placeXEdge = false;
-
         if(placeXEdge) {
             int x = maxX + 1;
             for(int y = SUBSTATION_OFFSET_Y; y <= maxY; y += SUBSTATION_SPACING_Y) {
-                var substation = new Substation(x, y);
+                var substation = new Substation(x + 1, y);
                 substations.add(substation);
             }
         }
@@ -245,7 +241,7 @@ public class FunctionPlacer {
         if(placeYEdge) {
             int y = maxY + 1;
             for(int x = SUBSTATION_OFFSET_X; x <= maxX; x += SUBSTATION_SPACING_X) {
-                var substation = new Substation(x, y);
+                var substation = new Substation(x, y + 1);
                 substations.add(substation);
             }
         }

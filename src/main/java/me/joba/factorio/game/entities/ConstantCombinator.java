@@ -8,7 +8,7 @@ import org.json.simple.JSONObject;
 
 import java.util.Map;
 
-public class ConstantCombinator extends CircuitNetworkEntity {
+public class ConstantCombinator extends CircuitNetworkEntity implements CircuitNetworkOutput {
 
     private final Map<FactorioSignal, Integer> signals;
 
@@ -17,20 +17,39 @@ public class ConstantCombinator extends CircuitNetworkEntity {
         this.signals = signals;
     }
 
+    @Override
     public void setRedOut(NetworkGroup red) {
         setNetwork(0, WireColor.RED, red);
     }
 
+    @Override
     public void setGreenOut(NetworkGroup green) {
         setNetwork(0, WireColor.GREEN, green);
     }
 
+    @Override
     public NetworkGroup getRedOut() {
         return getNetwork(0, WireColor.RED);
     }
 
+    @Override
     public NetworkGroup getGreenOut() {
         return getNetwork(0, WireColor.GREEN);
+    }
+
+    @Override
+    public void gatherSignals() {
+
+    }
+
+    @Override
+    public void update() {
+
+    }
+
+    @Override
+    public Map<FactorioSignal, Integer> getOutput() {
+        return signals;
     }
 
     @Override

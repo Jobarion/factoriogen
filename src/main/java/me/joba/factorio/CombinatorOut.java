@@ -3,10 +3,14 @@ package me.joba.factorio;
 import me.joba.factorio.lang.FactorioSignal;
 import org.json.simple.JSONObject;
 
+import java.util.Map;
+import java.util.stream.Collectors;
+
 public interface CombinatorOut {
 
     boolean isConstant();
     JSONObject toJson();
+    Map<FactorioSignal, Integer> sample(Map<FactorioSignal, Integer> inputs);
 
     static CombinatorOut one(FactorioSignal outSignal) {
         return new CombinatorOut() {
@@ -21,6 +25,11 @@ public interface CombinatorOut {
                 obj.put("type", outSignal.getType().getFactorioName());
                 obj.put("name", outSignal.getFactorioName());
                 return obj;
+            }
+
+            @Override
+            public Map<FactorioSignal, Integer> sample(Map<FactorioSignal, Integer> inputs) {
+                return Map.of(outSignal, 1);
             }
         };
     }
@@ -40,6 +49,11 @@ public interface CombinatorOut {
                 obj.put("name", outSignal.getFactorioName());
                 return obj;
             }
+
+            @Override
+            public Map<FactorioSignal, Integer> sample(Map<FactorioSignal, Integer> inputs) {
+                return Map.of(outSignal, inputs.getOrDefault(outSignal, 0));
+            }
         };
     }
 
@@ -57,6 +71,12 @@ public interface CombinatorOut {
                 obj.put("type", "virtual");
                 obj.put("name", "signal-everything");
                 return obj;
+            }
+
+            @Override
+            public Map<FactorioSignal, Integer> sample(Map<FactorioSignal, Integer> inputs) {
+                return inputs.entrySet().stream()
+                        .collect(Collectors.toMap(Map.Entry::getKey, e -> one ? 1 : e.getValue()));
             }
         };
     }

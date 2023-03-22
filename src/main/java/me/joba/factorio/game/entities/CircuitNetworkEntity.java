@@ -1,12 +1,16 @@
 package me.joba.factorio.game.entities;
 
+import me.joba.factorio.Main;
 import me.joba.factorio.NetworkGroup;
 import me.joba.factorio.game.ConnectionPoint;
 import me.joba.factorio.game.Entity;
 import me.joba.factorio.game.WireColor;
+import me.joba.factorio.lang.FactorioSignal;
 import org.json.simple.JSONObject;
 
-public class CircuitNetworkEntity extends Entity {
+import java.util.Map;
+
+public abstract class CircuitNetworkEntity extends Entity {
 
     private final ConnectionPoint[] connectionPoints;
     private JSONObject connectionData;
@@ -36,6 +40,10 @@ public class CircuitNetworkEntity extends Entity {
     public void setNetwork(int connectionPoint, WireColor color, NetworkGroup group) {
         connectionPoints[connectionPoint].getConnections().put(color, group);
     }
+
+    public abstract void gatherSignals();
+    public abstract void update();
+    public abstract Map<FactorioSignal, Integer> getOutput();
 
     public void setConnectionData(JSONObject connectionData) {
         this.connectionData = connectionData;
