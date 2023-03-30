@@ -1,0 +1,11 @@
+function main() -> int {
+  return c() + d();
+}
+
+function c() -> int {
+  return 1;
+}
+
+function d() -> int {
+  return 2;
+}

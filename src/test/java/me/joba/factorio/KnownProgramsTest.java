@@ -45,6 +45,8 @@ public class KnownProgramsTest {
         ARRAY_DELAY("examples/array_delay_test.fcl", Map.of(), 50, Map.of(), List.of(2)),
         MAX_COLLATZ("examples/max_collatz.fcl", Map.of(FactorioSignal.SIGNAL_RED, 1, FactorioSignal.SIGNAL_GREEN, 10, FactorioSignal.SIGNAL_I, 10), 10000, Map.of(), List.of(52)),
         FUNCTION_CALL_MINIMAL("examples/function_call_minimal.fcl", Map.of(FactorioSignal.SIGNAL_RED, 5, FactorioSignal.SIGNAL_GREEN, 13), 50, Map.of(), List.of(30)),
+        FUNCTION_CALL_TREE("examples/function_call_tree.fcl", Map.of(), 100, Map.of(), List.of(3)),
+        FUNCTION_CALL_CHAIN("examples/function_chain.fcl", Map.of(), 100, Map.of(), List.of(1)),
         IF_IN_WHILE("examples/if_in_while.fcl", Map.of(FactorioSignal.SIGNAL_RED, 1, FactorioSignal.SIGNAL_GREEN, 10), 500, Map.of(), List.of(15)),
         IF_NO_ELSE_A("examples/if_no_else.fcl", Map.of(FactorioSignal.SIGNAL_RED, 5, FactorioSignal.SIGNAL_GREEN, 6), 50, Map.of(), List.of()),
         IF_NO_ELSE_B("examples/if_no_else.fcl", Map.of(FactorioSignal.SIGNAL_RED, 6, FactorioSignal.SIGNAL_GREEN, 5), 50, Map.of(), List.of(7)),

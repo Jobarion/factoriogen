@@ -1,0 +1,13 @@
+int[10] TEMP_ARRAY;
+
+function main() -> int {
+  return read(0);
+}
+
+function read(index: int) -> int {
+  return getArray()[index];
+}
+
+function getArray() -> int[] {
+  return TEMP_ARRAY;
+}
