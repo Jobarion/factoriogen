@@ -1175,19 +1175,10 @@ public class Generator extends LanguageBaseListener {
     public void exitArrayAssignment(LanguageParser.ArrayAssignmentContext ctx) {
         var value = currentFunctionContext.popTempVariable();
         var index = currentFunctionContext.popTempVariable();
+        var array = currentFunctionContext.popTempVariable();
         if(index.getType() != PrimitiveType.INT) throw new RuntimeException("Invalid array index type " + index.getType() + ", expected INT");
 
-        String varName = ctx.var.getText();
-        Symbol array = currentFunctionContext.getNamedVariable(varName);
-        if(array == null) {
-            var declaredArray = declaredArrays.get(ctx.var.getText());
-            if(declaredArray == null) {
-                throw new RuntimeException("Variable " + ctx.var.getText() + " is not defined");
-            }
-            array = new Constant(declaredArray.getType(), declaredArray.getAddress());
-        }
-
-        if(!(array.getType() instanceof ArrayType)) throw new RuntimeException(varName + " is not an array. Expected " + new ArrayType(value.getType()) + ", found " + array.getType());
+        if(!(array.getType() instanceof ArrayType)) throw new RuntimeException(array + " is not an array. Expected " + new ArrayType(value.getType()) + ", found " + array.getType());
         var arraySubtype = ((ArrayType)array.getType()).getSubType();
 
         if(!arraySubtype.equals(value.getType())) throw new RuntimeException("Type mismatch " + value + " to array " + array);
@@ -1208,18 +1199,26 @@ public class Generator extends LanguageBaseListener {
             CombinatorGroup addressOffsetGroup = new CombinatorGroup(null, new NetworkGroup());
             arrayWriterGroup.getSubGroups().add(addressOffsetGroup);
 
-            var addressOffsetCalculator = ArithmeticCombinator.withLeftRight(CombinatorIn.signal(index.getSignal()[0]), CombinatorIn.constant(arraySubtype.getSize()), arrayWriteFunctionCallParamSignal, ArithmeticOperator.MUL);
-            addressOffsetGroup.getCombinators().add(addressOffsetCalculator);
-            addressOffsetCalculator.setGreenIn(arrayWriterGroup.getInput());
-            addressOffsetCalculator.setGreenOut(addressOffsetGroup.getOutput());
+            Symbol indexOffsetVar;
+            if(index instanceof Constant c) {
+                int addressOffset = c.getVal()[0] * arraySubtype.getSize();
+                indexOffsetVar = new Constant(addressOffset);
+            }
+            else {
+                var addressOffsetCalculator = ArithmeticCombinator.withLeftRight(CombinatorIn.signal(index.getSignal()[0]), CombinatorIn.constant(arraySubtype.getSize()), arrayWriteFunctionCallParamSignal, ArithmeticOperator.MUL);
+                addressOffsetGroup.getCombinators().add(addressOffsetCalculator);
+                addressOffsetCalculator.setGreenIn(arrayWriterGroup.getInput());
+                addressOffsetCalculator.setGreenOut(addressOffsetGroup.getOutput());
 
-            var indexOffsetVar = currentFunctionContext.createBoundTempVariable(PrimitiveType.INT, new FactorioSignal[]{arrayWriteFunctionCallParamSignal}, addressOffsetGroup);
-            indexOffsetVar.setDelay(index.getTickDelay() + 1);
-            currentFunctionContext.popTempVariable();//createBoundTempVariable puts it on the stack. We don't want that
+                var _indexOffsetVar = currentFunctionContext.createBoundTempVariable(PrimitiveType.INT, new FactorioSignal[]{arrayWriteFunctionCallParamSignal}, addressOffsetGroup);
+                _indexOffsetVar.setDelay(index.getTickDelay() + 1);
+                currentFunctionContext.popTempVariable();//createBoundTempVariable puts it on the stack. We don't want that
 
-            var accessor = ((Variable)index).createVariableAccessor();
-            arrayWriterGroup.getAccessors().add(accessor);
-            accessor.access(index.getTickDelay()).accept(arrayWriterGroup);
+                var accessor = ((Variable)index).createVariableAccessor();
+                arrayWriterGroup.getAccessors().add(accessor);
+                accessor.access(index.getTickDelay()).accept(arrayWriterGroup);
+                indexOffsetVar = _indexOffsetVar;
+            }
 
             for(int i = 0; i < arraySubtype.getSize(); i++) {
                 //This is only a virtual variable we create that represents one int of the larger value.
