@@ -183,6 +183,7 @@ public class Generator extends LanguageBaseListener {
                 shift.setGreenIn(shiftGroup.getInput());
                 shift.setGreenOut(shiftGroup.getOutput());
                 var tempVar = currentFunctionContext.createBoundTempVariable(currentFunctionContext.getSignature().getReturnType(), returnVal.getSignal(), shiftGroup);
+                currentFunctionContext.popTempVariable();
                 tempVar.setDelay(returnVal.getTickDelay() + 1);
                 returnVal = tempVar;
             }

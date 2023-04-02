@@ -1,0 +1,3 @@
+function main(a: fixedp<20><red>, b: fixedp<22><green>) -> fixedp<16> {
+  return a * b;
+}

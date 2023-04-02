@@ -54,6 +54,7 @@ public class KnownProgramsTest {
         IF_RUNTIME_EQUAL_B("examples/if_runtime_equal.fcl", Map.of(FactorioSignal.SIGNAL_RED, 6, FactorioSignal.SIGNAL_GREEN, 5), 50, Map.of(), List.of(6)),
         IF_RUNTIME_UNEQUAL_A("examples/if_runtime_unequal.fcl", Map.of(FactorioSignal.SIGNAL_RED, 5, FactorioSignal.SIGNAL_GREEN, 6), 50, Map.of(), List.of(6)),
         IF_RUNTIME_UNEQUAL_B("examples/if_runtime_unequal.fcl", Map.of(FactorioSignal.SIGNAL_RED, 6, FactorioSignal.SIGNAL_GREEN, 5), 50, Map.of(), List.of(7)),
+        SAME_VAR_EXPRESSION("examples/same_var_expression.fcl", Map.of(FactorioSignal.SIGNAL_RED, 125, FactorioSignal.SIGNAL_GREEN, 8), 20, Map.of(), List.of(976)),
         WHILE_IN_IF_A("examples/while_in_if.fcl", Map.of(FactorioSignal.SIGNAL_RED, 1, FactorioSignal.SIGNAL_GREEN, 5), 500, Map.of(), List.of(10)),
         WHILE_IN_IF_B("examples/while_in_if.fcl", Map.of(FactorioSignal.SIGNAL_RED, 5, FactorioSignal.SIGNAL_GREEN, 1), 50, Map.of(), List.of()),
         WHILE_MINIMAL("examples/while_minimal.fcl", Map.of(FactorioSignal.SIGNAL_RED, 1, FactorioSignal.SIGNAL_GREEN, 5), 50, Map.of(), List.of(15)),

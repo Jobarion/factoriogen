@@ -1,26 +1,29 @@
 package me.joba.factorio;
 
-import me.joba.factorio.game.EntityBlock;
-import me.joba.factorio.game.entities.*;
+import me.joba.factorio.game.entities.CircuitNetworkEntity;
+import me.joba.factorio.game.entities.CircuitNetworkOutput;
+import me.joba.factorio.game.entities.ConstantCombinator;
 import me.joba.factorio.lang.FactorioSignal;
 import me.joba.factorio.lang.Generator;
-import me.joba.factorio.lang.MemoryUtil;
 import me.joba.factorio.lang.Program;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
 
 public class Simulator {
 
     public static void main(String[] args) throws IOException {
-        Path file = Path.of("examples/max_collatz.fcl");
+        Path file = Path.of("examples/fixedp.fcl");
         var code = Files.readAllLines(file)
                 .stream()
                 .collect(StringBuffer::new, StringBuffer::append, StringBuffer::append)
                 .toString();
-        var result = simulate(Generator.generateProgram(code, false),  Map.of(FactorioSignal.SIGNAL_RED, 1, FactorioSignal.SIGNAL_GREEN, 10, FactorioSignal.SIGNAL_I, 10), 10000);
+        var result = simulate(Generator.generateProgram(code, false),  Map.of(FactorioSignal.SIGNAL_RED, 14082375, FactorioSignal.SIGNAL_GREEN, 54702112), 100);
+        //var result = simulate(Generator.generateProgram(code, false),  Map.of(FactorioSignal.SIGNAL_RED, 880148, FactorioSignal.SIGNAL_GREEN, 854720), 100);
         System.out.println(result);
     }
 
@@ -30,6 +33,7 @@ public class Simulator {
                 .filter(e -> e instanceof CircuitNetworkEntity)
                 .map(e -> (CircuitNetworkEntity)e)
                 .toList();
+        System.out.println("Entity count: " + entities.size());
         for(var e : entities) {
             if(e instanceof CircuitNetworkOutput cno) {
                 if(cno.getRedOut() != null) cno.getRedOut().addEntity(e);
@@ -39,7 +43,7 @@ public class Simulator {
         Map<FactorioSignal, Integer> programIn = new HashMap<>(input);
         programIn.put(FactorioSignal.SIGNAL_CHECK, 105231);
         for(int i = 0; i < maxSteps; i++) {
-//            System.out.println("\nSTEP " + (i + 1) + "\n");
+            System.out.println("\nSTEP " + (i + 1) + "\n");
             var inputEntity = new ConstantCombinator(input) {
                 @Override
                 public Map<FactorioSignal, Integer> getOutput() {
@@ -53,7 +57,7 @@ public class Simulator {
             }
             for(var e : entities) {
                 e.update();
-//                System.out.println(e + ": " + e.getOutput());
+                System.out.println(e + ": " + e.getOutput());
             }
             if(program.mainOut().getValues().getOrDefault(FactorioSignal.SIGNAL_CHECK, 0) == 105231) {
                 return Optional.of(new ProgramResult(program.mainOut().getValues(), i + 1));

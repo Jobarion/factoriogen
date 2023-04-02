@@ -6,7 +6,7 @@ public enum ArithmeticOperator implements IntBinaryOperator {
     ADD("+", "+", (a, b) -> a + b),
     SUB("-", "-", (a, b) -> a - b),
     MUL("*", "*", (a, b) -> a * b),
-    DIV("/", "/", (a, b) -> a / b),
+    DIV("/", "/", (a, b) -> b == 0 ? 0 : a / b),
     MOD("%", "%", (a, b) -> a % b),
     LSH("<<", "<<", (a, b) -> a << b),
     RSH(">>", ">>", (a, b) -> a >> b),

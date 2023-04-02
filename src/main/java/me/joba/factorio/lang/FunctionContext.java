@@ -288,6 +288,10 @@ public class FunctionContext {
         }
     }
 
+    public void unclaimSymbols(FactorioSignal[] tempSymbols) {
+        freeBindings.addAll(Arrays.asList(tempSymbols));
+    }
+
     public CombinatorGroup getFunctionGroup() {
         return functionHeader;
     }

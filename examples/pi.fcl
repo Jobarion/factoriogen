@@ -1,13 +1,15 @@
-function main(iterations: int) -> fixedp<28> {
-  sum<28> = 0.0;
+function main(iterations: int<1>) -> fixedp<16> {
+  sum<16> = 0.0;
   d<16> = 1.0;
-  while(iterations > 0) {
-    if(iterations % 2 == 0) {
-      sum<28> = sum + 4.0 / d;
+  a = 0;
+  while(a < iterations) {
+    if(a % 2 == 0) {
+      sum<16> = sum + 4.0 / d;
     }
     else {
-      sum<28> = sum - 4.0 / d;
+      sum<16> = sum - 4.0 / d;
     }
+    a = a + 1;
     d<16> = d + 2.0;
   }
   return sum;
