@@ -255,7 +255,7 @@ public class Generator extends LanguageBaseListener {
                     log("Copying signal " + returnVal.getSignal()[i]);
                 }
                 else {
-                    cmb = ArithmeticCombinator.remapping(returnVal.getSignal()[i], currentFunctionContext.getSignature().getReturnSignals()[i]);
+                    cmb = ArithmeticCombinator.mapping(returnVal.getSignal()[i], currentFunctionContext.getSignature().getReturnSignals()[i]);
                     log("Remapping signal " + returnVal.getSignal()[i] + " to " + currentFunctionContext.getSignature().getReturnSignals()[i]);
                 }
                 returnGroup.getCombinators().add(cmb);
@@ -401,6 +401,8 @@ public class Generator extends LanguageBaseListener {
         for(var x : whileScope.getDefinedVariables().values()) {
             innerLoopDelay = Math.max(innerLoopDelay, x.getTickDelay());
         }
+        //This must be wrong, but eh, it works
+        innerLoopDelay = Math.max(innerLoopDelay, currentFunctionContext.getCurrentSideEffectsDelay(FunctionSignature.SideEffectsType.IDEMPOTENT_READ) - 6);
 
         if(condition instanceof Constant) {
             ConstantCombinator connected = new ConstantCombinator(Map.of(condition.getSignal()[0], ((Constant) condition).getVal()[0]));
@@ -422,7 +424,7 @@ public class Generator extends LanguageBaseListener {
         var bufferDelayInput = loopDataPreCondition;
         ArithmeticCombinator bufferDelayConnected = null;
         for(int i = condition.getTickDelay(); i >= 0; i--) {
-            bufferDelayConnected = ArithmeticCombinator.withEach(CombinatorIn.constant(0), ArithmeticOperator.ADD);
+            bufferDelayConnected = ArithmeticCombinator.copying();
             bufferDelayConnected.setGreenIn(bufferDelayInput);
             whileGroup.getCombinators().add(bufferDelayConnected);
             if(i > 0) {
@@ -829,7 +831,7 @@ public class Generator extends LanguageBaseListener {
                         var accessor = var.createVariableAccessor();
                         functionCallInput.getAccessors().add(accessor);
                         accessor.access(totalDelay - 1).accept(paramRemapIn, functionCallInput);
-                        ArithmeticCombinator arithmeticCombinator = ArithmeticCombinator.remapping(argument.getSignal()[j], targetSignal[j]);
+                        ArithmeticCombinator arithmeticCombinator = ArithmeticCombinator.mapping(argument.getSignal()[j], targetSignal[j]);
                         functionCallInput.getCombinators().add(arithmeticCombinator);
                         arithmeticCombinator.setGreenIn(paramRemapIn);
                         arithmeticCombinator.setGreenOut(argumentsIn);
@@ -864,7 +866,7 @@ public class Generator extends LanguageBaseListener {
             CombinatorGroup returnSignalRemapGroup = new CombinatorGroup(functionCallReturn.getOutput(), new NetworkGroup());
             functionCallReturn.getSubGroups().add(returnSignalRemapGroup);
             for(int i = 0; i < returnType.getSize(); i++) {
-                var cp = ArithmeticCombinator.remapping(targetFunction.getSignature().getReturnSignals()[i], returnSignal[i]);
+                var cp = ArithmeticCombinator.mapping(targetFunction.getSignature().getReturnSignals()[i], returnSignal[i]);
                 cp.setGreenIn(returnSignalRemapGroup.getInput());
                 cp.setGreenOut(returnSignalRemapGroup.getOutput());
                 cp.setOrientation(6);
@@ -959,7 +961,7 @@ public class Generator extends LanguageBaseListener {
                 CombinatorGroup group = new CombinatorGroup(((Variable)tupleVar).getProducer().getOutput(), new NetworkGroup());
                 currentFunctionContext.getFunctionGroup().getSubGroups().add(group);
                 for(int i = 0; i < oldSignals.length; i++) {
-                    ArithmeticCombinator ac = ArithmeticCombinator.remapping(oldSignals[i], newSignals[i]);
+                    ArithmeticCombinator ac = ArithmeticCombinator.mapping(oldSignals[i], newSignals[i]);
                     group.getCombinators().add(ac);
                     ac.setGreenIn(group.getInput());
                     ac.setGreenOut(group.getOutput());
@@ -1018,7 +1020,7 @@ public class Generator extends LanguageBaseListener {
                     group.getAccessors().add(accessor);
                     accessor.access(delay).accept(group);
                     for(FactorioSignal signal : symbol.getSignal()) {
-                        ArithmeticCombinator ac = ArithmeticCombinator.remapping(signal, remappedSignals[offset++]);
+                        ArithmeticCombinator ac = ArithmeticCombinator.mapping(signal, remappedSignals[offset++]);
                         group.getCombinators().add(ac);
                         ac.setGreenIn(group.getInput());
                         ac.setGreenOut(group.getOutput());
@@ -1101,7 +1103,7 @@ public class Generator extends LanguageBaseListener {
 
                     for(int i = 0; i < tupleComponents.length; i++) {
                         var tupleComponent = tupleComponents[i];
-                        var remapping = ArithmeticCombinator.remapping(tupleComponent.getSignal()[0], signals[i]);
+                        var remapping = ArithmeticCombinator.mapping(tupleComponent.getSignal()[0], signals[i]);
                         arrayLoaderGroup.getCombinators().add(remapping);
                         remapping.setGreenIn(tupleComponent.getProducer().getOutput());
                         if(tupleComponent.getTickDelay() + 1 < sharedChainDelay) throw new RuntimeException("Unsorted tuple components");
@@ -1344,7 +1346,7 @@ public class Generator extends LanguageBaseListener {
                         var accessor = var.createVariableAccessor();
                         functionCallGroup.getAccessors().add(accessor);
                         accessor.access(functionCallTime - 2).accept(paramRemapIn, functionCallGroup);
-                        ArithmeticCombinator arithmeticCombinator = ArithmeticCombinator.remapping(argument.getSignal()[j], targetSignal[j]);
+                        ArithmeticCombinator arithmeticCombinator = ArithmeticCombinator.mapping(argument.getSignal()[j], targetSignal[j]);
                         functionCallGroup.getCombinators().add(arithmeticCombinator);
                         arithmeticCombinator.setGreenIn(paramRemapIn);
                         arithmeticCombinator.setGreenOut(functionCallGroup.getInput());

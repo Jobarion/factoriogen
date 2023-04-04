@@ -1,7 +1,14 @@
-int[10] ARRAY_1;
+int[20] ARRAY_1;
 
 function main() -> void {
-    sort(ARRAY_1, 10);
+    start = 0;
+    seed = 598223;
+    while(start < 20) {
+        ARRAY_1[start] = seed % 100;
+        seed = (8121 * seed + 28411) % 134456;
+        start = start + 1;
+    }
+    sort(ARRAY_1, 20);
 }
 
 function sort(arr: int[], size: int) -> void {

@@ -74,6 +74,10 @@ public class FunctionContext {
         }
     }
 
+    public int getCurrentSideEffectsDelay(FunctionSignature.SideEffectsType type) {
+        return firstAvailableSlotBySideEffectType.get(type);
+    }
+
     public int reserveFunctionCallSlot(FunctionSignature signature, int earliestStartTime) {
         if(signature.getReturnType() != PrimitiveType.VOID && !signature.isConstantDelay()) throw new IllegalArgumentException(signature + " is not constant delay");
         earliestStartTime = Math.max(earliestStartTime, firstAvailableSlotBySideEffectType.get(signature.getSideEffectsType()));

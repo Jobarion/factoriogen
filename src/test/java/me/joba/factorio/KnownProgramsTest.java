@@ -37,12 +37,13 @@ public class KnownProgramsTest {
             assertEquals(returnValues.getOrDefault(expected.getKey(), 0), expected.getValue(), "Signal " + expected.getKey() + " with unexpected value");
             returnValues.remove(expected.getKey());
         }
-        assertTrue(returnValues.values().containsAll(program.getReturnUnknownSignals()));
+        assertTrue(returnValues.values().containsAll(program.getReturnUnknownSignals()), "Expected signals " + program.getReturnUnknownSignals() + " but found " + returnValues.values());
         System.out.println("Completed in " + result.get().cycles() + " cycles");
     }
 
     public enum KnownProgram {
         ARRAY_DELAY("examples/array_delay_test.fcl", Map.of(), 50, Map.of(), List.of(2)),
+        ARRAY_RACE_CONDITION_WHILE("examples/array_race_condition_while.fcl", Map.of(), 500, Map.of(), List.of(45)),
         MAX_COLLATZ("examples/max_collatz.fcl", Map.of(FactorioSignal.SIGNAL_RED, 1, FactorioSignal.SIGNAL_GREEN, 10, FactorioSignal.SIGNAL_I, 10), 10000, Map.of(), List.of(52)),
         FUNCTION_CALL_MINIMAL("examples/function_call_minimal.fcl", Map.of(FactorioSignal.SIGNAL_RED, 5, FactorioSignal.SIGNAL_GREEN, 13), 50, Map.of(), List.of(30)),
         FUNCTION_CALL_TREE("examples/function_call_tree.fcl", Map.of(), 100, Map.of(), List.of(3)),

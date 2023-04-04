@@ -86,7 +86,6 @@ typeList: type (',' type)+;
 
 arrayDeclaration: type '[' intLiteral ']' varName ';';
 
-
 fixedpLiteral: decimalLiteral '.' NumberCharacter+;
 intLiteral
           : decimal=decimalLiteral

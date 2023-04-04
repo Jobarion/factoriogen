@@ -4,8 +4,6 @@ import me.joba.factorio.CombinatorIn;
 import me.joba.factorio.lang.FactorioSignal;
 import org.json.simple.JSONObject;
 
-import java.util.Collection;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -32,7 +30,7 @@ public class ArithmeticCombinator extends IOCircuitNetworkEntity {
         return withLeftRight(CombinatorIn.signal(signal), CombinatorIn.constant(0), signal, ArithmeticOperator.OR);
     }
 
-    public static ArithmeticCombinator remapping(FactorioSignal in, FactorioSignal out) {
+    public static ArithmeticCombinator mapping(FactorioSignal in, FactorioSignal out) {
         return withLeftRight(CombinatorIn.signal(in), CombinatorIn.constant(0), out, ArithmeticOperator.OR);
     }
 
