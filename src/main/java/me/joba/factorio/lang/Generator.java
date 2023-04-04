@@ -483,6 +483,8 @@ public class Generator extends LanguageBaseListener {
         conditionGroup.getSubGroups().add(conditionContext.getIfProvider());
         conditionGroup.getSubGroups().add(conditionContext.getElseProvider());
 
+        //TODO: Move the last part of the conditional into these decider combinators
+        //Instead of if(A > 0) --> X = 1 and then if x = 1 else if x = 0, we can do if a > 0 else if a <= 0.
         var ifInput = DeciderCombinator.withLeftRight(CombinatorIn.signal(condition.getSignal()[0]), CombinatorIn.constant(1), CombinatorOut.everything(false), DeciderOperator.EQ);
         var elseInput = DeciderCombinator.withLeftRight(CombinatorIn.signal(condition.getSignal()[0]), CombinatorIn.constant(0), CombinatorOut.everything(false), DeciderOperator.EQ);
         conditionGroup.getCombinators().add(ifInput);
@@ -583,16 +585,18 @@ public class Generator extends LanguageBaseListener {
         }
 
         Symbol[] arguments = new Symbol[targetFunction.getSignature().getParameters().length];
-        int argumentDelay = 0;
+        //Access everything one tick later to make sure signals are clean
+        //TODO: How can we know that a signal is already clean?
+        int argumentDelay = currentFunctionContext.getControlFlowVariable().getTickDelay() + 1;
         for(int i = arguments.length - 1; i >= 0; i--) {
             var tmpVar = currentFunctionContext.popTempVariable();
             arguments[i] = tmpVar;
             log("Param " + Arrays.toString(targetFunction.getSignature().getParameters()[i].getSignal()) + " as " + tmpVar);
             int delay = tmpVar.getTickDelay();
-            if(!Arrays.equals(targetFunction.getSignature().getParameters()[i].getSignal(), tmpVar.getSignal())) {
-                delay++; //Mapping to new signal type can be skipped if they are identical
-            }
-            argumentDelay = Math.max(argumentDelay, delay);
+//            if(!Arrays.equals(targetFunction.getSignature().getParameters()[i].getSignal(), tmpVar.getSignal())) {
+//                delay++; //Mapping to new signal type can be skipped if they are identical
+//            }
+            argumentDelay = Math.max(argumentDelay, delay + 1);
         }
         int outsideDelay = 0;
         for(var variable : currentFunctionContext.getVariableScope().getAllVariables().values()) {
