@@ -17,12 +17,13 @@ import java.util.Optional;
 public class Simulator {
 
     public static void main(String[] args) throws IOException {
-        Path file = Path.of("examples/array_race_condition_while.fcl");
+        Path file = Path.of("examples/pi.fcl");
         var code = Files.readAllLines(file)
                 .stream()
                 .collect(StringBuffer::new, StringBuffer::append, StringBuffer::append)
                 .toString();
-        var result = simulate(Generator.generateProgram(code, false),  Map.of(FactorioSignal.SIGNAL_RED, 14082375, FactorioSignal.SIGNAL_GREEN, 54702112), 1000);
+        var result = simulate(Generator.generateProgram(code, false),  Map.of(FactorioSignal.SIGNAL_1, 4000), 1000000);
+//        var result = simulate(Generator.generateProgram(code, false),  Map.of(FactorioSignal.SIGNAL_RED, 1133314, FactorioSignal.SIGNAL_GREEN, 619905), 1000000);
         //var result = simulate(Generator.generateProgram(code, false),  Map.of(FactorioSignal.SIGNAL_RED, 880148, FactorioSignal.SIGNAL_GREEN, 854720), 100);
         System.out.println(result);
     }
@@ -43,7 +44,7 @@ public class Simulator {
         Map<FactorioSignal, Integer> programIn = new HashMap<>(input);
         programIn.put(FactorioSignal.SIGNAL_CHECK, 105231);
         for(int i = 0; i < maxSteps; i++) {
-//            System.out.println("\nSTEP " + (i + 1) + "\n");
+            System.out.println("\nSTEP " + (i + 1) + "\n");
             var inputEntity = new ConstantCombinator(input) {
                 @Override
                 public Map<FactorioSignal, Integer> getOutput() {

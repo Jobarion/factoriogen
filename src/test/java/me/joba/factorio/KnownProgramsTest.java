@@ -45,6 +45,7 @@ public class KnownProgramsTest {
         ARRAY_DELAY("examples/array_delay_test.fcl", Map.of(), 50, Map.of(), List.of(2)),
         ARRAY_RACE_CONDITION_WHILE("examples/array_race_condition_while.fcl", Map.of(), 500, Map.of(), List.of(45)),
         MAX_COLLATZ("examples/max_collatz.fcl", Map.of(FactorioSignal.SIGNAL_RED, 1, FactorioSignal.SIGNAL_GREEN, 10, FactorioSignal.SIGNAL_I, 10), 10000, Map.of(), List.of(52)),
+        FIXEDP_TEST("examples/fixedp_mul.fcl", Map.of(FactorioSignal.SIGNAL_RED, -1133314, FactorioSignal.SIGNAL_GREEN, 619905), 10, Map.of(), List.of(-10720017)),
         FUNCTION_CALL_MINIMAL("examples/function_call_minimal.fcl", Map.of(FactorioSignal.SIGNAL_RED, 5, FactorioSignal.SIGNAL_GREEN, 13), 50, Map.of(), List.of(30)),
         FUNCTION_CALL_TREE("examples/function_call_tree.fcl", Map.of(), 100, Map.of(), List.of(3)),
         FUNCTION_CALL_CHAIN("examples/function_chain.fcl", Map.of(), 100, Map.of(), List.of(1)),

@@ -50,14 +50,27 @@ public class FixedpExpressionResolver extends ExpressionResolver<LanguageParser.
         int maxInputDelay = prepareSymbols(symbols, targetType, op, outputGroup, context);
         var outSymbol = context.getFreeSymbols(targetType.getSize());
 
-        var bound = context.createBoundTempVariable(targetType, outSymbol, outputGroup);
         int propagationDelay;
         if(op == ArithmeticOperator.MUL) {
-            propagationDelay = generateMulCombinators(symbols, outSymbol[0], targetType, outputGroup);
+            if(symbols[0] instanceof Variable v1 && symbols[1] instanceof Variable v2) {
+                propagationDelay = generateTwoVariableMultiplicationCombinators(new Variable[]{v1, v2}, outSymbol[0], targetType, outputGroup);
+            }
+            else {
+                if(symbols[0] instanceof Variable v1) {
+                    propagationDelay = generateOneVariableOneConstMultiplicationCombinators(v1, (Constant)symbols[1], outSymbol[0], targetType, outputGroup);
+                }
+                else {
+                    propagationDelay = generateOneVariableOneConstMultiplicationCombinators((Variable)symbols[1], (Constant)symbols[0], outSymbol[0], targetType, outputGroup);
+                }
+            }
+        }
+        else if(op == ArithmeticOperator.DIV) {
+            propagationDelay = generateDivCombinators(symbols, outSymbol, targetType, outputGroup);
         }
         else {
             propagationDelay = generateCombinators(symbols, op, outSymbol, outputGroup, context);
         }
+        var bound = context.createBoundTempVariable(targetType, outSymbol, outputGroup);
         bound.setDelay(maxInputDelay + propagationDelay);
 
         log(context, Arrays.toString(symbols) + " (using " + op + ") = " + bound + ", with delay " + bound.getTickDelay());
@@ -96,91 +109,203 @@ public class FixedpExpressionResolver extends ExpressionResolver<LanguageParser.
         return 1;
     }
 
-//    public int generateMulCombinators(Symbol[] symbols, FactorioSignal outSymbol, FixedpType outputType, CombinatorGroup expressionGroup) {
-//        if(symbols[0] == symbols[1]) {
-//            //a*a requires fewer combinators
-//        }
-//        var t0 = (FixedpType)symbols[0].getType();
-//        var t1 = (FixedpType)symbols[1].getType();
-//        var tempSymbols = new FactorioSignal[]{
-//                FactorioSignal.SIGNAL_A,
-//                FactorioSignal.SIGNAL_B,
-//                FactorioSignal.SIGNAL_C,
-//                FactorioSignal.SIGNAL_D,
-//        };
-//
-//        ArithmeticCombinator shiftA0 = ArithmeticCombinator.withLeftRight(CombinatorIn.signal(symbols[0].getSignal()[0]), CombinatorIn.constant(16), tempSymbols[0], ArithmeticOperator.RSH);
-//        ArithmeticCombinator shiftB0 = ArithmeticCombinator.withLeftRight(CombinatorIn.signal(symbols[1].getSignal()[0]), CombinatorIn.constant(16), tempSymbols[1], ArithmeticOperator.RSH);
-//        ArithmeticCombinator shiftA1 = ArithmeticCombinator.withLeftRight(CombinatorIn.signal(symbols[0].getSignal()[0]), CombinatorIn.constant(0xFFFFFFFF >>> 16), tempSymbols[2], ArithmeticOperator.AND);
-//        ArithmeticCombinator shiftB1 = ArithmeticCombinator.withLeftRight(CombinatorIn.signal(symbols[1].getSignal()[0]), CombinatorIn.constant(0xFFFFFFFF >>> 16), tempSymbols[3], ArithmeticOperator.AND);
-//
-//        //This is incorrect if we want to support a * a
-//        shiftA0.setGreenIn(expressionGroup.getInput());
-//        shiftB0.setGreenIn(expressionGroup.getInput());
-//        shiftA1.setGreenIn(expressionGroup.getInput());
-//        shiftB1.setGreenIn(expressionGroup.getInput());
-//
-//        expressionGroup.getCombinators().add(shiftA0);
-//        expressionGroup.getCombinators().add(shiftB0);
-//        expressionGroup.getCombinators().add(shiftA1);
-//        expressionGroup.getCombinators().add(shiftB1);
-//
-//        var internalStage1 = new NetworkGroup();
-//        expressionGroup.getNetworks().add(internalStage1);
-//
-//        shiftA0.setGreenOut(internalStage1);
-//        shiftA1.setGreenOut(internalStage1);
-//        shiftB0.setGreenOut(internalStage1);
-//        shiftB1.setGreenOut(internalStage1);
-//
-//        ArithmeticCombinator mul1 = ArithmeticCombinator.withLeftRight(CombinatorIn.signal(tempSymbols[0]), CombinatorIn.signal(tempSymbols[1]), tempSymbols[0], ArithmeticOperator.MUL);
-//        ArithmeticCombinator mul2 = ArithmeticCombinator.withLeftRight(CombinatorIn.signal(tempSymbols[0]), CombinatorIn.signal(tempSymbols[3]), tempSymbols[1], ArithmeticOperator.MUL);
-//        ArithmeticCombinator mul3 = ArithmeticCombinator.withLeftRight(CombinatorIn.signal(tempSymbols[1]), CombinatorIn.signal(tempSymbols[2]), tempSymbols[2], ArithmeticOperator.MUL);
-//        ArithmeticCombinator mul4 = ArithmeticCombinator.withLeftRight(CombinatorIn.signal(tempSymbols[2]), CombinatorIn.signal(tempSymbols[3]), tempSymbols[1], ArithmeticOperator.MUL);
-//        expressionGroup.getCombinators().add(mul1);
-//        expressionGroup.getCombinators().add(mul2);
-//        expressionGroup.getCombinators().add(mul3);
-//        expressionGroup.getCombinators().add(mul4);
-//
-//        mul1.setGreenIn(internalStage1);
-//        mul2.setGreenIn(internalStage1);
-//        mul3.setGreenIn(internalStage1);
-//        mul4.setGreenIn(internalStage1);
-//
-//        var internalStage2_0 = new NetworkGroup();
-//        expressionGroup.getNetworks().add(internalStage2_0);
-//        mul1.setGreenOut(internalStage2_0);
-//        mul4.setGreenOut(internalStage2_0);
-//
-//        var internalStage2_1 = new NetworkGroup();
-//        expressionGroup.getNetworks().add(internalStage2_1);
-//        mul2.setGreenOut(internalStage2_1);
-//        mul3.setGreenOut(internalStage2_1);
-//
-//        int shiftConstant = outputType.getFractionBits() - t0.getFractionBits() - t1.getFractionBits();
-//        int lshift1 = 32 + shiftConstant;
-//        int lshift23 = 16 + shiftConstant;
-//        int lshift4 = shiftConstant;
-//
-//        ArithmeticCombinator shift1 = ArithmeticCombinator.withLeftRight(CombinatorIn.signal(tempSymbols[0]), CombinatorIn.constant(Math.abs(lshift1)), outSymbol, lshift1 > 0 ? ArithmeticOperator.LSH : ArithmeticOperator.RSH);
-//        ArithmeticCombinator shift23 = ArithmeticCombinator.withEachMerge(CombinatorIn.constant(Math.abs(lshift23)), outSymbol, lshift23 > 0 ? ArithmeticOperator.LSH : ArithmeticOperator.RSH);
-//        ArithmeticCombinator shift4 = ArithmeticCombinator.withLeftRight(CombinatorIn.signal(tempSymbols[3]), CombinatorIn.constant(Math.abs(lshift4)), outSymbol, lshift4 > 0 ? ArithmeticOperator.LSH : ArithmeticOperator.RSH);
-//
-//        expressionGroup.getCombinators().add(shift1);
-//        expressionGroup.getCombinators().add(shift23);
-//        expressionGroup.getCombinators().add(shift4);
-//
-//        shift1.setGreenIn(internalStage2_0);
-//        shift1.setGreenOut(expressionGroup.getOutput());
-//        shift4.setGreenIn(internalStage2_0);
-//        shift4.setGreenOut(expressionGroup.getOutput());
-//        shift23.setGreenIn(internalStage2_1);
-//        shift23.setGreenOut(expressionGroup.getOutput());
-//
-//        return 3;
-//    }
 
-    public int generateMulCombinators(Symbol[] symbols, FactorioSignal outSymbol, FixedpType outputType, CombinatorGroup expressionGroup) {
+    private int generateOneVariableOneConstMultiplicationCombinators(Variable v1, Constant c2, FactorioSignal outSymbol, FixedpType outputType, CombinatorGroup expressionGroup) {
+        var t0 = (FixedpType)v1.getType();
+        var t1 = (FixedpType)c2.getType();
+        var s0 = v1.getSignal()[0];
+        int c1val = c2.getVal()[0];
+
+        var ts = new FactorioSignal[]{
+                FactorioSignal.SIGNAL_A,
+                FactorioSignal.SIGNAL_B,
+                FactorioSignal.SIGNAL_C,
+                FactorioSignal.SIGNAL_D,
+                FactorioSignal.SIGNAL_E,
+                FactorioSignal.SIGNAL_F,
+                FactorioSignal.SIGNAL_G,
+                FactorioSignal.SIGNAL_H,
+        };
+
+        var constants = new ConstantCombinator(Map.of(ts[0], 0xFFFF, ts[1], 0xFFFF));
+        expressionGroup.getCombinators().add(constants);
+
+        var stage1network = new NetworkGroup();
+        expressionGroup.getNetworks().add(stage1network);
+
+        var shift2group = new CombinatorGroup(expressionGroup.getInput(), stage1network);
+        expressionGroup.getSubGroups().add(shift2group);
+
+        var shiftA0 = DeciderCombinator.withLeftRight(CombinatorIn.signal(s0), CombinatorIn.constant(0), CombinatorOut.fromInput(ts[0]), DeciderOperator.LT);
+        var shiftA1 = DeciderCombinator.withLeftRight(CombinatorIn.signal(s0), CombinatorIn.constant(0), CombinatorOut.fromInput(ts[1]), DeciderOperator.LT);
+        generateLogicalRightShift(s0, 16, ts[2], shift2group);
+        var shiftA3 = ArithmeticCombinator.withLeftRight(CombinatorIn.signal(s0), CombinatorIn.constant(0xFFFF), ts[3], ArithmeticOperator.AND);
+
+        int shiftB0 = c1val < 0 ? 0xFFFF : 0;
+        int shiftB1 = shiftB0;
+        int shiftB2 = c1val >>> 16;
+        int shiftB3 = c1val & 0xFFFF;
+        ConstantCombinator shiftBcc = new ConstantCombinator(Map.of(ts[4], shiftB0, ts[5], shiftB1, ts[6], shiftB2, ts[7], shiftB3));
+
+        var shiftA = new ArrayList<>(List.of(shiftA0, shiftA1, shiftA3));
+
+        expressionGroup.getCombinators().addAll(shiftA);
+        expressionGroup.getCombinators().add(shiftBcc);
+
+        constants.setGreenOut(expressionGroup.getInput());
+        shiftA.forEach(c -> c.setGreenIn(expressionGroup.getInput()));
+        shiftA.forEach(c -> c.setGreenOut(stage1network));
+        shiftBcc.setGreenOut(stage1network);
+
+        //result of ts[a] * ts[b] is at matrixMulCombinators[a] as ts[b]
+        var mmcs = Stream.of(ts[0], ts[1], ts[2], ts[3])
+                .map(s -> ArithmeticCombinator.withEach(CombinatorIn.signal(s), ArithmeticOperator.MUL))
+                .toList();
+
+        expressionGroup.getCombinators().addAll(mmcs);
+        mmcs.forEach(mc -> {
+            var outNetwork = new NetworkGroup();
+            expressionGroup.getNetworks().add(outNetwork);
+            mc.setGreenIn(stage1network);
+            mc.setGreenOut(outNetwork);
+        });
+
+        //lo
+        var lo1 = ArithmeticCombinator.withLeftRight(CombinatorIn.signal(ts[7]), CombinatorIn.constant(16), ts[0], ArithmeticOperator.LSH);
+        var lo2 = ArithmeticCombinator.withLeftRight(CombinatorIn.signal(ts[6]), CombinatorIn.constant(16), ts[0], ArithmeticOperator.LSH);
+        var lo3 = ArithmeticCombinator.mapping(ts[7], ts[0]);
+        var loDelay = ArithmeticCombinator.copying(ts[0]);
+        expressionGroup.getCombinators().add(lo1);
+        expressionGroup.getCombinators().add(lo2);
+        expressionGroup.getCombinators().add(lo3);
+        expressionGroup.getCombinators().add(loDelay);
+
+
+        lo1.setGreenIn(mmcs.get(2).getGreenOut());
+        lo2.setGreenIn(mmcs.get(3).getGreenOut());
+        lo3.setGreenIn(mmcs.get(3).getGreenOut());
+
+
+        var loTmp = new NetworkGroup();
+        expressionGroup.getNetworks().add(loTmp);
+
+        lo1.setGreenOut(loTmp);
+        lo2.setGreenOut(loTmp);
+        lo3.setGreenOut(loTmp);
+        loDelay.setGreenIn(loTmp);
+
+        var loOut = new NetworkGroup();
+        expressionGroup.getNetworks().add(loOut);
+        loDelay.setGreenOut(loOut);
+
+
+        var loCarryTmp = new NetworkGroup();
+        expressionGroup.getNetworks().add(loCarryTmp);
+
+        //lo_carry
+        var lo1Carry = ArithmeticCombinator.withLeftRight(CombinatorIn.signal(ts[7]), CombinatorIn.constant(0xFFFF), ts[2], ArithmeticOperator.AND);
+        var lo2Carry = ArithmeticCombinator.withLeftRight(CombinatorIn.signal(ts[6]), CombinatorIn.constant(0xFFFF), ts[2], ArithmeticOperator.AND);
+        var lo2CarryGroup = new CombinatorGroup(lo3.getGreenIn(), loCarryTmp);
+        expressionGroup.getSubGroups().add(lo2CarryGroup);
+        generateLogicalRightShift(ts[7], 16, ts[2], lo2CarryGroup);
+        var loCarryShift = ArithmeticCombinator.withLeftRight(CombinatorIn.signal(ts[2]), CombinatorIn.constant(16), ts[1], ArithmeticOperator.RSH);
+
+        expressionGroup.getCombinators().add(lo1Carry);
+        expressionGroup.getCombinators().add(lo2Carry);
+        expressionGroup.getCombinators().add(loCarryShift);
+
+
+
+        lo1Carry.setGreenIn(lo1.getGreenIn());
+        lo2Carry.setGreenIn(lo2.getGreenIn());
+
+        lo1Carry.setGreenOut(loCarryTmp);
+        lo2Carry.setGreenOut(loCarryTmp);
+        loCarryShift.setGreenIn(loCarryTmp);
+
+        //hi
+        var hiTmp = new NetworkGroup();
+        expressionGroup.getNetworks().add(hiTmp);
+
+        var hi = new ArrayList<ArithmeticCombinator>();
+        var hi1 = ArithmeticCombinator.withLeftRight(CombinatorIn.signal(ts[7]), CombinatorIn.constant(16), ts[1], ArithmeticOperator.LSH);
+        var hi2 = ArithmeticCombinator.withLeftRight(CombinatorIn.signal(ts[6]), CombinatorIn.constant(16), ts[1], ArithmeticOperator.LSH);
+        var hi3 = ArithmeticCombinator.mapping(ts[7], ts[1]);
+        var hi4 = ArithmeticCombinator.withLeftRight(CombinatorIn.signal(ts[5]), CombinatorIn.constant(16), ts[1], ArithmeticOperator.LSH);
+        var hi5 = ArithmeticCombinator.mapping(ts[6], ts[1]);
+        var hi6group = new CombinatorGroup(mmcs.get(2).getGreenOut(), hiTmp);
+        expressionGroup.getSubGroups().add(hi6group);
+        generateLogicalRightShift(ts[7], 16, ts[1], hi6group); //hi6
+        var hi7 = ArithmeticCombinator.withLeftRight(CombinatorIn.signal(ts[4]), CombinatorIn.constant(16), ts[1], ArithmeticOperator.LSH);
+        var hi8 = ArithmeticCombinator.mapping(ts[5], ts[1]);
+
+        var hi9group = new CombinatorGroup(mmcs.get(3).getGreenOut(), hiTmp);
+        expressionGroup.getSubGroups().add(hi9group);
+        generateLogicalRightShift(ts[6], 16, ts[1], hi9group); //hi9
+
+        hi.addAll(List.of(hi1, hi2, hi3, hi4, hi5, hi7, hi8));
+        expressionGroup.getCombinators().addAll(hi);
+
+
+        hi1.setGreenIn(mmcs.get(0).getGreenOut());
+        hi2.setGreenIn(mmcs.get(1).getGreenOut());
+        hi3.setGreenIn(mmcs.get(1).getGreenOut());
+        hi4.setGreenIn(mmcs.get(2).getGreenOut());
+        hi5.setGreenIn(mmcs.get(2).getGreenOut());
+        hi7.setGreenIn(mmcs.get(3).getGreenOut());
+        hi8.setGreenIn(mmcs.get(3).getGreenOut());
+        hi.forEach(c -> c.setGreenOut(hiTmp));
+
+        var hiDelay = ArithmeticCombinator.copying(ts[1]);
+        hiDelay.setGreenIn(hiTmp);
+        expressionGroup.getCombinators().add(hiDelay);
+
+        var hiOut = new NetworkGroup();
+        expressionGroup.getNetworks().add(hiOut);
+        hiDelay.setGreenOut(hiOut);
+        loCarryShift.setGreenOut(hiOut);
+
+        int shiftConstant = outputType.getFractionBits() - t0.getFractionBits() - t1.getFractionBits();
+
+        var finalHiShift = ArithmeticCombinator.withLeftRight(CombinatorIn.signal(ts[1]), CombinatorIn.constant(32 + shiftConstant), outSymbol, ArithmeticOperator.LSH);
+        var finalLoShiftGroup = new CombinatorGroup(loOut, expressionGroup.getOutput());
+        expressionGroup.getSubGroups().add(finalLoShiftGroup);
+        generateLogicalRightShift(ts[0], -shiftConstant, outSymbol, finalLoShiftGroup);
+
+        expressionGroup.getCombinators().add(finalHiShift);
+
+        finalHiShift.setGreenIn(hiOut);
+        finalHiShift.setGreenOut(expressionGroup.getOutput());
+
+        return 5;
+    }
+
+    private int generateDivCombinators(Symbol[] symbols, FactorioSignal[] outSymbol, FixedpType targetType, CombinatorGroup outputGroup) {
+        // a / a
+        if(symbols[0] == symbols[1]) {
+            ConstantCombinator cc = new ConstantCombinator(Map.of(outSymbol[0], 1 << targetType.getFractionBits()));
+            var dc = DeciderCombinator.withLeftRight(symbols[0].toAccessor()[0], CombinatorIn.constant(0), CombinatorOut.fromInput(outSymbol[0]), DeciderOperator.NEQ);
+            outputGroup.getCombinators().add(cc);
+            outputGroup.getCombinators().add(dc);
+            var tmp = new NetworkGroup();
+            outputGroup.getNetworks().add(tmp);
+            cc.setRedOut(tmp);
+            dc.setRedIn(tmp);
+            dc.setGreenIn(outputGroup.getInput());
+            dc.setGreenOut(outputGroup.getOutput());
+            return 1;
+        }
+        else {
+            ArithmeticCombinator ac = ArithmeticCombinator.withLeftRight(symbols[0].toAccessor()[0], symbols[1].toAccessor()[0], outSymbol[0], ArithmeticOperator.DIV);
+            outputGroup.getCombinators().add(ac);
+            ac.setGreenIn(outputGroup.getInput());
+            ac.setGreenOut(outputGroup.getOutput());
+            return 1;
+        }
+
+    }
+
+    private int generateTwoVariableMultiplicationCombinators(Variable[] symbols, FactorioSignal outSymbol, FixedpType outputType, CombinatorGroup expressionGroup) {
         var t0 = (FixedpType)symbols[0].getType();
         var t1 = (FixedpType)symbols[1].getType();
         var s0 = symbols[0].getSignal()[0];
@@ -376,9 +501,14 @@ public class FixedpExpressionResolver extends ExpressionResolver<LanguageParser.
 
     private static int prepareSymbols(Symbol[] symbols, FixedpType outputType, ArithmeticOperator operator, CombinatorGroup outputContext, FunctionContext context) {
         int maxInputDelay = -1;
+
+        int[] requiredTargetType = operator == ArithmeticOperator.DIV ?
+                new int[]{outputType.getFractionBits() + outputType.getFractionBits() / 2, outputType.getFractionBits() / 2} :
+                new int[]{outputType.getFractionBits(), outputType.getFractionBits()};
+
         for(int i = 0; i < symbols.length; i++) {
             Symbol s = symbols[i];
-            if(s instanceof Variable && ((FixedpType)s.getType()).getFractionBits() != outputType.getFractionBits()) {
+            if(s instanceof Variable && ((FixedpType)s.getType()).getFractionBits() != requiredTargetType[i]) {
                 maxInputDelay = Math.max(maxInputDelay, s.getTickDelay() + 1);
             }
             else {
@@ -394,15 +524,18 @@ public class FixedpExpressionResolver extends ExpressionResolver<LanguageParser.
         context.getFunctionGroup().getSubGroups().add(outputContext);
         boolean isShifted = false;
         for(int i = 0; i < symbols.length; i++) {
+            var targetFractBits = requiredTargetType[i];
             if(symbols[i] instanceof Constant c) {
-                symbols[i] = unassignedConstToFixedpIntConst(c, outputType.getFractionBits());
+                symbols[i] = unassignedConstToFixedpIntConst(c, targetFractBits);
             }
             if(symbols[i] instanceof Variable v) {
                 var accessor = v.createVariableAccessor();
                 var fractBits = ((FixedpType)v.getType()).getFractionBits();
-                var targetFractBits = outputType.getFractionBits();
-                //MUL and DIV handle this differently
-                if(operator == ArithmeticOperator.MUL || operator == ArithmeticOperator.DIV || fractBits == targetFractBits) {
+                //MUL is handeled differently
+                if(operator == ArithmeticOperator.MUL) {
+                    accessor.access(maxInputDelay).accept(outputContext);
+                }
+                else if(fractBits == targetFractBits) {
                     accessor.access(maxInputDelay).accept(outputContext);
                 }
                 else {
@@ -427,7 +560,8 @@ public class FixedpExpressionResolver extends ExpressionResolver<LanguageParser.
     }
 
     public static void main(String[] args) {
-        String d1 = "-17.293";
+
+        String d1 = "17.293";
         String d2 = "9.459";
         System.out.println(floatToFixedpInt(d1, 16));
         System.out.println(floatToFixedpInt(d2, 16));
