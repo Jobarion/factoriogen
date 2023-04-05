@@ -1128,11 +1128,33 @@ public class Generator extends LanguageBaseListener {
     }
 
     @Override
+    public void exitTypeCast(LanguageParser.TypeCastContext ctx) {
+        var castValue = currentFunctionContext.popTempVariable();
+        var targetType = Type.parseType(ctx.targetType);
+        if(castValue.getType().getSize() != targetType.getSize()) {
+            log("Cannot cast between types of different size (" + castValue.getType() + " to " + targetType + ")");
+        }
+        log("Casting from " + castValue.getType() + " to " + targetType);
+        if(castValue instanceof Constant c) {
+            var castC = new Constant(targetType, c.getVal());
+            if(c.isBound()) castC.bind(c.getSignal());
+            currentFunctionContext.pushTempVariable(castC);
+        }
+        else if(castValue instanceof Variable v) {
+            var cast = currentFunctionContext.createBoundTempVariable(targetType, v.getSignal(), v.getProducer());
+            cast.setDelay(v.getTickDelay());
+        }
+        else {
+            throw new RuntimeException();
+        }
+    }
+
+    @Override
     public void exitAssignment(LanguageParser.AssignmentContext ctx) {
         var value = currentFunctionContext.popTempVariable();
 
         if(value instanceof Constant c && value.getType() == PrimitiveType.UNASSIGNED_FIXEDP) {
-            value = FixedpExpressionResolver.unassignedConstToFixedpIntConst(c, ctx.fractBits != null ? Integer.parseInt(ctx.fractBits.getText()) : 16);
+            value = FixedpExpressionResolver.unassignedConstToFixedpIntConst(c, 16);
         }
         String varName = ctx.var.getText();
 

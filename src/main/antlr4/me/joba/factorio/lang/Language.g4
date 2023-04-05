@@ -31,7 +31,7 @@ statement
     | functionCall ';'
     ;
 
-assignment: var=varName('<' fractBits=intLiteral '>')? '=' x=expr;
+assignment: var=varName '=' x=expr;
 arrayAssignment: array=expr '[' index=expr ']' '=' x=expr;
 
 ifExpr: 'if' '(' ifCond=boolExpr ')' ifPart=ifStatement ('else' elsePart=elseStatement)?;
@@ -53,12 +53,13 @@ expr
     | array=expr '[' index=expr ']'
     | call=functionCall
     | tuple=expr (op=ACCESS) propertyId=intLiteral
-    | left=expr (op=MUL | op=DIV | op=MOD) right=expr
-    | left=expr (op=ADD | op=SUB) right=expr
-    | left=expr (op=LSH | op=RSH) right=expr
+    | left=expr (op=MUL | op=DIV | op=MOD) (targetFractBits=fractBits)? right=expr
+    | left=expr (op=ADD | op=SUB) (targetFractBits=fractBits)? right=expr
+    | left=expr (op=LSH | op=RSH) (targetFractBits=fractBits)? right=expr
     | left=expr op=BAND right=expr
     | left=expr op=BOR right=expr
     | left=expr op=BXOR right=expr
+    | typeCast
     | simpleExpr
     ;
 
@@ -78,11 +79,16 @@ boolExpr
 
 type
     : singleType=TypeName
-    | 'fixedp' LT fracbits=intLiteral GT
+    | 'fixedp' fractBits
     | '(' typeList ')'
     | arrayType=type '[]'
     ;
+
+fractBits: '<' fracbits=intLiteral '>';
+
 typeList: type (',' type)+;
+
+typeCast: '(' targetType=type ')' expr;
 
 arrayDeclaration: type '[' intLiteral ']' varName ';';
 

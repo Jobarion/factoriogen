@@ -17,13 +17,13 @@ import java.util.Optional;
 public class Simulator {
 
     public static void main(String[] args) throws IOException {
-        Path file = Path.of("examples/pi.fcl");
+        Path file = Path.of("examples/cast_test.fcl");
         var code = Files.readAllLines(file)
                 .stream()
                 .collect(StringBuffer::new, StringBuffer::append, StringBuffer::append)
                 .toString();
-        var result = simulate(Generator.generateProgram(code, false),  Map.of(FactorioSignal.SIGNAL_1, 4000), 1000000);
-//        var result = simulate(Generator.generateProgram(code, false),  Map.of(FactorioSignal.SIGNAL_RED, 1133314, FactorioSignal.SIGNAL_GREEN, 619905), 1000000);
+//        var result = simulate(Generator.generateProgram(code, false),  Map.of(FactorioSignal.SIGNAL_1, 4000), 1000000);
+        var result = simulate(Generator.generateProgram(code, false),  Map.of(FactorioSignal.SIGNAL_RED, 1133314, FactorioSignal.SIGNAL_GREEN, 619905), 100);
         //var result = simulate(Generator.generateProgram(code, false),  Map.of(FactorioSignal.SIGNAL_RED, 880148, FactorioSignal.SIGNAL_GREEN, 854720), 100);
         System.out.println(result);
     }
@@ -58,7 +58,7 @@ public class Simulator {
             }
             for(var e : entities) {
                 e.update();
-//                System.out.println(e + ": " + e.getOutput());
+                System.out.println(e + ": " + e.getOutput());
             }
             if(program.mainOut().getValues().getOrDefault(FactorioSignal.SIGNAL_CHECK, 0) == 105231) {
                 return Optional.of(new ProgramResult(program.mainOut().getValues(), i + 1));

@@ -41,7 +41,14 @@ public class FixedpExpressionResolver extends ExpressionResolver<LanguageParser.
             }
         }
 
-        var targetFixedp = symbols[0] instanceof Constant ? ((FixedpType)symbols[1].getType()).getFractionBits() : ((FixedpType)symbols[0].getType()).getFractionBits();
+        int targetFixedp;
+        if(ruleContext.targetFractBits != null) {
+            targetFixedp = Integer.parseInt(ruleContext.targetFractBits.fracbits.getText());
+        }
+        else {
+            targetFixedp = symbols[0] instanceof Constant ? ((FixedpType)symbols[1].getType()).getFractionBits() : ((FixedpType)symbols[0].getType()).getFractionBits();
+        }
+
         var targetType = new FixedpType(targetFixedp);
 
         var outputGroup = new CombinatorGroup(new NetworkGroup(), new NetworkGroup());
@@ -565,13 +572,14 @@ public class FixedpExpressionResolver extends ExpressionResolver<LanguageParser.
         String d2 = "9.459";
         System.out.println(floatToFixedpInt(d1, 16));
         System.out.println(floatToFixedpInt(d2, 16));
+        System.out.println(constToFloat(10715136, 16));
 //        System.out.println(constToFloat(new Constant(new FixedpType(18), floatToFixedpInt(d1, 18))));
 //        int manu2 = fixedpMulImpl(floatToFixedpInt(d1, 16), 16, floatToFixedpInt(d2, 16), 16, 16)
-        int manu = signedFixedpMul(floatToFixedpInt(d1, 16), 16, floatToFixedpInt(d2, 16), 16, 16);
+        int manu = signedFixedpMul(floatToFixedpInt(d1, 16), 16, floatToFixedpInt(d2, 16), 16, 2);
 //        int manu2 = fixedpMulImpl(floatToFixedpInt(d1, 16), 16, floatToFixedpInt(d2, 16), 16, 16);
         int manu3 = test(floatToFixedpInt(d1, 16), floatToFixedpInt(d2, 16));
 //        System.out.println(manu);
-        System.out.println(constToFloat(manu, 16));
+        System.out.println(constToFloat(manu, 2));
 //        System.out.println(manu2);
 //        System.out.println(constToFloat(manu2, 16));
         System.out.println(constToFloat(manu3, 16));
