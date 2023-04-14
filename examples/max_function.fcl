@@ -1,0 +1,10 @@
+function main(a: int<red>, b: int<green>) -> int {
+  return max(a, b);
+}
+
+function [fixed_delay] max(a: int, b: int) -> int {
+  if(a < b) {
+    a = b;
+  }
+  return a;
+}

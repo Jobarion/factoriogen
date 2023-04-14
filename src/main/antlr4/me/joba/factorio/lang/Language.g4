@@ -12,9 +12,8 @@ functionModifiers
     | '[' functionModifier (',' functionModifier)* ']';
 
 functionModifier
-    : key='pipelined'
-    | key='native'
-    | key='delay' '=' intLiteral;
+    : key='native'
+    | key='fixed_delay' ('=' intLiteral)?;
 
 functionParams: (functionParam (',' functionParam)*)?;
 functionParam: varName ':' type ('<' signalName '>')?;

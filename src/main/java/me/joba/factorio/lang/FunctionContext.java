@@ -26,6 +26,7 @@ public class FunctionContext {
     private final NetworkGroup functionCallOutput;
     private final NetworkGroup functionCallReturn;
     private final Map<FunctionSignature.SideEffectsType, Integer> firstAvailableSlotBySideEffectType;
+    private String code;
 
     public FunctionContext(FunctionSignature functionSignature, NetworkGroup functionCallOutput, NetworkGroup functionCallReturn) {
         this.functionSignature = functionSignature;
@@ -46,6 +47,14 @@ public class FunctionContext {
 //        functionCallReturn = new NetworkGroup("Function call return of group " + functionSignature);
 
         bindParameterSignals();
+    }
+
+    public void setCode(String code) {
+        this.code = code;
+    }
+
+    public String getCode() {
+        return code;
     }
 
     private void bindParameterSignals() {

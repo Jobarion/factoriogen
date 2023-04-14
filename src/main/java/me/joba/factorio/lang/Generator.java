@@ -213,9 +213,9 @@ public class Generator extends LanguageBaseListener {
         if(!returnVal.isBound()) {
             returnVal.bind(currentFunctionContext.getSignature().getReturnSignals());
         }
-        log("Returning " + returnVal + " with delay " + returnVal.getTickDelay());
-
         int delay = Math.max(returnVal.getTickDelay() + 1, currentFunctionContext.getControlFlowVariable().getTickDelay());
+
+        log("Returning " + returnVal + " with delay " + delay);
 
         if(returnVal instanceof Constant) {
             int[] vals = ((Constant) returnVal).getVal();
@@ -270,6 +270,11 @@ public class Generator extends LanguageBaseListener {
         var accessor = currentFunctionContext.getControlFlowVariable().createVariableAccessor();
         accessor.access(delay + (signalMappingRequired ? 1 : 0)).accept(gateOutput, returnGroup);//Ensure our output is clean
         returnGroup.getAccessors().add(accessor);
+
+        if(currentFunctionContext.getSignature().isConstantDelay()) {
+            int actualDelay = delay + (signalMappingRequired ? 1 : 0) + 1;
+            System.out.println("Actual delay: " + actualDelay);
+        }
 
         outputGate.setGreenIn(gateOutput);
     }
@@ -509,6 +514,10 @@ public class Generator extends LanguageBaseListener {
         log("Outside delay " + outsideVariableDelay);
         log("If delay " + ifDelay);
         log("Else delay " + elseDelay);
+        if(currentFunctionContext.getSignature().isConstantDelay() && ifDelay != elseDelay) {
+            log("Transforming to constant time conditional");
+            ifDelay = elseDelay = Math.max(ifDelay, elseDelay);
+        }
 
         CombinatorGroup conditionOutputGroup = new CombinatorGroup(null, new NetworkGroup("if output (if/else merged)"));
         conditionGroup.getSubGroups().add(conditionOutputGroup);
@@ -549,7 +558,13 @@ public class Generator extends LanguageBaseListener {
             accessor.access(elseDelay).accept(elseDataOut, conditionOutputGroup);
 
             var produced = currentFunctionContext.getVariableScope().createNamedVariable(varName, variable.getType(), variable.getSignal(), conditionOutputGroup);
-            produced.setDelay(0);
+            if(currentFunctionContext.getSignature().isConstantDelay()) {
+                int totalDelay = outsideVariableDelay + ifDelay + 1; //ifDelay and elseDelay are the same in this case.
+                produced.setDelay(totalDelay);
+            }
+            else {
+                produced.setDelay(0);
+            }
         }
 
         NetworkGroup conditionWire = new NetworkGroup("condition wire");
@@ -1412,6 +1427,9 @@ public class Generator extends LanguageBaseListener {
         parser.file();
 
         parser = new LanguageParser(new CommonTokenStream(new LanguageLexer(CharStreams.fromString(code))));
+
+        System.out.println(structureParser.getCompileOrder());
+
 
         var functionMap = new HashMap<>(structureParser.getFunctions());
 

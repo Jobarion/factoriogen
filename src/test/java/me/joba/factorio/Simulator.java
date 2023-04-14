@@ -17,7 +17,7 @@ import java.util.Optional;
 public class Simulator {
 
     public static void main(String[] args) throws IOException {
-        Path file = Path.of("examples/cast_test.fcl");
+        Path file = Path.of("examples/max_function.fcl");
         var code = Files.readAllLines(file)
                 .stream()
                 .collect(StringBuffer::new, StringBuffer::append, StringBuffer::append)

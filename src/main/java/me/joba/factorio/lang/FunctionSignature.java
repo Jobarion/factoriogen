@@ -15,22 +15,23 @@ public class FunctionSignature {
     private final FactorioSignal[] returnSignals;
     private final int functionId = currentFunctionId++;
     private final int constantDelay;
-    private final boolean pipelined, isNative;
+    private final boolean isNative;
+    private final boolean isConstantDelay;
     private final SideEffectsType sideEffectsType;
 
-    public FunctionSignature(String name, FunctionParameter[] parameters, Type returnType, FactorioSignal[] returnSignals, int delay, boolean pipelined, boolean isNative, SideEffectsType sideEffectsType) {
+    public FunctionSignature(String name, FunctionParameter[] parameters, Type returnType, FactorioSignal[] returnSignals, int delay, boolean constDelay, boolean isNative, SideEffectsType sideEffectsType) {
         this.name = name;
         this.parameters = parameters;
         this.returnType = returnType;
         this.returnSignals = returnSignals;
         this.constantDelay = delay;
-        this.pipelined = pipelined;
+        this.isConstantDelay = constDelay;
         this.isNative = isNative;
         this.sideEffectsType = sideEffectsType;
     }
 
-    public boolean isPipelined() {
-        return pipelined;
+    public boolean isConstantDelay() {
+        return isConstantDelay;
     }
 
     public boolean isNative() {
@@ -39,10 +40,6 @@ public class FunctionSignature {
 
     public SideEffectsType getSideEffectsType() {
         return sideEffectsType;
-    }
-
-    public boolean isConstantDelay() {
-        return constantDelay >= 0;
     }
 
     public int getConstantDelay() {
@@ -86,7 +83,7 @@ public class FunctionSignature {
         private final Type returnType;
         private final FactorioSignal[] returnSignals;
         private int constantDelay = -1;
-        private boolean pipelined = false, isNative = false;
+        private boolean isConstantDelay = false, isNative = false;
         private SideEffectsType sideEffectsType = SideEffectsType.ANY;
 
         public Builder(String name, FunctionParameter[] parameters, Type returnType, FactorioSignal[] returnSignals) {
@@ -96,13 +93,14 @@ public class FunctionSignature {
             this.returnSignals = returnSignals;
         }
 
-        public Builder withDelay(int delay) {
+        public Builder withConstantDelay(int delay) {
+            this.isConstantDelay = true;
             this.constantDelay = delay;
             return this;
         }
 
-        public Builder asPipelined(boolean isPipelined) {
-            this.pipelined = isPipelined;
+        public Builder withConstantDelay(boolean isConstantDelay) {
+            this.isConstantDelay = isConstantDelay;
             return this;
         }
 
@@ -117,7 +115,13 @@ public class FunctionSignature {
         }
 
         public FunctionSignature build() {
-            return new FunctionSignature(name, parameters, returnType, returnSignals, constantDelay, pipelined, isNative, sideEffectsType);
+            if(isNative && isConstantDelay && constantDelay == -1) {
+                throw new IllegalArgumentException("Native constant delay functions cannot derive the delay value");
+            }
+            else if(!isNative && isConstantDelay && constantDelay != -1) {
+                throw new IllegalArgumentException("Non native constant delay functions must not specify the delay value");
+            }
+            return new FunctionSignature(name, parameters, returnType, returnSignals, constantDelay, isConstantDelay, isNative, sideEffectsType);
         }
     }
 

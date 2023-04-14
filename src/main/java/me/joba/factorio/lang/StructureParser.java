@@ -4,9 +4,9 @@ import me.joba.factorio.NetworkGroup;
 import me.joba.factorio.lang.types.ArrayType;
 import me.joba.factorio.lang.types.Type;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 public class StructureParser extends LanguageBaseListener {
 
@@ -21,6 +21,8 @@ public class StructureParser extends LanguageBaseListener {
     public Map<String, ArrayDeclaration> getDeclaredArrays() {
         return declaredArrays;
     }
+    public Map<String, List<String>> functionCallDependencies = new HashMap<>();
+    private String currentFunction;
 
     private final NetworkGroup FUNCTION_CALL_IN = new NetworkGroup("Global function call out");
     private final NetworkGroup FUNCTION_CALL_RETURN = new NetworkGroup("Global function call return");
@@ -31,6 +33,29 @@ public class StructureParser extends LanguageBaseListener {
 
     public NetworkGroup getFunctionCallReturn() {
         return FUNCTION_CALL_RETURN;
+    }
+
+    public List<List<String>> getCompileOrder() {
+        var list = new ArrayList<List<String>>();
+        var localMap = functionCallDependencies.entrySet().stream()
+                .collect(Collectors.toMap(Map.Entry::getKey, v -> new ArrayList<>(v.getValue())));
+
+        while(!localMap.isEmpty()) {
+            var currentGroup = new ArrayList<String>();
+            for(var e : localMap.entrySet()) {
+                if(e.getValue().isEmpty()) {
+                    currentGroup.add(e.getKey());
+                }
+            }
+            if(!localMap.values().removeIf(List::isEmpty)) {
+                throw new IllegalStateException("Cyclic dependencies between functions " + localMap.keySet());
+            }
+            list.add(currentGroup);
+            for(var v : localMap.values()) {
+                v.removeAll(currentGroup);
+            }
+        }
+        return list;
     }
 
     @Override
@@ -46,12 +71,24 @@ public class StructureParser extends LanguageBaseListener {
     }
 
     @Override
+    public void exitFunctionCall(LanguageParser.FunctionCallContext ctx) {
+        functionCallDependencies.get(currentFunction).add(ctx.functionName().getText());
+    }
+
+    @Override
     public void exitFunction(LanguageParser.FunctionContext ctx) {
-        String name = ctx.functionHeader().functionName().getText();
-        Type returnType = Type.parseType(ctx.functionHeader().returnType);
-        FunctionParameter[] paramTypes = new FunctionParameter[ctx.functionHeader().functionParams().functionParam().size()];
+        functions.get(ctx.functionHeader().functionName()).setCode(ctx.getText());
+    }
+
+    @Override
+    public void exitFunctionHeader(LanguageParser.FunctionHeaderContext ctx) {
+        String name = ctx.functionName().getText();
+        currentFunction = name;
+        functionCallDependencies.put(name, new ArrayList<>());
+        Type returnType = Type.parseType(ctx.returnType);
+        FunctionParameter[] paramTypes = new FunctionParameter[ctx.functionParams().functionParam().size()];
         for(int i = 0; i < paramTypes.length; i++) {
-            var param = ctx.functionHeader().functionParams().functionParam(i);
+            var param = ctx.functionParams().functionParam(i);
             var type = Type.parseType(param.type());
             FactorioSignal signal = null;
             if(param.signalName() != null) {
@@ -59,7 +96,7 @@ public class StructureParser extends LanguageBaseListener {
             }
             paramTypes[i] = new FunctionParameter(param.varName().getText(), type, signal == null ? null : new FactorioSignal[]{signal});
         }
-        var modifiers = ctx.functionHeader().functionModifiers().functionModifier();
+        var modifiers = ctx.functionModifiers().functionModifier();
         if(modifiers == null) modifiers = Collections.emptyList();
 
         var signatureBuilder = new FunctionSignature.Builder(name, paramTypes, returnType, getFunctionReturnSignals(returnType));
@@ -67,8 +104,14 @@ public class StructureParser extends LanguageBaseListener {
         for(var modifier : modifiers) {
             switch (modifier.key.getText()) {
                 case "native" -> signatureBuilder.asNative(true);
-                case "pipelined" -> signatureBuilder.asPipelined(true);
-                case "delay" -> signatureBuilder.withDelay(Integer.parseInt(modifier.intLiteral().getText()));
+                case "fixed_delay" -> {
+                    if(modifier.intLiteral() != null) {
+                        signatureBuilder.withConstantDelay(Integer.parseInt(modifier.intLiteral().getText()));
+                    }
+                    else {
+                        signatureBuilder.withConstantDelay(true);//Delay is derived
+                    }
+                }
             }
         }
         FunctionContext context = new FunctionContext(signatureBuilder.build(), FUNCTION_CALL_IN, FUNCTION_CALL_RETURN);
