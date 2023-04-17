@@ -14,7 +14,7 @@ public class FunctionSignature {
     private final Type returnType;
     private final FactorioSignal[] returnSignals;
     private final int functionId = currentFunctionId++;
-    private final int constantDelay;
+    private int constantDelay;
     private final boolean isNative;
     private final boolean isConstantDelay;
     private final SideEffectsType sideEffectsType;
@@ -40,6 +40,10 @@ public class FunctionSignature {
 
     public SideEffectsType getSideEffectsType() {
         return sideEffectsType;
+    }
+
+    public void setConstantDelay(int constantDelay) {
+        this.constantDelay = constantDelay;
     }
 
     public int getConstantDelay() {

@@ -272,8 +272,11 @@ public class Generator extends LanguageBaseListener {
         returnGroup.getAccessors().add(accessor);
 
         if(currentFunctionContext.getSignature().isConstantDelay()) {
-            int actualDelay = delay + (signalMappingRequired ? 1 : 0) + 1;
-            System.out.println("Actual delay: " + actualDelay);
+            final int constantFunctionCallOutputGateDelay = 1;
+            final int constantFunctionCallReturnInputDelay = 2;
+            int actualDelay = delay + (signalMappingRequired ? 1 : 0) + constantFunctionCallOutputGateDelay + constantFunctionCallReturnInputDelay;
+            log("Actual delay: " + actualDelay);
+            currentFunctionContext.getSignature().setConstantDelay(actualDelay);
         }
 
         outputGate.setGreenIn(gateOutput);
@@ -1426,10 +1429,21 @@ public class Generator extends LanguageBaseListener {
 
         parser.file();
 
-        parser = new LanguageParser(new CommonTokenStream(new LanguageLexer(CharStreams.fromString(code))));
+        System.out.println("Compile order:");
 
-        System.out.println(structureParser.getCompileOrder());
+        //TODO can we do this in a non hacky way? Maybe parse the entire structure and _then_ generate rather than reordering the actual code string
+        var reorderedCode = new StringJoiner("\n\n");
+        for(var compileOrderGroup : structureParser.getCompileOrder()) {
+            System.out.println(" - " + compileOrderGroup.toString());
+            for(var functionName : compileOrderGroup) {
+                reorderedCode.add(structureParser.getFunctions().get(functionName).getCode());
+            }
+        }
 
+        System.out.println("Reordered code\n");
+        System.out.println(reorderedCode);
+
+        parser = new LanguageParser(new CommonTokenStream(new LanguageLexer(CharStreams.fromString(reorderedCode.toString()))));
 
         var functionMap = new HashMap<>(structureParser.getFunctions());
 

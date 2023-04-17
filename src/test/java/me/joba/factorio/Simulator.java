@@ -41,10 +41,11 @@ public class Simulator {
                 if(cno.getGreenOut() != null) cno.getGreenOut().addEntity(e);
             }
         }
+        final int checkSignalValue = 0xDEADBEEF; //Random, we just need to recognize it
         Map<FactorioSignal, Integer> programIn = new HashMap<>(input);
-        programIn.put(FactorioSignal.SIGNAL_CHECK, 105231);
+        programIn.put(FactorioSignal.SIGNAL_CHECK, checkSignalValue);
         for(int i = 0; i < maxSteps; i++) {
-            System.out.println("\nSTEP " + (i + 1) + "\n");
+//            System.out.println("\nSTEP " + (i + 1) + "\n");
             var inputEntity = new ConstantCombinator(input) {
                 @Override
                 public Map<FactorioSignal, Integer> getOutput() {
@@ -58,9 +59,9 @@ public class Simulator {
             }
             for(var e : entities) {
                 e.update();
-                System.out.println(e + ": " + e.getOutput());
+//                System.out.println(e + ": " + e.getOutput());
             }
-            if(program.mainOut().getValues().getOrDefault(FactorioSignal.SIGNAL_CHECK, 0) == 105231) {
+            if(program.mainOut().getValues().getOrDefault(FactorioSignal.SIGNAL_CHECK, 0) == checkSignalValue) {
                 return Optional.of(new ProgramResult(program.mainOut().getValues(), i + 1));
             }
             programIn.clear();

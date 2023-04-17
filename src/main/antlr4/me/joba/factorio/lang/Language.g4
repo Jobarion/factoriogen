@@ -6,7 +6,7 @@ function
     : functionHeader block
     | functionHeader ';';
 
-functionHeader: 'function ' functionModifiers? name=functionName '(' functionParams ')' '->' returnType=type;
+functionHeader: 'function' functionModifiers? name=functionName '(' functionParams ')' '->' returnType=type;
 functionModifiers
     :
     | '[' functionModifier (',' functionModifier)* ']';

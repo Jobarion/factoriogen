@@ -77,7 +77,7 @@ public class StructureParser extends LanguageBaseListener {
 
     @Override
     public void exitFunction(LanguageParser.FunctionContext ctx) {
-        functions.get(ctx.functionHeader().functionName()).setCode(ctx.getText());
+        functions.get(ctx.functionHeader().functionName().getText()).setCode(ctx.getText());
     }
 
     @Override
