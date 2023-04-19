@@ -1,6 +1,6 @@
-package me.joba.factorio.lang;
+package me.joba.factorio;
 
-import me.joba.factorio.*;
+import me.joba.factorio.lang.*;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 
